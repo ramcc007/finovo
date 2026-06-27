@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { SlidersHorizontal, Download, RotateCcw, ChevronUp, ChevronDown } from 'lucide-react';
-import { SCREENER_STOCKS } from '@/lib/mock-data';
 import { cn, formatCrores } from '@/lib/utils';
 
-type SortKey = 'mcap' | 'pe' | 'pb' | 'roe' | 'revGrowth1Y' | 'profGrowth1Y' | 'debtEquity' | 'divYield';
+type SortKey = 'market_cap' | 'pe' | 'pb' | 'roe' | 'revenue_growth_1y' | 'profit_growth_1y' | 'debt_to_equity' | 'dividend_yield';
 
 interface Filters {
   sector: string;
@@ -93,12 +92,62 @@ function MinInput({ label, filterKey, filters, onChange, unit = '' }: {
   );
 }
 
+interface ScreenerRow {
+  symbol: string; name: string; sector: string; price: number;
+  pe: number; pb: number; roe: number; roce: number; market_cap: number;
+  debt_to_equity: number; revenue_growth_1y: number; profit_growth_1y: number;
+  dividend_yield: number; promoter_pct: number; pledge_pct: number;
+}
+
 export default function ScreenerPage() {
   const [filters, setFilters] = useState<Filters>(defaultFilters);
-  const [sortKey, setSortKey] = useState<SortKey>('mcap');
+  const [sortKey, setSortKey] = useState<SortKey>('market_cap');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
-  const PER_PAGE = 10;
+  const [results, setResults] = useState<ScreenerRow[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const PER_PAGE = 20;
+
+  const fetchResults = useCallback(async (f: Filters, sk: SortKey, sd: 'asc' | 'desc', pg: number) => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (f.sector) params.set('sector', f.sector);
+    if (f.mcapMin) params.set('mcap_min', f.mcapMin);
+    if (f.mcapMax) params.set('mcap_max', f.mcapMax);
+    if (f.peMin) params.set('pe_min', f.peMin);
+    if (f.peMax) params.set('pe_max', f.peMax);
+    if (f.pbMin) params.set('pb_min', f.pbMin);
+    if (f.pbMax) params.set('pb_max', f.pbMax);
+    if (f.roeMin) params.set('roe_min', f.roeMin);
+    if (f.roeMax) params.set('roe_max', f.roeMax);
+    if (f.revGrowthMin) params.set('rev_growth_1y_min', f.revGrowthMin);
+    if (f.profGrowthMin) params.set('profit_growth_1y_min', f.profGrowthMin);
+    if (f.debtEquityMax) params.set('debt_equity_max', f.debtEquityMax);
+    if (f.divYieldMin) params.set('div_yield_min', f.divYieldMin);
+    if (f.promoterMin) params.set('promoter_min', f.promoterMin);
+    if (f.pledgeMax) params.set('pledge_max', f.pledgeMax);
+    params.set('sort_by', sk);
+    params.set('sort_dir', sd);
+    params.set('page', String(pg));
+    params.set('per_page', String(PER_PAGE));
+
+    try {
+      const res = await fetch(`/api/screener?${params}`);
+      const data = await res.json();
+      setResults(data.data ?? []);
+      setTotal(data.total ?? 0);
+    } catch {
+      setResults([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchResults(filters, sortKey, sortDir, page);
+  }, [filters, sortKey, sortDir, page, fetchResults]);
 
   const updateFilter = (key: keyof Filters, value: string) => {
     setFilters(f => ({ ...f, [key]: value }));
@@ -107,36 +156,12 @@ export default function ScreenerPage() {
 
   const clearFilters = () => { setFilters(defaultFilters); setPage(1); };
 
-  const filtered = useMemo(() => {
-    return SCREENER_STOCKS.filter(s => {
-      if (filters.sector && s.sector !== filters.sector) return false;
-      if (filters.mcapMin && s.mcap < +filters.mcapMin * 100) return false;
-      if (filters.mcapMax && s.mcap > +filters.mcapMax * 100) return false;
-      if (filters.peMin && s.pe < +filters.peMin) return false;
-      if (filters.peMax && s.pe > +filters.peMax) return false;
-      if (filters.pbMin && s.pb < +filters.pbMin) return false;
-      if (filters.pbMax && s.pb > +filters.pbMax) return false;
-      if (filters.roeMin && s.roe < +filters.roeMin) return false;
-      if (filters.roeMax && s.roe > +filters.roeMax) return false;
-      if (filters.revGrowthMin && s.revGrowth1Y < +filters.revGrowthMin) return false;
-      if (filters.profGrowthMin && s.profGrowth1Y < +filters.profGrowthMin) return false;
-      if (filters.debtEquityMax && s.debtEquity > +filters.debtEquityMax) return false;
-      if (filters.divYieldMin && s.divYield < +filters.divYieldMin) return false;
-      if (filters.promoterMin && s.promoter < +filters.promoterMin) return false;
-      return true;
-    }).sort((a, b) => {
-      const aVal = a[sortKey] as number;
-      const bVal = b[sortKey] as number;
-      return sortDir === 'desc' ? bVal - aVal : aVal - bVal;
-    });
-  }, [filters, sortKey, sortDir]);
-
-  const totalPages = Math.ceil(filtered.length / PER_PAGE);
-  const pageData = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const totalPages = Math.ceil(total / PER_PAGE);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir(d => d === 'desc' ? 'asc' : 'desc');
     else { setSortKey(key); setSortDir('desc'); }
+    setPage(1);
   };
 
   const SortIcon = ({ col }: { col: SortKey }) => {
@@ -246,7 +271,10 @@ export default function ScreenerPage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm text-[#6B6966]">
-                <span className="num font-semibold text-[#1A1917]">{filtered.length}</span> companies found
+                {loading
+                  ? <span className="text-[#9C9894]">Loading...</span>
+                  : <><span className="num font-semibold text-[#1A1917]">{total}</span> companies found</>
+                }
               </p>
             </div>
 
@@ -256,14 +284,14 @@ export default function ScreenerPage() {
                   <tr>
                     <th className="text-left">Company</th>
                     {[
-                      { key: 'mcap', label: 'Mkt Cap' },
+                      { key: 'market_cap', label: 'Mkt Cap' },
                       { key: 'pe', label: 'P/E' },
                       { key: 'pb', label: 'P/B' },
                       { key: 'roe', label: 'ROE %' },
-                      { key: 'revGrowth1Y', label: 'Rev Gr 1Y' },
-                      { key: 'profGrowth1Y', label: 'Pft Gr 1Y' },
-                      { key: 'debtEquity', label: 'D/E' },
-                      { key: 'divYield', label: 'Div Yield' },
+                      { key: 'revenue_growth_1y', label: 'Rev Gr 1Y' },
+                      { key: 'profit_growth_1y', label: 'Pft Gr 1Y' },
+                      { key: 'debt_to_equity', label: 'D/E' },
+                      { key: 'dividend_yield', label: 'Div Yield' },
                     ].map(col => (
                       <th
                         key={col.key}
@@ -278,13 +306,21 @@ export default function ScreenerPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {pageData.length === 0 ? (
+                  {loading ? (
+                    Array(8).fill(0).map((_, i) => (
+                      <tr key={i}>
+                        {Array(9).fill(0).map((_, j) => (
+                          <td key={j}><div className="h-4 bg-[#F1F0ED] rounded animate-pulse" /></td>
+                        ))}
+                      </tr>
+                    ))
+                  ) : results.length === 0 ? (
                     <tr>
                       <td colSpan={9} className="text-center py-12 text-[#9C9894] font-sans">
                         No stocks match your filters. Try relaxing the criteria.
                       </td>
                     </tr>
-                  ) : pageData.map(s => (
+                  ) : results.map(s => (
                     <tr key={s.symbol}>
                       <td>
                         <Link href={`/stocks/${s.symbol}`} className="group">
@@ -292,14 +328,14 @@ export default function ScreenerPage() {
                           <div className="text-[11px] text-[#9C9894] font-sans mt-0.5 max-w-[180px] truncate">{s.name}</div>
                         </Link>
                       </td>
-                      <td>{formatCrores(s.mcap)}</td>
-                      <td className={s.pe < 15 ? 'text-positive' : s.pe > 35 ? 'text-negative' : ''}>{s.pe}x</td>
-                      <td className={s.pb < 2 ? 'text-positive' : s.pb > 10 ? 'text-negative' : ''}>{s.pb}x</td>
-                      <td className={s.roe > 20 ? 'text-positive' : s.roe < 10 ? 'text-negative' : ''}>{s.roe}%</td>
-                      <td className={s.revGrowth1Y >= 0 ? 'text-positive' : 'text-negative'}>{s.revGrowth1Y >= 0 ? '+' : ''}{s.revGrowth1Y}%</td>
-                      <td className={s.profGrowth1Y >= 0 ? 'text-positive' : 'text-negative'}>{s.profGrowth1Y >= 0 ? '+' : ''}{s.profGrowth1Y}%</td>
-                      <td className={s.debtEquity < 0.5 ? 'text-positive' : s.debtEquity > 2 ? 'text-negative' : ''}>{s.debtEquity}x</td>
-                      <td>{s.divYield}%</td>
+                      <td>{s.market_cap ? formatCrores(s.market_cap) : '—'}</td>
+                      <td className={!s.pe ? '' : s.pe < 15 ? 'text-positive' : s.pe > 35 ? 'text-negative' : ''}>{s.pe ? `${s.pe}x` : '—'}</td>
+                      <td className={!s.pb ? '' : s.pb < 2 ? 'text-positive' : s.pb > 10 ? 'text-negative' : ''}>{s.pb ? `${s.pb}x` : '—'}</td>
+                      <td className={!s.roe ? '' : s.roe > 20 ? 'text-positive' : s.roe < 10 ? 'text-negative' : ''}>{s.roe ? `${s.roe}%` : '—'}</td>
+                      <td className={s.revenue_growth_1y == null ? '' : s.revenue_growth_1y >= 0 ? 'text-positive' : 'text-negative'}>{s.revenue_growth_1y != null ? `${s.revenue_growth_1y >= 0 ? '+' : ''}${s.revenue_growth_1y}%` : '—'}</td>
+                      <td className={s.profit_growth_1y == null ? '' : s.profit_growth_1y >= 0 ? 'text-positive' : 'text-negative'}>{s.profit_growth_1y != null ? `${s.profit_growth_1y >= 0 ? '+' : ''}${s.profit_growth_1y}%` : '—'}</td>
+                      <td className={!s.debt_to_equity ? '' : s.debt_to_equity < 0.5 ? 'text-positive' : s.debt_to_equity > 2 ? 'text-negative' : ''}>{s.debt_to_equity != null ? `${s.debt_to_equity}x` : '—'}</td>
+                      <td>{s.dividend_yield != null ? `${s.dividend_yield}%` : '—'}</td>
                     </tr>
                   ))}
                 </tbody>
