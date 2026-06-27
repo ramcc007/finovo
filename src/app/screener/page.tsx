@@ -1,0 +1,344 @@
+'use client';
+
+import { useState, useMemo } from 'react';
+import Link from 'next/link';
+import { SlidersHorizontal, Download, RotateCcw, ChevronUp, ChevronDown } from 'lucide-react';
+import { SCREENER_STOCKS } from '@/lib/mock-data';
+import { cn, formatCrores } from '@/lib/utils';
+
+type SortKey = 'mcap' | 'pe' | 'pb' | 'roe' | 'revGrowth1Y' | 'profGrowth1Y' | 'debtEquity' | 'divYield';
+
+interface Filters {
+  sector: string;
+  mcapMin: string; mcapMax: string;
+  peMin: string; peMax: string;
+  pbMin: string; pbMax: string;
+  roeMin: string;
+  roeMax: string;
+  revGrowthMin: string;
+  profGrowthMin: string;
+  debtEquityMax: string;
+  divYieldMin: string;
+  promoterMin: string;
+  pledgeMax: string;
+}
+
+const defaultFilters: Filters = {
+  sector: '', mcapMin: '', mcapMax: '', peMin: '', peMax: '',
+  pbMin: '', pbMax: '', roeMin: '', roeMax: '', revGrowthMin: '',
+  profGrowthMin: '', debtEquityMax: '', divYieldMin: '', promoterMin: '', pledgeMax: '',
+};
+
+const SECTORS = ['IT', 'Banking', 'NBFC', 'FMCG', 'Auto', 'Pharma', 'Oil & Gas', 'Power'];
+
+function FilterSection({ title, children }: { title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="border-b border-[#EEEDE9] last:border-0">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#F8F7F4] transition-colors"
+      >
+        <span className="text-xs font-semibold text-[#6B6966] uppercase tracking-wide">{title}</span>
+        {open ? <ChevronUp size={14} className="text-[#9C9894]" /> : <ChevronDown size={14} className="text-[#9C9894]" />}
+      </button>
+      {open && <div className="px-4 pb-4 space-y-3">{children}</div>}
+    </div>
+  );
+}
+
+function RangeInput({ label, minKey, maxKey, filters, onChange, unit = '' }: {
+  label: string; minKey: keyof Filters; maxKey: keyof Filters;
+  filters: Filters; onChange: (k: keyof Filters, v: string) => void; unit?: string;
+}) {
+  return (
+    <div>
+      <label className="block text-xs text-[#9C9894] mb-1.5">{label}{unit && ` (${unit})`}</label>
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          placeholder="Min"
+          value={filters[minKey]}
+          onChange={e => onChange(minKey, e.target.value)}
+          className="w-full text-xs bg-[#F8F7F4] border border-[#E5E4E0] rounded-[6px] px-2.5 py-2 text-[#1A1917] placeholder:text-[#9C9894] outline-none focus:border-[#4F46E5] transition-colors"
+        />
+        <span className="text-[#9C9894] text-xs shrink-0">to</span>
+        <input
+          type="number"
+          placeholder="Max"
+          value={filters[maxKey]}
+          onChange={e => onChange(maxKey, e.target.value)}
+          className="w-full text-xs bg-[#F8F7F4] border border-[#E5E4E0] rounded-[6px] px-2.5 py-2 text-[#1A1917] placeholder:text-[#9C9894] outline-none focus:border-[#4F46E5] transition-colors"
+        />
+      </div>
+    </div>
+  );
+}
+
+function MinInput({ label, filterKey, filters, onChange, unit = '' }: {
+  label: string; filterKey: keyof Filters;
+  filters: Filters; onChange: (k: keyof Filters, v: string) => void; unit?: string;
+}) {
+  return (
+    <div>
+      <label className="block text-xs text-[#9C9894] mb-1.5">{label}{unit && ` (${unit})`}</label>
+      <input
+        type="number"
+        placeholder="Min value"
+        value={filters[filterKey]}
+        onChange={e => onChange(filterKey, e.target.value)}
+        className="w-full text-xs bg-[#F8F7F4] border border-[#E5E4E0] rounded-[6px] px-2.5 py-2 text-[#1A1917] placeholder:text-[#9C9894] outline-none focus:border-[#4F46E5] transition-colors"
+      />
+    </div>
+  );
+}
+
+export default function ScreenerPage() {
+  const [filters, setFilters] = useState<Filters>(defaultFilters);
+  const [sortKey, setSortKey] = useState<SortKey>('mcap');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [page, setPage] = useState(1);
+  const PER_PAGE = 10;
+
+  const updateFilter = (key: keyof Filters, value: string) => {
+    setFilters(f => ({ ...f, [key]: value }));
+    setPage(1);
+  };
+
+  const clearFilters = () => { setFilters(defaultFilters); setPage(1); };
+
+  const filtered = useMemo(() => {
+    return SCREENER_STOCKS.filter(s => {
+      if (filters.sector && s.sector !== filters.sector) return false;
+      if (filters.mcapMin && s.mcap < +filters.mcapMin * 100) return false;
+      if (filters.mcapMax && s.mcap > +filters.mcapMax * 100) return false;
+      if (filters.peMin && s.pe < +filters.peMin) return false;
+      if (filters.peMax && s.pe > +filters.peMax) return false;
+      if (filters.pbMin && s.pb < +filters.pbMin) return false;
+      if (filters.pbMax && s.pb > +filters.pbMax) return false;
+      if (filters.roeMin && s.roe < +filters.roeMin) return false;
+      if (filters.roeMax && s.roe > +filters.roeMax) return false;
+      if (filters.revGrowthMin && s.revGrowth1Y < +filters.revGrowthMin) return false;
+      if (filters.profGrowthMin && s.profGrowth1Y < +filters.profGrowthMin) return false;
+      if (filters.debtEquityMax && s.debtEquity > +filters.debtEquityMax) return false;
+      if (filters.divYieldMin && s.divYield < +filters.divYieldMin) return false;
+      if (filters.promoterMin && s.promoter < +filters.promoterMin) return false;
+      return true;
+    }).sort((a, b) => {
+      const aVal = a[sortKey] as number;
+      const bVal = b[sortKey] as number;
+      return sortDir === 'desc' ? bVal - aVal : aVal - bVal;
+    });
+  }, [filters, sortKey, sortDir]);
+
+  const totalPages = Math.ceil(filtered.length / PER_PAGE);
+  const pageData = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir(d => d === 'desc' ? 'asc' : 'desc');
+    else { setSortKey(key); setSortDir('desc'); }
+  };
+
+  const SortIcon = ({ col }: { col: SortKey }) => {
+    if (sortKey !== col) return <span className="text-[#E5E4E0]">↕</span>;
+    return sortDir === 'desc' ? <ChevronDown size={12} className="text-[#4F46E5]" /> : <ChevronUp size={12} className="text-[#4F46E5]" />;
+  };
+
+  const activeFilterCount = Object.values(filters).filter(v => v !== '').length;
+
+  return (
+    <div className="min-h-screen bg-[#F8F7F4]">
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h1 className="text-xl font-bold text-[#1A1917]">Stock Screener</h1>
+            <p className="text-sm text-[#6B6966] mt-0.5">Filter and find stocks across 5000+ NSE & BSE companies</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {activeFilterCount > 0 && (
+              <span className="text-xs bg-[#4F46E5] text-white px-2 py-0.5 rounded-full font-semibold">{activeFilterCount} filters</span>
+            )}
+            <button
+              onClick={() => {}}
+              className="flex items-center gap-1.5 text-sm text-[#6B6966] border border-[#E5E4E0] bg-white px-3 py-1.5 rounded-[6px] hover:border-[#9C9894] transition-colors"
+            >
+              <Download size={13} /> Export CSV
+            </button>
+          </div>
+        </div>
+
+        <div className="flex gap-5">
+          {/* Filter Panel */}
+          <div className="w-[280px] shrink-0">
+            <div className="card-plain overflow-hidden sticky top-20">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[#EEEDE9]">
+                <div className="flex items-center gap-2">
+                  <SlidersHorizontal size={14} className="text-[#4F46E5]" />
+                  <span className="text-sm font-semibold text-[#1A1917]">Filters</span>
+                </div>
+                <button onClick={clearFilters} className="flex items-center gap-1 text-xs text-[#6B6966] hover:text-[#DC2626] transition-colors">
+                  <RotateCcw size={11} /> Clear all
+                </button>
+              </div>
+
+              <div className="max-h-[calc(100vh-160px)] overflow-y-auto">
+                <FilterSection title="Classification">
+                  <div>
+                    <label className="block text-xs text-[#9C9894] mb-1.5">Sector</label>
+                    <select
+                      value={filters.sector}
+                      onChange={e => updateFilter('sector', e.target.value)}
+                      className="w-full text-xs bg-[#F8F7F4] border border-[#E5E4E0] rounded-[6px] px-2.5 py-2 text-[#1A1917] outline-none focus:border-[#4F46E5] transition-colors"
+                    >
+                      <option value="">All Sectors</option>
+                      {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <RangeInput label="Market Cap" minKey="mcapMin" maxKey="mcapMax" filters={filters} onChange={updateFilter} unit="₹ Cr" />
+                </FilterSection>
+
+                <FilterSection title="Valuation">
+                  <RangeInput label="P/E Ratio" minKey="peMin" maxKey="peMax" filters={filters} onChange={updateFilter} />
+                  <RangeInput label="P/B Ratio" minKey="pbMin" maxKey="pbMax" filters={filters} onChange={updateFilter} />
+                  <MinInput label="Dividend Yield" filterKey="divYieldMin" filters={filters} onChange={updateFilter} unit="%" />
+                </FilterSection>
+
+                <FilterSection title="Profitability">
+                  <RangeInput label="ROE" minKey="roeMin" maxKey="roeMax" filters={filters} onChange={updateFilter} unit="%" />
+                </FilterSection>
+
+                <FilterSection title="Growth">
+                  <MinInput label="Revenue Growth 1Y" filterKey="revGrowthMin" filters={filters} onChange={updateFilter} unit="%" />
+                  <MinInput label="Profit Growth 1Y" filterKey="profGrowthMin" filters={filters} onChange={updateFilter} unit="%" />
+                </FilterSection>
+
+                <FilterSection title="Financial Health">
+                  <div>
+                    <label className="block text-xs text-[#9C9894] mb-1.5">Debt/Equity (Max)</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 0.5"
+                      value={filters.debtEquityMax}
+                      onChange={e => updateFilter('debtEquityMax', e.target.value)}
+                      className="w-full text-xs bg-[#F8F7F4] border border-[#E5E4E0] rounded-[6px] px-2.5 py-2 text-[#1A1917] placeholder:text-[#9C9894] outline-none focus:border-[#4F46E5] transition-colors"
+                    />
+                  </div>
+                </FilterSection>
+
+                <FilterSection title="Shareholding">
+                  <MinInput label="Promoter Holding" filterKey="promoterMin" filters={filters} onChange={updateFilter} unit="%" />
+                  <div>
+                    <label className="block text-xs text-[#9C9894] mb-1.5">Max Pledge % (0 = No Pledge)</label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 0"
+                      value={filters.pledgeMax}
+                      onChange={e => updateFilter('pledgeMax', e.target.value)}
+                      className="w-full text-xs bg-[#F8F7F4] border border-[#E5E4E0] rounded-[6px] px-2.5 py-2 text-[#1A1917] placeholder:text-[#9C9894] outline-none focus:border-[#4F46E5] transition-colors"
+                    />
+                  </div>
+                </FilterSection>
+              </div>
+            </div>
+          </div>
+
+          {/* Results */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm text-[#6B6966]">
+                <span className="num font-semibold text-[#1A1917]">{filtered.length}</span> companies found
+              </p>
+            </div>
+
+            <div className="card p-0 overflow-auto">
+              <table className="data-table min-w-[700px]">
+                <thead>
+                  <tr>
+                    <th className="text-left">Company</th>
+                    {[
+                      { key: 'mcap', label: 'Mkt Cap' },
+                      { key: 'pe', label: 'P/E' },
+                      { key: 'pb', label: 'P/B' },
+                      { key: 'roe', label: 'ROE %' },
+                      { key: 'revGrowth1Y', label: 'Rev Gr 1Y' },
+                      { key: 'profGrowth1Y', label: 'Pft Gr 1Y' },
+                      { key: 'debtEquity', label: 'D/E' },
+                      { key: 'divYield', label: 'Div Yield' },
+                    ].map(col => (
+                      <th
+                        key={col.key}
+                        onClick={() => handleSort(col.key as SortKey)}
+                        className="cursor-pointer select-none hover:text-[#1A1917] transition-colors"
+                      >
+                        <span className="flex items-center justify-end gap-1">
+                          {col.label} <SortIcon col={col.key as SortKey} />
+                        </span>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {pageData.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="text-center py-12 text-[#9C9894] font-sans">
+                        No stocks match your filters. Try relaxing the criteria.
+                      </td>
+                    </tr>
+                  ) : pageData.map(s => (
+                    <tr key={s.symbol}>
+                      <td>
+                        <Link href={`/stocks/${s.symbol}`} className="group">
+                          <div className="font-semibold text-[#4F46E5] group-hover:underline">{s.symbol}</div>
+                          <div className="text-[11px] text-[#9C9894] font-sans mt-0.5 max-w-[180px] truncate">{s.name}</div>
+                        </Link>
+                      </td>
+                      <td>{formatCrores(s.mcap)}</td>
+                      <td className={s.pe < 15 ? 'text-positive' : s.pe > 35 ? 'text-negative' : ''}>{s.pe}x</td>
+                      <td className={s.pb < 2 ? 'text-positive' : s.pb > 10 ? 'text-negative' : ''}>{s.pb}x</td>
+                      <td className={s.roe > 20 ? 'text-positive' : s.roe < 10 ? 'text-negative' : ''}>{s.roe}%</td>
+                      <td className={s.revGrowth1Y >= 0 ? 'text-positive' : 'text-negative'}>{s.revGrowth1Y >= 0 ? '+' : ''}{s.revGrowth1Y}%</td>
+                      <td className={s.profGrowth1Y >= 0 ? 'text-positive' : 'text-negative'}>{s.profGrowth1Y >= 0 ? '+' : ''}{s.profGrowth1Y}%</td>
+                      <td className={s.debtEquity < 0.5 ? 'text-positive' : s.debtEquity > 2 ? 'text-negative' : ''}>{s.debtEquity}x</td>
+                      <td>{s.divYield}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-4">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="text-xs px-3 py-1.5 border border-[#E5E4E0] rounded-[6px] text-[#6B6966] disabled:opacity-40 hover:border-[#4F46E5] hover:text-[#4F46E5] transition-colors"
+                >
+                  ← Prev
+                </button>
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(p => (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={cn(
+                      'text-xs w-8 h-8 rounded-[6px] transition-colors',
+                      page === p ? 'bg-[#4F46E5] text-white' : 'border border-[#E5E4E0] text-[#6B6966] hover:border-[#4F46E5]'
+                    )}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="text-xs px-3 py-1.5 border border-[#E5E4E0] rounded-[6px] text-[#6B6966] disabled:opacity-40 hover:border-[#4F46E5] hover:text-[#4F46E5] transition-colors"
+                >
+                  Next →
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
