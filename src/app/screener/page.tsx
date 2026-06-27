@@ -33,13 +33,13 @@ const SECTORS = ['IT', 'Banking', 'NBFC', 'FMCG', 'Auto', 'Pharma', 'Oil & Gas',
 function FilterSection({ title, children }: { title: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(true);
   return (
-    <div className="border-b border-[#EEEDE9] last:border-0">
+    <div className="border-b border-[#EDF0F7] last:border-0">
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#F8F7F4] transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#F4F6FA] transition-colors"
       >
-        <span className="text-xs font-semibold text-[#6B6966] uppercase tracking-wide">{title}</span>
-        {open ? <ChevronUp size={14} className="text-[#9C9894]" /> : <ChevronDown size={14} className="text-[#9C9894]" />}
+        <span className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide">{title}</span>
+        {open ? <ChevronUp size={14} className="text-[#8A96A8]" /> : <ChevronDown size={14} className="text-[#8A96A8]" />}
       </button>
       {open && <div className="px-4 pb-4 space-y-3">{children}</div>}
     </div>
@@ -52,22 +52,22 @@ function RangeInput({ label, minKey, maxKey, filters, onChange, unit = '' }: {
 }) {
   return (
     <div>
-      <label className="block text-xs text-[#9C9894] mb-1.5">{label}{unit && ` (${unit})`}</label>
+      <label className="block text-xs text-[#8A96A8] mb-1.5">{label}{unit && ` (${unit})`}</label>
       <div className="flex items-center gap-2">
         <input
           type="number"
           placeholder="Min"
           value={filters[minKey]}
           onChange={e => onChange(minKey, e.target.value)}
-          className="w-full text-xs bg-[#F8F7F4] border border-[#E5E4E0] rounded-[6px] px-2.5 py-2 text-[#1A1917] placeholder:text-[#9C9894] outline-none focus:border-[#4F46E5] transition-colors"
+          className="w-full text-xs bg-[#F4F6FA] border border-[#E2E8F0] rounded-[6px] px-2.5 py-2 text-[#0D1117] placeholder:text-[#8A96A8] outline-none focus:border-[#F97316] transition-colors"
         />
-        <span className="text-[#9C9894] text-xs shrink-0">to</span>
+        <span className="text-[#8A96A8] text-xs shrink-0">to</span>
         <input
           type="number"
           placeholder="Max"
           value={filters[maxKey]}
           onChange={e => onChange(maxKey, e.target.value)}
-          className="w-full text-xs bg-[#F8F7F4] border border-[#E5E4E0] rounded-[6px] px-2.5 py-2 text-[#1A1917] placeholder:text-[#9C9894] outline-none focus:border-[#4F46E5] transition-colors"
+          className="w-full text-xs bg-[#F4F6FA] border border-[#E2E8F0] rounded-[6px] px-2.5 py-2 text-[#0D1117] placeholder:text-[#8A96A8] outline-none focus:border-[#F97316] transition-colors"
         />
       </div>
     </div>
@@ -80,13 +80,13 @@ function MinInput({ label, filterKey, filters, onChange, unit = '' }: {
 }) {
   return (
     <div>
-      <label className="block text-xs text-[#9C9894] mb-1.5">{label}{unit && ` (${unit})`}</label>
+      <label className="block text-xs text-[#8A96A8] mb-1.5">{label}{unit && ` (${unit})`}</label>
       <input
         type="number"
         placeholder="Min value"
         value={filters[filterKey]}
         onChange={e => onChange(filterKey, e.target.value)}
-        className="w-full text-xs bg-[#F8F7F4] border border-[#E5E4E0] rounded-[6px] px-2.5 py-2 text-[#1A1917] placeholder:text-[#9C9894] outline-none focus:border-[#4F46E5] transition-colors"
+        className="w-full text-xs bg-[#F4F6FA] border border-[#E2E8F0] rounded-[6px] px-2.5 py-2 text-[#0D1117] placeholder:text-[#8A96A8] outline-none focus:border-[#F97316] transition-colors"
       />
     </div>
   );
@@ -165,27 +165,27 @@ export default function ScreenerPage() {
   };
 
   const SortIcon = ({ col }: { col: SortKey }) => {
-    if (sortKey !== col) return <span className="text-[#E5E4E0]">↕</span>;
-    return sortDir === 'desc' ? <ChevronDown size={12} className="text-[#4F46E5]" /> : <ChevronUp size={12} className="text-[#4F46E5]" />;
+    if (sortKey !== col) return <span className="text-[#E2E8F0]">↕</span>;
+    return sortDir === 'desc' ? <ChevronDown size={12} className="text-[#F97316]" /> : <ChevronUp size={12} className="text-[#F97316]" />;
   };
 
   const activeFilterCount = Object.values(filters).filter(v => v !== '').length;
 
   return (
-    <div className="min-h-screen bg-[#F8F7F4]">
+    <div className="min-h-screen bg-[#F4F6FA]">
       <div className="max-w-7xl mx-auto px-6 py-6">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h1 className="text-xl font-bold text-[#1A1917]">Stock Screener</h1>
-            <p className="text-sm text-[#6B6966] mt-0.5">Filter and find stocks across 5000+ NSE & BSE companies</p>
+            <h1 className="text-xl font-bold text-[#0D1117]">Stock Screener</h1>
+            <p className="text-sm text-[#4A5568] mt-0.5">Filter and find stocks across 5000+ NSE & BSE companies</p>
           </div>
           <div className="flex items-center gap-2">
             {activeFilterCount > 0 && (
-              <span className="text-xs bg-[#4F46E5] text-white px-2 py-0.5 rounded-full font-semibold">{activeFilterCount} filters</span>
+              <span className="text-xs bg-[#F97316] text-white px-2 py-0.5 rounded-full font-semibold">{activeFilterCount} filters</span>
             )}
             <button
               onClick={() => {}}
-              className="flex items-center gap-1.5 text-sm text-[#6B6966] border border-[#E5E4E0] bg-white px-3 py-1.5 rounded-[6px] hover:border-[#9C9894] transition-colors"
+              className="flex items-center gap-1.5 text-sm text-[#4A5568] border border-[#E2E8F0] bg-white px-3 py-1.5 rounded-[6px] hover:border-[#8A96A8] transition-colors"
             >
               <Download size={13} /> Export CSV
             </button>
@@ -196,12 +196,12 @@ export default function ScreenerPage() {
           {/* Filter Panel */}
           <div className="w-[280px] shrink-0">
             <div className="card-plain overflow-hidden sticky top-20">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-[#EEEDE9]">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[#EDF0F7]">
                 <div className="flex items-center gap-2">
-                  <SlidersHorizontal size={14} className="text-[#4F46E5]" />
-                  <span className="text-sm font-semibold text-[#1A1917]">Filters</span>
+                  <SlidersHorizontal size={14} className="text-[#F97316]" />
+                  <span className="text-sm font-semibold text-[#0D1117]">Filters</span>
                 </div>
-                <button onClick={clearFilters} className="flex items-center gap-1 text-xs text-[#6B6966] hover:text-[#DC2626] transition-colors">
+                <button onClick={clearFilters} className="flex items-center gap-1 text-xs text-[#4A5568] hover:text-[#DC2626] transition-colors">
                   <RotateCcw size={11} /> Clear all
                 </button>
               </div>
@@ -209,11 +209,11 @@ export default function ScreenerPage() {
               <div className="max-h-[calc(100vh-160px)] overflow-y-auto">
                 <FilterSection title="Classification">
                   <div>
-                    <label className="block text-xs text-[#9C9894] mb-1.5">Sector</label>
+                    <label className="block text-xs text-[#8A96A8] mb-1.5">Sector</label>
                     <select
                       value={filters.sector}
                       onChange={e => updateFilter('sector', e.target.value)}
-                      className="w-full text-xs bg-[#F8F7F4] border border-[#E5E4E0] rounded-[6px] px-2.5 py-2 text-[#1A1917] outline-none focus:border-[#4F46E5] transition-colors"
+                      className="w-full text-xs bg-[#F4F6FA] border border-[#E2E8F0] rounded-[6px] px-2.5 py-2 text-[#0D1117] outline-none focus:border-[#F97316] transition-colors"
                     >
                       <option value="">All Sectors</option>
                       {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
@@ -239,13 +239,13 @@ export default function ScreenerPage() {
 
                 <FilterSection title="Financial Health">
                   <div>
-                    <label className="block text-xs text-[#9C9894] mb-1.5">Debt/Equity (Max)</label>
+                    <label className="block text-xs text-[#8A96A8] mb-1.5">Debt/Equity (Max)</label>
                     <input
                       type="number"
                       placeholder="e.g. 0.5"
                       value={filters.debtEquityMax}
                       onChange={e => updateFilter('debtEquityMax', e.target.value)}
-                      className="w-full text-xs bg-[#F8F7F4] border border-[#E5E4E0] rounded-[6px] px-2.5 py-2 text-[#1A1917] placeholder:text-[#9C9894] outline-none focus:border-[#4F46E5] transition-colors"
+                      className="w-full text-xs bg-[#F4F6FA] border border-[#E2E8F0] rounded-[6px] px-2.5 py-2 text-[#0D1117] placeholder:text-[#8A96A8] outline-none focus:border-[#F97316] transition-colors"
                     />
                   </div>
                 </FilterSection>
@@ -253,13 +253,13 @@ export default function ScreenerPage() {
                 <FilterSection title="Shareholding">
                   <MinInput label="Promoter Holding" filterKey="promoterMin" filters={filters} onChange={updateFilter} unit="%" />
                   <div>
-                    <label className="block text-xs text-[#9C9894] mb-1.5">Max Pledge % (0 = No Pledge)</label>
+                    <label className="block text-xs text-[#8A96A8] mb-1.5">Max Pledge % (0 = No Pledge)</label>
                     <input
                       type="number"
                       placeholder="e.g. 0"
                       value={filters.pledgeMax}
                       onChange={e => updateFilter('pledgeMax', e.target.value)}
-                      className="w-full text-xs bg-[#F8F7F4] border border-[#E5E4E0] rounded-[6px] px-2.5 py-2 text-[#1A1917] placeholder:text-[#9C9894] outline-none focus:border-[#4F46E5] transition-colors"
+                      className="w-full text-xs bg-[#F4F6FA] border border-[#E2E8F0] rounded-[6px] px-2.5 py-2 text-[#0D1117] placeholder:text-[#8A96A8] outline-none focus:border-[#F97316] transition-colors"
                     />
                   </div>
                 </FilterSection>
@@ -270,10 +270,10 @@ export default function ScreenerPage() {
           {/* Results */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm text-[#6B6966]">
+              <p className="text-sm text-[#4A5568]">
                 {loading
-                  ? <span className="text-[#9C9894]">Loading...</span>
-                  : <><span className="num font-semibold text-[#1A1917]">{total}</span> companies found</>
+                  ? <span className="text-[#8A96A8]">Loading...</span>
+                  : <><span className="num font-semibold text-[#0D1117]">{total}</span> companies found</>
                 }
               </p>
             </div>
@@ -296,7 +296,7 @@ export default function ScreenerPage() {
                       <th
                         key={col.key}
                         onClick={() => handleSort(col.key as SortKey)}
-                        className="cursor-pointer select-none hover:text-[#1A1917] transition-colors"
+                        className="cursor-pointer select-none hover:text-[#0D1117] transition-colors"
                       >
                         <span className="flex items-center justify-end gap-1">
                           {col.label} <SortIcon col={col.key as SortKey} />
@@ -310,13 +310,13 @@ export default function ScreenerPage() {
                     Array(8).fill(0).map((_, i) => (
                       <tr key={i}>
                         {Array(9).fill(0).map((_, j) => (
-                          <td key={j}><div className="h-4 bg-[#F1F0ED] rounded animate-pulse" /></td>
+                          <td key={j}><div className="h-4 bg-[#EEF1F7] rounded animate-pulse" /></td>
                         ))}
                       </tr>
                     ))
                   ) : results.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="text-center py-12 text-[#9C9894] font-sans">
+                      <td colSpan={9} className="text-center py-12 text-[#8A96A8] font-sans">
                         No stocks match your filters. Try relaxing the criteria.
                       </td>
                     </tr>
@@ -324,8 +324,8 @@ export default function ScreenerPage() {
                     <tr key={s.symbol}>
                       <td>
                         <Link href={`/stocks/${s.symbol}`} className="group">
-                          <div className="font-semibold text-[#4F46E5] group-hover:underline">{s.symbol}</div>
-                          <div className="text-[11px] text-[#9C9894] font-sans mt-0.5 max-w-[180px] truncate">{s.name}</div>
+                          <div className="font-semibold text-[#F97316] group-hover:underline">{s.symbol}</div>
+                          <div className="text-[11px] text-[#8A96A8] font-sans mt-0.5 max-w-[180px] truncate">{s.name}</div>
                         </Link>
                       </td>
                       <td>{s.market_cap ? formatCrores(s.market_cap) : '—'}</td>
@@ -347,7 +347,7 @@ export default function ScreenerPage() {
                 <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="text-xs px-3 py-1.5 border border-[#E5E4E0] rounded-[6px] text-[#6B6966] disabled:opacity-40 hover:border-[#4F46E5] hover:text-[#4F46E5] transition-colors"
+                  className="text-xs px-3 py-1.5 border border-[#E2E8F0] rounded-[6px] text-[#4A5568] disabled:opacity-40 hover:border-[#F97316] hover:text-[#F97316] transition-colors"
                 >
                   ← Prev
                 </button>
@@ -357,7 +357,7 @@ export default function ScreenerPage() {
                     onClick={() => setPage(p)}
                     className={cn(
                       'text-xs w-8 h-8 rounded-[6px] transition-colors',
-                      page === p ? 'bg-[#4F46E5] text-white' : 'border border-[#E5E4E0] text-[#6B6966] hover:border-[#4F46E5]'
+                      page === p ? 'bg-[#F97316] text-white' : 'border border-[#E2E8F0] text-[#4A5568] hover:border-[#F97316]'
                     )}
                   >
                     {p}
@@ -366,7 +366,7 @@ export default function ScreenerPage() {
                 <button
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="text-xs px-3 py-1.5 border border-[#E5E4E0] rounded-[6px] text-[#6B6966] disabled:opacity-40 hover:border-[#4F46E5] hover:text-[#4F46E5] transition-colors"
+                  className="text-xs px-3 py-1.5 border border-[#E2E8F0] rounded-[6px] text-[#4A5568] disabled:opacity-40 hover:border-[#F97316] hover:text-[#F97316] transition-colors"
                 >
                   Next →
                 </button>

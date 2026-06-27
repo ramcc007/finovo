@@ -51,13 +51,13 @@ function RatioRow({ label, value, unit = '', industryAvg, inverse = false }: {
   label: string; value: number | null | undefined; unit?: string; industryAvg?: number; inverse?: boolean;
 }) {
   if (value === null || value === undefined) return (
-    <div className="py-3 border-b border-[#EEEDE9] last:border-0 flex justify-between">
-      <span className="text-sm text-[#6B6966]">{label}</span>
-      <span className="text-sm text-[#9C9894]">—</span>
+    <div className="py-3 border-b border-[#EDF0F7] last:border-0 flex justify-between">
+      <span className="text-sm text-[#4A5568]">{label}</span>
+      <span className="text-sm text-[#8A96A8]">—</span>
     </div>
   );
 
-  let color = '#9C9894';
+  let color = '#8A96A8';
   if (industryAvg !== undefined) {
     const better = inverse ? value < industryAvg : value > industryAvg;
     color = better ? '#16A34A' : '#D97706';
@@ -65,17 +65,17 @@ function RatioRow({ label, value, unit = '', industryAvg, inverse = false }: {
   const pct = industryAvg ? Math.min((value / (industryAvg * 2)) * 100, 100) : 50;
 
   return (
-    <div className="py-3 border-b border-[#EEEDE9] last:border-0">
+    <div className="py-3 border-b border-[#EDF0F7] last:border-0">
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-sm text-[#6B6966]">{label}</span>
-        <span className="num text-sm font-semibold text-[#1A1917]">{value.toFixed(1)}{unit}</span>
+        <span className="text-sm text-[#4A5568]">{label}</span>
+        <span className="num text-sm font-semibold text-[#0D1117]">{value.toFixed(1)}{unit}</span>
       </div>
       {industryAvg !== undefined && (
         <div className="flex items-center gap-2">
-          <div className="flex-1 h-1.5 bg-[#F1F0ED] rounded-full overflow-hidden">
+          <div className="flex-1 h-1.5 bg-[#EEF1F7] rounded-full overflow-hidden">
             <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
           </div>
-          <span className="text-[11px] text-[#9C9894] shrink-0">Ind avg: {industryAvg}{unit}</span>
+          <span className="text-[11px] text-[#8A96A8] shrink-0">Ind avg: {industryAvg}{unit}</span>
         </div>
       )}
     </div>
@@ -83,7 +83,7 @@ function RatioRow({ label, value, unit = '', industryAvg, inverse = false }: {
 }
 
 function Skeleton({ className }: { className?: string }) {
-  return <div className={cn('animate-pulse bg-[#F1F0ED] rounded', className)} />;
+  return <div className={cn('animate-pulse bg-[#EEF1F7] rounded', className)} />;
 }
 
 export default function StockPage() {
@@ -136,11 +136,11 @@ export default function StockPage() {
   const npKey = 'net_profit' in (finData[0] ?? {}) ? 'net_profit' : 'netProfit';
 
   return (
-    <div className="min-h-screen bg-[#F8F7F4]">
+    <div className="min-h-screen bg-[#F4F6FA]">
       {/* Header */}
-      <div className="bg-white border-b border-[#E5E4E0]">
+      <div className="bg-white border-b border-[#E2E8F0]">
         <div className="max-w-7xl mx-auto px-6 py-5">
-          <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-[#6B6966] hover:text-[#1A1917] mb-4 transition-colors">
+          <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-[#4A5568] hover:text-[#0D1117] mb-4 transition-colors">
             <ArrowLeft size={14} /> Back
           </Link>
 
@@ -154,13 +154,13 @@ export default function StockPage() {
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
               <div>
                 <div className="flex items-center gap-3 mb-1 flex-wrap">
-                  <h1 className="text-2xl font-bold text-[#1A1917]">{symbol}</h1>
+                  <h1 className="text-2xl font-bold text-[#0D1117]">{symbol}</h1>
                   {c?.sector && (
-                    <span className="text-[11px] bg-[#EEF2FF] text-[#4F46E5] px-2 py-0.5 rounded font-medium">{c.sector}</span>
+                    <span className="text-[11px] bg-[#FFF7ED] text-[#F97316] px-2 py-0.5 rounded font-medium">{c.sector}</span>
                   )}
                 </div>
-                <p className="text-[#6B6966] text-sm mb-1">{c?.name}</p>
-                <p className="text-[11px] text-[#9C9894]">
+                <p className="text-[#4A5568] text-sm mb-1">{c?.name}</p>
+                <p className="text-[11px] text-[#8A96A8]">
                   NSE: {symbol}
                   {c?.bse_code && ` · BSE: ${c.bse_code}`}
                   {c?.industry && ` · ${c.industry}`}
@@ -169,12 +169,12 @@ export default function StockPage() {
 
               <div className="flex flex-col items-start md:items-end gap-2">
                 <div className="flex items-center gap-3">
-                  <span className="num text-3xl font-bold text-[#1A1917]">
+                  <span className="num text-3xl font-bold text-[#0D1117]">
                     ₹ {formatPrice(q?.price ?? 0)}
                   </span>
                   <ChangeBadge value={q?.change_pct ?? 0} />
                 </div>
-                <div className="text-sm text-[#6B6966] flex items-center gap-2">
+                <div className="text-sm text-[#4A5568] flex items-center gap-2">
                   <span className="num">{(q?.change ?? 0) >= 0 ? '+' : ''}₹{(q?.change ?? 0).toFixed(2)}</span>
                   <span>·</span>
                   <span>As of 3:30 PM, NSE</span>
@@ -184,8 +184,8 @@ export default function StockPage() {
                   className={cn(
                     'flex items-center gap-1.5 text-sm font-medium px-4 py-1.5 rounded-[6px] transition-all',
                     watchlisted
-                      ? 'bg-[#EEF2FF] text-[#4F46E5] border border-[#4F46E5]'
-                      : 'border border-[#E5E4E0] text-[#6B6966] hover:border-[#4F46E5] hover:text-[#4F46E5]'
+                      ? 'bg-[#FFF7ED] text-[#F97316] border border-[#F97316]'
+                      : 'border border-[#E2E8F0] text-[#4A5568] hover:border-[#F97316] hover:text-[#F97316]'
                   )}
                 >
                   {watchlisted ? <Check size={14} /> : <Plus size={14} />}
@@ -198,13 +198,13 @@ export default function StockPage() {
           {/* 52W Range */}
           {!loading && (
             <div className="mt-4 max-w-md">
-              <div className="flex justify-between text-[11px] text-[#9C9894] mb-1.5">
+              <div className="flex justify-between text-[11px] text-[#8A96A8] mb-1.5">
                 <span>52W Low: <span className="num font-semibold text-[#DC2626]">₹{weekLow.toLocaleString('en-IN')}</span></span>
                 <span>52W High: <span className="num font-semibold text-[#16A34A]">₹{weekHigh.toLocaleString('en-IN')}</span></span>
               </div>
-              <div className="relative h-2 rounded-full overflow-hidden bg-gradient-to-r from-[#FEE2E2] via-[#EEF2FF] to-[#DCFCE7]">
+              <div className="relative h-2 rounded-full overflow-hidden bg-gradient-to-r from-[#FEE2E2] via-[#FFF7ED] to-[#DCFCE7]">
                 <div
-                  className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-[#4F46E5] rounded-full border-2 border-white shadow-sm"
+                  className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-[#F97316] rounded-full border-2 border-white shadow-sm"
                   style={{ left: `calc(${pricePos}% - 6px)` }}
                 />
               </div>
@@ -221,7 +221,7 @@ export default function StockPage() {
                 onClick={() => setActiveTab(tab)}
                 className={cn(
                   'px-5 py-3 text-sm font-medium border-b-2 transition-colors',
-                  activeTab === tab ? 'border-[#4F46E5] text-[#4F46E5]' : 'border-transparent text-[#6B6966] hover:text-[#1A1917]'
+                  activeTab === tab ? 'border-[#F97316] text-[#F97316]' : 'border-transparent text-[#4A5568] hover:text-[#0D1117]'
                 )}
               >
                 {tab}
@@ -245,8 +245,8 @@ export default function StockPage() {
 
             {/* Key Metrics */}
             <div className="card p-0 overflow-hidden">
-              <div className="px-4 py-3 border-b border-[#EEEDE9]">
-                <h3 className="text-xs font-semibold text-[#6B6966] uppercase tracking-wide">Key Metrics</h3>
+              <div className="px-4 py-3 border-b border-[#EDF0F7]">
+                <h3 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide">Key Metrics</h3>
               </div>
               {loading ? (
                 <div className="p-4 space-y-3">{Array(12).fill(0).map((_, i) => <Skeleton key={i} className="h-5 w-full" />)}</div>
@@ -265,9 +265,9 @@ export default function StockPage() {
                   { label: "Today's Low", value: q?.low ? `₹ ${formatPrice(q.low)}` : '—' },
                   { label: 'Prev Close', value: q?.prev_close ? `₹ ${formatPrice(q.prev_close)}` : '—' },
                 ].map((item, i) => (
-                  <div key={item.label} className={cn('flex items-center justify-between px-4 py-2.5', i % 2 === 1 ? 'bg-[#FAFAF9]' : '')}>
-                    <span className="text-xs text-[#6B6966]">{item.label}</span>
-                    <span className="num text-xs font-semibold text-[#1A1917]">{item.value}</span>
+                  <div key={item.label} className={cn('flex items-center justify-between px-4 py-2.5', i % 2 === 1 ? 'bg-[#FAFBFD]' : '')}>
+                    <span className="text-xs text-[#4A5568]">{item.label}</span>
+                    <span className="num text-xs font-semibold text-[#0D1117]">{item.value}</span>
                   </div>
                 ))
               )}
@@ -275,27 +275,27 @@ export default function StockPage() {
 
             {/* About */}
             <div className="lg:col-span-2 card-plain p-5">
-              <h3 className="font-semibold text-[#1A1917] text-sm mb-3">About {symbol}</h3>
+              <h3 className="font-semibold text-[#0D1117] text-sm mb-3">About {symbol}</h3>
               {loading
                 ? <div className="space-y-2"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-4/5" /><Skeleton className="h-4 w-3/4" /></div>
-                : <p className="text-sm text-[#6B6966] leading-relaxed">
+                : <p className="text-sm text-[#4A5568] leading-relaxed">
                     {c?.name} is listed on the NSE under symbol {symbol}
                     {c?.sector && ` in the ${c.sector} sector`}
                     {c?.industry && `, ${c.industry} industry`}.
                   </p>
               }
               {!loading && (
-                <div className="mt-4 flex flex-wrap gap-4 text-xs text-[#9C9894]">
-                  {c?.sector && <span>Sector: <span className="text-[#1A1917] font-medium">{c.sector}</span></span>}
-                  {c?.industry && <span>Industry: <span className="text-[#1A1917] font-medium">{c.industry}</span></span>}
-                  {c?.bse_code && <span>BSE: <span className="text-[#1A1917] font-medium">{c.bse_code}</span></span>}
+                <div className="mt-4 flex flex-wrap gap-4 text-xs text-[#8A96A8]">
+                  {c?.sector && <span>Sector: <span className="text-[#0D1117] font-medium">{c.sector}</span></span>}
+                  {c?.industry && <span>Industry: <span className="text-[#0D1117] font-medium">{c.industry}</span></span>}
+                  {c?.bse_code && <span>BSE: <span className="text-[#0D1117] font-medium">{c.bse_code}</span></span>}
                 </div>
               )}
             </div>
 
             {/* Quick Ratios */}
             <div className="card-plain p-5">
-              <h3 className="font-semibold text-[#1A1917] text-sm mb-3">Quick Ratios</h3>
+              <h3 className="font-semibold text-[#0D1117] text-sm mb-3">Quick Ratios</h3>
               {loading
                 ? <div className="space-y-3">{Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-5 w-full" />)}</div>
                 : [
@@ -305,10 +305,10 @@ export default function StockPage() {
                     { label: 'Debt/Equity', value: r?.debt_to_equity !== undefined ? `${r.debt_to_equity.toFixed(2)}x` : '—', good: (r?.debt_to_equity ?? 999) < 1 },
                     { label: 'Current Ratio', value: r?.current_ratio ? `${r.current_ratio.toFixed(2)}x` : '—', good: (r?.current_ratio ?? 0) > 1.5 },
                   ].map(row => (
-                    <div key={row.label} className="flex items-center justify-between py-2 border-b border-[#EEEDE9] last:border-0">
-                      <span className="text-sm text-[#6B6966]">{row.label}</span>
+                    <div key={row.label} className="flex items-center justify-between py-2 border-b border-[#EDF0F7] last:border-0">
+                      <span className="text-sm text-[#4A5568]">{row.label}</span>
                       <div className="flex items-center gap-2">
-                        <span className="num text-sm font-semibold text-[#1A1917]">{row.value}</span>
+                        <span className="num text-sm font-semibold text-[#0D1117]">{row.value}</span>
                         <span className={cn('w-2 h-2 rounded-full', row.good ? 'bg-[#16A34A]' : 'bg-[#DC2626]')} />
                       </div>
                     </div>
@@ -322,18 +322,18 @@ export default function StockPage() {
         {activeTab === 'Financials' && (
           <div className="space-y-5">
             <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="flex gap-1 bg-[#F1F0ED] p-1 rounded-[8px]">
+              <div className="flex gap-1 bg-[#EEF1F7] p-1 rounded-[8px]">
                 {[['pl', 'Profit & Loss'], ['bs', 'Balance Sheet'], ['cf', 'Cash Flow']].map(([key, label]) => (
                   <button key={key} onClick={() => setFinTab(key as 'pl' | 'bs' | 'cf')}
-                    className={cn('text-xs font-medium px-3 py-1.5 rounded-[6px] transition-colors', finTab === key ? 'bg-white text-[#1A1917] shadow-sm' : 'text-[#6B6966]')}>
+                    className={cn('text-xs font-medium px-3 py-1.5 rounded-[6px] transition-colors', finTab === key ? 'bg-white text-[#0D1117] shadow-sm' : 'text-[#4A5568]')}>
                     {label}
                   </button>
                 ))}
               </div>
-              <div className="flex gap-1 bg-[#F1F0ED] p-1 rounded-[8px]">
+              <div className="flex gap-1 bg-[#EEF1F7] p-1 rounded-[8px]">
                 {[['annual', 'Annual'], ['quarterly', 'Quarterly']].map(([key, label]) => (
                   <button key={key} onClick={() => setFinPeriod(key as 'annual' | 'quarterly')}
-                    className={cn('text-xs font-medium px-3 py-1.5 rounded-[6px] transition-colors', finPeriod === key ? 'bg-white text-[#1A1917] shadow-sm' : 'text-[#6B6966]')}>
+                    className={cn('text-xs font-medium px-3 py-1.5 rounded-[6px] transition-colors', finPeriod === key ? 'bg-white text-[#0D1117] shadow-sm' : 'text-[#4A5568]')}>
                     {label}
                   </button>
                 ))}
@@ -343,7 +343,7 @@ export default function StockPage() {
             {loading ? (
               <div className="card p-5 space-y-3">{Array(6).fill(0).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}</div>
             ) : finData.length === 0 ? (
-              <div className="card p-12 text-center text-[#9C9894]">No financial data available yet</div>
+              <div className="card p-12 text-center text-[#8A96A8]">No financial data available yet</div>
             ) : (
               <div className="card p-0 overflow-auto">
                 <table className="data-table">
@@ -369,7 +369,7 @@ export default function StockPage() {
                         <td>{row.label}</td>
                         {finData.map((r, i) => {
                           const val = (r as Record<string, unknown>)[row.key];
-                          if (val === null || val === undefined) return <td key={i} className="text-[#9C9894]">—</td>;
+                          if (val === null || val === undefined) return <td key={i} className="text-[#8A96A8]">—</td>;
                           const num = Number(val);
                           if (row.format === 'growth') {
                             const pos = num >= 0;
@@ -420,7 +420,7 @@ export default function StockPage() {
         {activeTab === 'Ratios' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="card p-5">
-              <h3 className="text-xs font-semibold text-[#6B6966] uppercase tracking-wide mb-4">Valuation</h3>
+              <h3 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-4">Valuation</h3>
               <RatioRow label="P/E Ratio" value={r?.pe} unit="x" industryAvg={22} />
               <RatioRow label="P/B Ratio" value={r?.pb} unit="x" industryAvg={4.2} />
               <RatioRow label="EV/EBITDA" value={r?.ev_ebitda} unit="x" industryAvg={14} />
@@ -428,23 +428,23 @@ export default function StockPage() {
               <RatioRow label="PEG Ratio" value={r?.peg_ratio} unit="x" industryAvg={1.8} inverse />
             </div>
             <div className="card p-5">
-              <h3 className="text-xs font-semibold text-[#6B6966] uppercase tracking-wide mb-4">Profitability</h3>
+              <h3 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-4">Profitability</h3>
               <RatioRow label="ROE" value={r?.roe} unit="%" industryAvg={18} />
               <RatioRow label="ROCE" value={r?.roce} unit="%" industryAvg={22} />
               <RatioRow label="Net Profit Margin" value={r?.net_margin} unit="%" industryAvg={14} />
               <RatioRow label="Operating Margin" value={r?.operating_margin} unit="%" industryAvg={18} />
             </div>
             <div className="card p-5">
-              <h3 className="text-xs font-semibold text-[#6B6966] uppercase tracking-wide mb-4">Financial Health</h3>
+              <h3 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-4">Financial Health</h3>
               <RatioRow label="Debt to Equity" value={r?.debt_to_equity} unit="x" industryAvg={0.5} inverse />
               <RatioRow label="Current Ratio" value={r?.current_ratio} unit="x" industryAvg={1.5} />
               <RatioRow label="Quick Ratio" value={r?.quick_ratio} unit="x" industryAvg={1.2} />
             </div>
             <div className="card p-5">
-              <h3 className="text-xs font-semibold text-[#6B6966] uppercase tracking-wide mb-4">Growth (CAGR)</h3>
+              <h3 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-4">Growth (CAGR)</h3>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-[11px] text-[#6B6966] uppercase">
+                  <tr className="text-[11px] text-[#4A5568] uppercase">
                     <th className="text-left py-2 font-semibold">Metric</th>
                     <th className="text-right py-2 font-semibold">1Y</th>
                     <th className="text-right py-2 font-semibold">3Y</th>
@@ -456,10 +456,10 @@ export default function StockPage() {
                     { label: 'Profit', y1: r?.profit_growth_1y, y3: r?.profit_growth_3y },
                     { label: 'EPS', y1: r?.eps_growth_1y, y3: null },
                   ].map(row => (
-                    <tr key={row.label} className="border-t border-[#EEEDE9]">
-                      <td className="py-2.5 text-[#6B6966] font-sans text-sm">{row.label}</td>
+                    <tr key={row.label} className="border-t border-[#EDF0F7]">
+                      <td className="py-2.5 text-[#4A5568] font-sans text-sm">{row.label}</td>
                       {[row.y1, row.y3].map((v, i) => (
-                        <td key={i} className={cn('num py-2.5 text-right text-sm font-semibold', v == null ? 'text-[#9C9894]' : v >= 0 ? 'text-positive' : 'text-negative')}>
+                        <td key={i} className={cn('num py-2.5 text-right text-sm font-semibold', v == null ? 'text-[#8A96A8]' : v >= 0 ? 'text-positive' : 'text-negative')}>
                           {v == null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`}
                         </td>
                       ))}
@@ -475,7 +475,7 @@ export default function StockPage() {
         {activeTab === 'Shareholding' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <div className="card p-5">
-              <h3 className="font-semibold text-[#1A1917] text-sm mb-5">
+              <h3 className="font-semibold text-[#0D1117] text-sm mb-5">
                 Latest Shareholding {data?.shareholding?.[0]?.quarter ? `(${data.shareholding[0].quarter})` : ''}
               </h3>
               {loading ? (
@@ -483,10 +483,10 @@ export default function StockPage() {
               ) : (
                 <>
                   {[
-                    { label: 'Promoters', key: 'promoter_pct', color: '#4F46E5' },
+                    { label: 'Promoters', key: 'promoter_pct', color: '#F97316' },
                     { label: 'FII / FPI', key: 'fii_pct', color: '#16A34A' },
                     { label: 'DII', key: 'dii_pct', color: '#D97706' },
-                    { label: 'Public', key: 'public_pct', color: '#9C9894' },
+                    { label: 'Public', key: 'public_pct', color: '#8A96A8' },
                   ].map(item => {
                     const val = data?.shareholding?.[0]?.[item.key as keyof typeof data.shareholding[0]] ?? 0;
                     return (
@@ -494,18 +494,18 @@ export default function StockPage() {
                         <div className="flex items-center justify-between mb-1.5">
                           <div className="flex items-center gap-2">
                             <div className="w-2.5 h-2.5 rounded-sm" style={{ background: item.color }} />
-                            <span className="text-sm text-[#6B6966]">{item.label}</span>
+                            <span className="text-sm text-[#4A5568]">{item.label}</span>
                           </div>
-                          <span className="num text-sm font-semibold text-[#1A1917]">{Number(val).toFixed(2)}%</span>
+                          <span className="num text-sm font-semibold text-[#0D1117]">{Number(val).toFixed(2)}%</span>
                         </div>
-                        <div className="h-2 bg-[#F1F0ED] rounded-full overflow-hidden">
+                        <div className="h-2 bg-[#EEF1F7] rounded-full overflow-hidden">
                           <div className="h-full rounded-full" style={{ width: `${val}%`, background: item.color }} />
                         </div>
                       </div>
                     );
                   })}
-                  <div className="mt-4 pt-4 border-t border-[#EEEDE9] flex items-center justify-between">
-                    <span className="text-sm text-[#6B6966]">Promoter Pledge</span>
+                  <div className="mt-4 pt-4 border-t border-[#EDF0F7] flex items-center justify-between">
+                    <span className="text-sm text-[#4A5568]">Promoter Pledge</span>
                     {(data?.shareholding?.[0]?.pledge_pct ?? 0) === 0
                       ? <span className="text-xs font-semibold text-[#16A34A] bg-[#DCFCE7] px-2.5 py-1 rounded">✓ No Pledge</span>
                       : <span className="text-xs font-semibold text-[#D97706] bg-[#FEF3C7] px-2.5 py-1 rounded">⚠ {data?.shareholding?.[0]?.pledge_pct}% Pledged</span>
@@ -516,8 +516,8 @@ export default function StockPage() {
             </div>
 
             <div className="card p-0 overflow-auto">
-              <div className="px-5 py-4 border-b border-[#EEEDE9]">
-                <h3 className="font-semibold text-[#1A1917] text-sm">Shareholding Trend</h3>
+              <div className="px-5 py-4 border-b border-[#EDF0F7]">
+                <h3 className="font-semibold text-[#0D1117] text-sm">Shareholding Trend</h3>
               </div>
               <table className="data-table">
                 <thead>
@@ -549,11 +549,11 @@ export default function StockPage() {
         {/* PEERS */}
         {activeTab === 'Peers' && (
           <div className="card p-0 overflow-auto">
-            <div className="px-5 py-4 border-b border-[#EEEDE9] flex items-center justify-between">
-              <h3 className="font-semibold text-[#1A1917] text-sm">
+            <div className="px-5 py-4 border-b border-[#EDF0F7] flex items-center justify-between">
+              <h3 className="font-semibold text-[#0D1117] text-sm">
                 Peer Comparison — {c?.sector ?? 'Sector'}
               </h3>
-              <div className="flex items-center gap-1 text-xs text-[#9C9894]">
+              <div className="flex items-center gap-1 text-xs text-[#8A96A8]">
                 <RefreshCw size={11} /> Live data
               </div>
             </div>
@@ -573,15 +573,15 @@ export default function StockPage() {
                 {(data?.peers ?? PEERS).map(p => (
                   <tr
                     key={p.symbol}
-                    className={p.symbol === symbol ? 'bg-[#EEF2FF]' : ''}
+                    className={p.symbol === symbol ? 'bg-[#FFF7ED]' : ''}
                     onClick={() => p.symbol !== symbol && window.location.assign(`/stocks/${p.symbol}`)}
                     style={{ cursor: p.symbol === symbol ? 'default' : 'pointer' }}
                   >
                     <td>
-                      <span className={cn('font-semibold', p.symbol === symbol ? 'text-[#4F46E5]' : 'text-[#1A1917]')}>
+                      <span className={cn('font-semibold', p.symbol === symbol ? 'text-[#F97316]' : 'text-[#0D1117]')}>
                         {p.symbol}
                       </span>
-                      {p.symbol === symbol && <span className="ml-1.5 text-[10px] text-[#4F46E5] bg-[#EEF2FF] px-1.5 py-0.5 rounded">Current</span>}
+                      {p.symbol === symbol && <span className="ml-1.5 text-[10px] text-[#F97316] bg-[#FFF7ED] px-1.5 py-0.5 rounded">Current</span>}
                     </td>
                     <td>₹ {p.price.toLocaleString('en-IN')}</td>
                     <td>{p.mcap}</td>

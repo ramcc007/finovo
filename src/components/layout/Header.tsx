@@ -2,14 +2,23 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Search, X } from 'lucide-react';
+import { useRouter, usePathname } from 'next/navigation';
+import { Search, X, Menu, TrendingUp } from 'lucide-react';
 import { SCREENER_STOCKS } from '@/lib/mock-data';
+import { cn } from '@/lib/utils';
+
+const NAV = [
+  { href: '/screener', label: 'Screener' },
+  { href: '/markets', label: 'Markets' },
+  { href: '/screens', label: 'Screens' },
+];
 
 export default function Header() {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
   const ref = useRef<HTMLDivElement>(null);
 
   const results = query.length > 1
@@ -27,77 +36,108 @@ export default function Header() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  return (
-    <header className="sticky top-0 z-50 bg-white border-b border-[#E5E4E0] h-14 flex items-center px-6 gap-6">
-      <Link href="/" className="flex items-center gap-2 shrink-0">
-        <span className="text-[#4F46E5] text-xl">◆</span>
-        <span className="font-bold text-[#1A1917] text-lg tracking-tight">Finovo</span>
-      </Link>
+  useEffect(() => { setMobileOpen(false); }, [pathname]);
 
-      {/* Search */}
-      <div ref={ref} className="relative flex-1 max-w-[440px]">
-        <div className="flex items-center gap-2 bg-[#F1F0ED] rounded-full px-4 py-2">
-          <Search size={15} className="text-[#9C9894] shrink-0" />
-          <input
-            type="text"
-            placeholder="Search stocks, symbols..."
-            value={query}
-            onChange={e => { setQuery(e.target.value); setOpen(true); }}
-            onFocus={() => setOpen(true)}
-            className="bg-transparent text-sm text-[#1A1917] placeholder:text-[#9C9894] outline-none w-full"
-          />
-          {query && (
-            <button onClick={() => { setQuery(''); setOpen(false); }}>
-              <X size={13} className="text-[#9C9894]" />
-            </button>
+  return (
+    <>
+      <header className="sticky top-0 z-50 bg-[#080C10] border-b border-white/10 h-14 flex items-center px-4 md:px-6 gap-4">
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2 shrink-0">
+          <div className="w-7 h-7 bg-[#F97316] rounded-[6px] flex items-center justify-center">
+            <TrendingUp size={15} className="text-white" strokeWidth={2.5} />
+          </div>
+          <span className="font-bold text-white text-[17px] tracking-tight">Finovo</span>
+        </Link>
+
+        {/* Search */}
+        <div ref={ref} className="relative flex-1 max-w-[480px] mx-auto">
+          <div className="flex items-center gap-2 bg-white/10 hover:bg-white/15 border border-white/10 rounded-lg px-3 py-2 transition-colors">
+            <Search size={14} className="text-white/50 shrink-0" />
+            <input
+              type="text"
+              placeholder="Search stocks, symbols..."
+              value={query}
+              onChange={e => { setQuery(e.target.value); setOpen(true); }}
+              onFocus={() => setOpen(true)}
+              className="bg-transparent text-sm text-white placeholder:text-white/40 outline-none w-full"
+            />
+            {query && (
+              <button onClick={() => { setQuery(''); setOpen(false); }}>
+                <X size={13} className="text-white/40 hover:text-white/70" />
+              </button>
+            )}
+          </div>
+
+          {open && results.length > 0 && (
+            <div className="absolute top-full mt-2 left-0 right-0 bg-white border border-[#E2E8F0] rounded-xl shadow-lg overflow-hidden z-50">
+              {results.map(s => (
+                <button
+                  key={s.symbol}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#FFF7ED] transition-colors text-left border-b border-[#EDF0F7] last:border-0"
+                  onClick={() => {
+                    router.push(`/stocks/${s.symbol}`);
+                    setQuery('');
+                    setOpen(false);
+                  }}
+                >
+                  <div>
+                    <div className="text-sm font-semibold text-[#0D1117]">{s.symbol}</div>
+                    <div className="text-xs text-[#4A5568]">{s.name}</div>
+                  </div>
+                  <span className="text-xs text-[#8A96A8] bg-[#F4F6FA] px-2 py-0.5 rounded">{s.sector}</span>
+                </button>
+              ))}
+            </div>
           )}
         </div>
 
-        {open && results.length > 0 && (
-          <div className="absolute top-full mt-2 left-0 right-0 bg-white border border-[#E5E4E0] rounded-[10px] shadow-md overflow-hidden z-50">
-            {results.map(s => (
-              <button
-                key={s.symbol}
-                className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#EEF2FF] transition-colors text-left"
-                onClick={() => {
-                  router.push(`/stocks/${s.symbol}`);
-                  setQuery('');
-                  setOpen(false);
-                }}
-              >
-                <div>
-                  <div className="text-sm font-semibold text-[#1A1917]">{s.symbol}</div>
-                  <div className="text-xs text-[#6B6966]">{s.name}</div>
-                </div>
-                <span className="text-xs text-[#9C9894] bg-[#F1F0ED] px-2 py-0.5 rounded-sm">{s.sector}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+        {/* Desktop Nav */}
+        <nav className="hidden md:flex items-center gap-1">
+          {NAV.map(item => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                'text-sm font-medium px-3 py-1.5 rounded-lg transition-colors',
+                pathname === item.href
+                  ? 'bg-[#F97316] text-white'
+                  : 'text-white/70 hover:text-white hover:bg-white/10'
+              )}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
 
-      {/* Nav */}
-      <nav className="hidden md:flex items-center gap-6 ml-2">
-        {[
-          { href: '/screener', label: 'Screener' },
-          { href: '/markets', label: 'Markets' },
-          { href: '/screens', label: 'Screens' },
-        ].map(item => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="text-sm font-medium text-[#6B6966] hover:text-[#1A1917] transition-colors"
-          >
-            {item.label}
-          </Link>
-        ))}
-      </nav>
-
-      <div className="ml-auto shrink-0">
-        <button className="text-sm font-medium text-[#4F46E5] border border-[#4F46E5] px-4 py-1.5 rounded-[6px] hover:bg-[#EEF2FF] transition-colors">
-          Login
+        {/* Mobile hamburger */}
+        <button
+          className="md:hidden ml-auto text-white/70 hover:text-white p-1.5"
+          onClick={() => setMobileOpen(v => !v)}
+          aria-label="Menu"
+        >
+          {mobileOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
-      </div>
-    </header>
+      </header>
+
+      {/* Mobile nav drawer */}
+      {mobileOpen && (
+        <div className="md:hidden fixed inset-x-0 top-14 z-40 bg-[#0F1923] border-b border-white/10 py-3 px-4 shadow-lg">
+          {NAV.map(item => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                'flex items-center px-4 py-3 rounded-lg text-sm font-medium mb-1',
+                pathname === item.href
+                  ? 'bg-[#F97316] text-white'
+                  : 'text-white/70 hover:bg-white/10 hover:text-white'
+              )}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      )}
+    </>
   );
 }

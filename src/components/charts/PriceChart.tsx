@@ -69,25 +69,25 @@ export default function PriceChart({ symbol, currentPrice }: PriceChartProps) {
       chart = createChart(chartContainerRef.current, {
         layout: {
           background: { type: ColorType.Solid, color: '#FFFFFF' },
-          textColor: '#6B6966',
+          textColor: '#4A5568',
           fontFamily: 'Inter, sans-serif',
           fontSize: 11,
         },
         grid: {
-          vertLines: { color: '#F1F0ED' },
-          horzLines: { color: '#F1F0ED' },
+          vertLines: { color: '#EEF1F7' },
+          horzLines: { color: '#EEF1F7' },
         },
         crosshair: {
           mode: CrosshairMode.Normal,
-          vertLine: { color: '#4F46E5', labelBackgroundColor: '#4F46E5' },
-          horzLine: { color: '#4F46E5', labelBackgroundColor: '#4F46E5' },
+          vertLine: { color: '#F97316', labelBackgroundColor: '#F97316' },
+          horzLine: { color: '#F97316', labelBackgroundColor: '#F97316' },
         },
         rightPriceScale: {
-          borderColor: '#E5E4E0',
+          borderColor: '#E2E8F0',
           scaleMargins: { top: 0.1, bottom: 0.3 },
         },
         timeScale: {
-          borderColor: '#E5E4E0',
+          borderColor: '#E2E8F0',
           timeVisible: true,
         },
         handleScroll: true,
@@ -183,7 +183,7 @@ export default function PriceChart({ symbol, currentPrice }: PriceChartProps) {
                 onClick={() => setPeriod(p)}
                 className={cn(
                   'text-xs px-2.5 py-1 rounded transition-colors',
-                  period === p ? 'bg-[#4F46E5] text-white' : 'text-[#6B6966] hover:bg-[#F1F0ED]'
+                  period === p ? 'bg-[#F97316] text-white' : 'text-[#4A5568] hover:bg-[#EEF1F7]'
                 )}
               >
                 {p}
@@ -203,14 +203,14 @@ export default function PriceChart({ symbol, currentPrice }: PriceChartProps) {
         </div>
 
         {/* Chart type toggle */}
-        <div className="flex gap-1 bg-[#F1F0ED] p-0.5 rounded-[6px]">
+        <div className="flex gap-1 bg-[#EEF1F7] p-0.5 rounded-[6px]">
           {(['line', 'candle'] as const).map(t => (
             <button
               key={t}
               onClick={() => setChartType(t)}
               className={cn(
                 'text-[11px] font-medium px-2.5 py-1 rounded-[5px] transition-colors capitalize',
-                chartType === t ? 'bg-white text-[#1A1917] shadow-sm' : 'text-[#6B6966]'
+                chartType === t ? 'bg-white text-[#0D1117] shadow-sm' : 'text-[#4A5568]'
               )}
             >
               {t === 'line' ? '📈 Line' : '🕯 Candle'}
@@ -220,14 +220,14 @@ export default function PriceChart({ symbol, currentPrice }: PriceChartProps) {
       </div>
 
       {loading ? (
-        <div className="h-64 flex items-center justify-center text-[#9C9894] text-sm">
+        <div className="h-64 flex items-center justify-center text-[#8A96A8] text-sm">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 border-2 border-[#4F46E5] border-t-transparent rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-[#F97316] border-t-transparent rounded-full animate-spin" />
             Loading chart...
           </div>
         </div>
       ) : prices.length === 0 ? (
-        <div className="h-64 flex items-center justify-center text-[#9C9894] text-sm">
+        <div className="h-64 flex items-center justify-center text-[#8A96A8] text-sm">
           No price data available
         </div>
       ) : (

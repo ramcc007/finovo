@@ -145,7 +145,7 @@ export const PRE_BUILT_SCREENS = [
     description: 'Companies with consistently high returns and minimal debt',
     filters: 'ROE > 20% · Debt/Equity < 0.5 · Profit Growth 3Y > 15%',
     count: 142,
-    color: '#4F46E5',
+    color: '#F97316',
   },
   {
     id: 'value-picks',
