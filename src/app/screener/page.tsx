@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { SlidersHorizontal, Download, RotateCcw, ChevronUp, ChevronDown } from 'lucide-react';
+import { SlidersHorizontal, Download, RotateCcw, ChevronUp, ChevronDown, X } from 'lucide-react';
 import { cn, formatCrores } from '@/lib/utils';
 
 type SortKey = 'market_cap' | 'pe' | 'pb' | 'roe' | 'revenue_growth_1y' | 'profit_growth_1y' | 'debt_to_equity' | 'dividend_yield';
@@ -107,6 +107,7 @@ export default function ScreenerPage() {
   const [results, setResults] = useState<ScreenerRow[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const PER_PAGE = 20;
 
   const fetchResults = useCallback(async (f: Filters, sk: SortKey, sd: 'asc' | 'desc', pg: number) => {
@@ -173,29 +174,35 @@ export default function ScreenerPage() {
 
   return (
     <div className="min-h-screen bg-[#F4F6FA]">
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        <div className="flex items-center justify-between mb-5">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-10">
+        <div className="flex items-end justify-between mb-6 gap-4">
           <div>
-            <h1 className="text-xl font-bold text-[#0D1117]">Stock Screener</h1>
-            <p className="text-sm text-[#4A5568] mt-0.5">Filter and find stocks across 5000+ NSE & BSE companies</p>
+            <h1 className="h-section text-[#0D1117]">Stock Screener</h1>
+            <p className="text-sm text-[#4A5568] mt-1">Filter 5,000+ NSE &amp; BSE companies across 47 metrics.</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {activeFilterCount > 0 && (
-              <span className="text-xs bg-[#F97316] text-white px-2 py-0.5 rounded-full font-semibold">{activeFilterCount} filters</span>
+              <span className="hidden sm:inline text-xs bg-[#FFF7ED] text-[#F97316] border border-[#FFEDD5] px-2.5 py-1 rounded-full font-semibold tnum">{activeFilterCount} active</span>
             )}
-            <button
-              onClick={() => {}}
-              className="flex items-center gap-1.5 text-sm text-[#4A5568] border border-[#E2E8F0] bg-white px-3 py-1.5 rounded-[6px] hover:border-[#8A96A8] transition-colors"
-            >
-              <Download size={13} /> Export CSV
+            <button onClick={() => {}} className="btn btn-secondary !px-3 !py-2 !text-[13px]">
+              <Download size={13} /> <span className="hidden sm:inline">Export CSV</span>
             </button>
           </div>
         </div>
 
-        <div className="flex gap-5">
+        {/* Mobile filter toggle */}
+        <button
+          onClick={() => setShowFilters(v => !v)}
+          className="lg:hidden btn btn-secondary w-full mb-4 justify-between"
+        >
+          <span className="flex items-center gap-2"><SlidersHorizontal size={15} className="text-[#F97316]" /> Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}</span>
+          {showFilters ? <X size={16} /> : <ChevronDown size={16} />}
+        </button>
+
+        <div className="flex flex-col lg:flex-row gap-5">
           {/* Filter Panel */}
-          <div className="w-[280px] shrink-0">
-            <div className="card-plain overflow-hidden sticky top-20">
+          <div className={cn('w-full lg:w-[280px] shrink-0', showFilters ? 'block' : 'hidden lg:block')}>
+            <div className="card-plain overflow-hidden lg:sticky lg:top-20">
               <div className="flex items-center justify-between px-4 py-3 border-b border-[#EDF0F7]">
                 <div className="flex items-center gap-2">
                   <SlidersHorizontal size={14} className="text-[#F97316]" />
@@ -321,10 +328,10 @@ export default function ScreenerPage() {
                       </td>
                     </tr>
                   ) : results.map(s => (
-                    <tr key={s.symbol}>
+                    <tr key={s.symbol} className="group">
                       <td>
-                        <Link href={`/stocks/${s.symbol}`} className="group">
-                          <div className="font-semibold text-[#F97316] group-hover:underline">{s.symbol}</div>
+                        <Link href={`/stocks/${s.symbol}`}>
+                          <div className="font-semibold text-[#0D1117] group-hover:text-[#F97316] transition-colors">{s.symbol}</div>
                           <div className="text-[11px] text-[#8A96A8] font-sans mt-0.5 max-w-[180px] truncate">{s.name}</div>
                         </Link>
                       </td>

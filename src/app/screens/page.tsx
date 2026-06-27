@@ -19,13 +19,13 @@ export default function ScreensPage() {
 
   return (
     <div className="min-h-screen bg-[#F4F6FA]">
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-10">
+        <div className="flex items-end justify-between mb-7 gap-4">
           <div>
-            <h1 className="text-xl font-bold text-[#0D1117]">Pre-built Screens</h1>
-            <p className="text-sm text-[#4A5568] mt-0.5">Ready-made filters based on proven investing frameworks</p>
+            <h1 className="h-section text-[#0D1117]">Pre-built Screens</h1>
+            <p className="text-sm text-[#4A5568] mt-1">Ready-made filters based on proven investing frameworks.</p>
           </div>
-          <Link href="/screener" className="flex items-center gap-1.5 text-sm font-medium text-white bg-[#F97316] px-4 py-2 rounded-[8px] hover:bg-[#EA6C00] transition-colors">
+          <Link href="/screener" className="btn btn-primary shrink-0">
             Custom Screener <ArrowRight size={14} />
           </Link>
         </div>
@@ -38,7 +38,7 @@ export default function ScreensPage() {
                 {screens.map(screen => (
                   <div
                     key={screen.id}
-                    className="card-plain p-5 hover:shadow-md transition-all cursor-pointer group"
+                    className="card-plain lift p-5 cursor-pointer group"
                     style={{ borderTop: `3px solid ${screen.color}` }}
                     onClick={() => router.push('/screener')}
                   >
@@ -82,13 +82,13 @@ export default function ScreensPage() {
             </thead>
             <tbody>
               {SCREENER_STOCKS.filter(s => s.roe > 20 && s.debtEquity < 0.5).slice(0, 8).map(s => (
-                <tr key={s.symbol} onClick={() => router.push(`/stocks/${s.symbol}`)}>
+                <tr key={s.symbol} className="group" onClick={() => router.push(`/stocks/${s.symbol}`)}>
                   <td>
-                    <div className="font-semibold text-[#F97316]">{s.symbol}</div>
+                    <div className="font-semibold text-[#0D1117] group-hover:text-[#F97316] transition-colors">{s.symbol}</div>
                     <div className="text-[11px] text-[#8A96A8] font-sans mt-0.5 max-w-[160px] truncate">{s.name}</div>
                   </td>
                   <td className="text-[#4A5568] font-sans text-xs">{s.sector}</td>
-                  <td>₹ {s.price.toLocaleString('en-IN')}</td>
+                  <td>{s.price.toLocaleString('en-IN')}</td>
                   <td className={s.pe < 25 ? 'text-positive' : ''}>{s.pe}x</td>
                   <td className="text-positive font-semibold">{s.roe}%</td>
                   <td className={cn(s.revGrowth1Y >= 0 ? 'text-positive' : 'text-negative')}>

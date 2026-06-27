@@ -16,19 +16,19 @@ export default function MarketsPage() {
   return (
     <div className="min-h-screen bg-[#F4F6FA]">
       <TickerBar />
-      <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-10 space-y-6">
         <div>
-          <h1 className="text-xl font-bold text-[#0D1117]">Market Overview</h1>
-          <p className="text-sm text-[#4A5568] mt-0.5">Live data — NSE & BSE · Last updated: 3:30 PM</p>
+          <h1 className="h-section text-[#0D1117]">Market Overview</h1>
+          <p className="text-sm text-[#4A5568] mt-1">Live data — NSE &amp; BSE · Last updated 3:30 PM IST</p>
         </div>
 
         {/* Index Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
           {INDICES.map(idx => (
-            <div key={idx.name} className="card-plain p-4">
+            <div key={idx.name} className="card-plain lift p-4">
               <div className="text-xs text-[#4A5568] mb-1">{idx.name}</div>
-              <div className="num text-lg font-bold text-[#0D1117]">{idx.value.toLocaleString('en-IN')}</div>
-              <div className={cn('num text-xs font-semibold mt-1', idx.changePct >= 0 ? 'text-positive' : 'text-negative')}>
+              <div className="tnum text-lg font-bold text-[#0D1117]">{idx.value.toLocaleString('en-IN')}</div>
+              <div className={cn('tnum text-xs font-semibold mt-1', idx.changePct >= 0 ? 'text-positive' : 'text-negative')}>
                 {idx.changePct >= 0 ? '▲' : '▼'} {idx.change.toFixed(2)} ({Math.abs(idx.changePct).toFixed(2)}%)
               </div>
             </div>
@@ -37,26 +37,28 @@ export default function MarketsPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Main table */}
-          <div className="lg:col-span-2 card p-0 overflow-hidden">
-            <div className="flex items-center gap-1 px-4 pt-3 pb-2 border-b border-[#EDF0F7] flex-wrap">
-              {[
-                { key: 'gainers', label: '▲ Top Gainers' },
-                { key: 'losers', label: '▼ Top Losers' },
-                { key: 'active', label: '⚡ Most Active' },
-                { key: '52high', label: '↑ 52W High' },
-                { key: '52low', label: '↓ 52W Low' },
-              ].map(t => (
-                <button
-                  key={t.key}
-                  onClick={() => setTab(t.key as MarketTab)}
-                  className={cn(
-                    'text-xs font-medium px-3 py-1.5 rounded-[6px] transition-colors',
-                    tab === t.key ? 'bg-[#F97316] text-white' : 'text-[#4A5568] hover:bg-[#EEF1F7]'
-                  )}
-                >
-                  {t.label}
-                </button>
-              ))}
+          <div className="lg:col-span-2 card-plain p-0 overflow-hidden">
+            <div className="px-4 pt-3 pb-3 border-b border-[#EDF0F7] overflow-x-auto">
+              <div className="inline-flex items-center gap-0.5 bg-[#EEF1F7] p-0.5 rounded-lg">
+                {[
+                  { key: 'gainers', label: 'Top Gainers' },
+                  { key: 'losers', label: 'Top Losers' },
+                  { key: 'active', label: 'Most Active' },
+                  { key: '52high', label: '52W High' },
+                  { key: '52low', label: '52W Low' },
+                ].map(t => (
+                  <button
+                    key={t.key}
+                    onClick={() => setTab(t.key as MarketTab)}
+                    className={cn(
+                      'text-xs font-semibold px-3 py-1.5 rounded-md transition-all whitespace-nowrap',
+                      tab === t.key ? 'bg-white text-[#0D1117] shadow-sm' : 'text-[#4A5568] hover:text-[#0D1117]'
+                    )}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
             </div>
             <table className="data-table">
               <thead>
@@ -71,12 +73,12 @@ export default function MarketsPage() {
               </thead>
               <tbody>
                 {stocks.map(s => (
-                  <tr key={s.symbol} onClick={() => router.push(`/stocks/${s.symbol}`)}>
+                  <tr key={s.symbol} className="group" onClick={() => router.push(`/stocks/${s.symbol}`)}>
                     <td>
-                      <div className="font-semibold text-[#F97316]">{s.symbol}</div>
+                      <div className="font-semibold text-[#0D1117] group-hover:text-[#F97316] transition-colors">{s.symbol}</div>
                       <div className="text-[11px] text-[#8A96A8] font-sans mt-0.5">{s.name}</div>
                     </td>
-                    <td>₹ {formatPrice(s.price)}</td>
+                    <td>{formatPrice(s.price)}</td>
                     <td className={s.change >= 0 ? 'text-positive' : 'text-negative'}>
                       {s.change >= 0 ? '+' : ''}₹{Math.abs(s.change).toFixed(2)}
                     </td>

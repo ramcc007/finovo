@@ -139,7 +139,7 @@ export default function StockPage() {
     <div className="min-h-screen bg-[#F4F6FA]">
       {/* Header */}
       <div className="bg-white border-b border-[#E2E8F0]">
-        <div className="max-w-7xl mx-auto px-6 py-5">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 py-5">
           <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-[#4A5568] hover:text-[#0D1117] mb-4 transition-colors">
             <ArrowLeft size={14} /> Back
           </Link>
@@ -213,14 +213,14 @@ export default function StockPage() {
         </div>
 
         {/* Tabs */}
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex -mb-px">
+        <div className="max-w-7xl mx-auto px-4 md:px-6">
+          <div className="flex -mb-px overflow-x-auto">
             {TABS.map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={cn(
-                  'px-5 py-3 text-sm font-medium border-b-2 transition-colors',
+                  'px-4 sm:px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap',
                   activeTab === tab ? 'border-[#F97316] text-[#F97316]' : 'border-transparent text-[#4A5568] hover:text-[#0D1117]'
                 )}
               >
@@ -231,7 +231,7 @@ export default function StockPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-6">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
 
         {/* OVERVIEW */}
         {activeTab === 'Overview' && (
