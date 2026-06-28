@@ -14,7 +14,6 @@ yfinance provides:
 
 import os
 import time
-import traceback
 from datetime import date
 import yfinance as yf
 from curl_cffi import requests as cffi_requests
@@ -210,10 +209,7 @@ def run():
                 print(f"  [{i+1}/{len(symbols)}] {success} ok, {error} errors")
         except Exception as e:
             error += 1
-            if error <= 3:
-                print(f"  Error [{symbol}]: {e}")
-                traceback.print_exc()
-            elif (i + 1) % 50 == 0:
+            if error <= 5 or (i + 1) % 50 == 0:
                 print(f"  Error [{symbol}]: {e}")
         time.sleep(DELAY)
 
