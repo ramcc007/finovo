@@ -24,7 +24,7 @@ export default function Footer() {
             <h4 className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-4">Tools</h4>
             <ul className="space-y-2.5">
               {[
-                { href: '/screener', label: 'Stock Screener' },
+                { href: '/screener', label: 'Stock Explorer' },
                 { href: '/markets', label: 'Market Overview' },
                 { href: '/screens', label: 'Pre-built Screens' },
               ].map(l => (

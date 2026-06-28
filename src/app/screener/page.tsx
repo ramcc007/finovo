@@ -36,12 +36,12 @@ function FilterSection({ title, children }: { title: string; children: React.Rea
     <div className="border-b border-[#EDF0F7] last:border-0">
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#F4F6FA] transition-colors"
+        className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-[#F4F6FA] transition-colors"
       >
         <span className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide">{title}</span>
         {open ? <ChevronUp size={14} className="text-[#8A96A8]" /> : <ChevronDown size={14} className="text-[#8A96A8]" />}
       </button>
-      {open && <div className="px-4 pb-4 space-y-3">{children}</div>}
+      {open && <div className="px-5 pb-5 space-y-4 pt-1">{children}</div>}
     </div>
   );
 }
@@ -174,11 +174,11 @@ export default function ScreenerPage() {
 
   return (
     <div className="min-h-screen bg-[#F4F6FA]">
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-10">
-        <div className="flex items-end justify-between mb-6 gap-4">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-10 md:py-14">
+        <div className="flex items-end justify-between mb-8 gap-4">
           <div>
-            <h1 className="h-section text-[#0D1117]">Stock Screener</h1>
-            <p className="text-sm text-[#4A5568] mt-1">Filter 5,000+ NSE &amp; BSE companies across 47 metrics.</p>
+            <h1 className="h-section text-[#0D1117]">Stock Explorer</h1>
+            <p className="text-sm text-[#4A5568] mt-1.5">Filter 5,000+ NSE &amp; BSE companies across 47 metrics.</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {activeFilterCount > 0 && (
@@ -199,11 +199,11 @@ export default function ScreenerPage() {
           {showFilters ? <X size={16} /> : <ChevronDown size={16} />}
         </button>
 
-        <div className="flex flex-col lg:flex-row gap-5">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
           {/* Filter Panel */}
           <div className={cn('w-full lg:w-[280px] shrink-0', showFilters ? 'block' : 'hidden lg:block')}>
             <div className="card-plain overflow-hidden lg:sticky lg:top-20">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-[#EDF0F7]">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-[#EDF0F7]">
                 <div className="flex items-center gap-2">
                   <SlidersHorizontal size={14} className="text-[#F97316]" />
                   <span className="text-sm font-semibold text-[#0D1117]">Filters</span>
@@ -276,7 +276,7 @@ export default function ScreenerPage() {
 
           {/* Results */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-4">
               <p className="text-sm text-[#4A5568]">
                 {loading
                   ? <span className="text-[#8A96A8]">Loading...</span>

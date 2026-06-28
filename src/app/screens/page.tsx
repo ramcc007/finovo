@@ -19,26 +19,26 @@ export default function ScreensPage() {
 
   return (
     <div className="min-h-screen bg-[#F4F6FA]">
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-10">
-        <div className="flex items-end justify-between mb-7 gap-4">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-10 md:py-14">
+        <div className="flex items-end justify-between mb-9 gap-4">
           <div>
             <h1 className="h-section text-[#0D1117]">Pre-built Screens</h1>
             <p className="text-sm text-[#4A5568] mt-1">Ready-made filters based on proven investing frameworks.</p>
           </div>
           <Link href="/screener" className="btn btn-primary shrink-0">
-            Custom Screener <ArrowRight size={14} />
+            Custom Explorer <ArrowRight size={14} />
           </Link>
         </div>
 
-        <div className="space-y-8">
+        <div className="space-y-10">
           {Object.entries(categoryMap).map(([category, screens]) => (
             <div key={category}>
-              <h2 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-3">{category} Investing</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <h2 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-4">{category} Investing</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {screens.map(screen => (
                   <div
                     key={screen.id}
-                    className="card-plain lift p-5 cursor-pointer group"
+                    className="card-plain lift p-6 cursor-pointer group"
                     style={{ borderTop: `3px solid ${screen.color}` }}
                     onClick={() => router.push('/screener')}
                   >
@@ -63,8 +63,8 @@ export default function ScreensPage() {
         </div>
 
         {/* Sample stocks table */}
-        <div className="mt-8 card p-0 overflow-hidden">
-          <div className="px-5 py-4 border-b border-[#EDF0F7]">
+        <div className="mt-10 card p-0 overflow-hidden">
+          <div className="px-6 py-5 border-b border-[#EDF0F7]">
             <h3 className="font-semibold text-[#0D1117] text-sm">Sample: High Quality Compounders</h3>
             <p className="text-xs text-[#8A96A8] mt-0.5">ROE &gt; 20% · Debt/Equity &lt; 0.5 · Profit Growth 3Y &gt; 15%</p>
           </div>
@@ -101,7 +101,7 @@ export default function ScreensPage() {
           </table>
           <div className="px-5 py-3 border-t border-[#EDF0F7]">
             <Link href="/screener" className="text-xs text-[#F97316] hover:underline flex items-center gap-1">
-              Open in Screener with these filters <ArrowRight size={12} />
+              Open in Explorer with these filters <ArrowRight size={12} />
             </Link>
           </div>
         </div>

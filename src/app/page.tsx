@@ -166,7 +166,7 @@ export default function Home() {
               {/* CTAs */}
               <div className="flex flex-col sm:flex-row gap-3">
                 <Link href="/screener" className="btn btn-primary">
-                  Open the Screener <ArrowRight size={16} />
+                  Open Explorer <ArrowRight size={16} />
                 </Link>
                 <Link href="/markets" className="btn btn-on-dark">
                   Explore markets
@@ -222,7 +222,7 @@ export default function Home() {
 
         {/* Trust strip */}
         <div className="relative border-t border-white/8">
-          <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 grid grid-cols-2 md:grid-cols-4 gap-6">
             {[
               { v: '5,000+', l: 'Listed companies' },
               { v: '47+', l: 'Financial metrics' },
@@ -252,7 +252,7 @@ export default function Home() {
           </div>
         </Reveal>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Movers */}
           <Reveal className="lg:col-span-2">
             <div className="card-plain p-0 overflow-hidden">
@@ -303,10 +303,10 @@ export default function Home() {
 
           {/* Breadth + FII/DII */}
           <Reveal delay={80}>
-            <div className="space-y-5">
-              <div className="card-plain p-5">
-                <h3 className="font-semibold text-[#0D1117] text-sm mb-4">Market Breadth</h3>
-                <div className="space-y-3">
+            <div className="space-y-6">
+              <div className="card-plain p-6">
+                <h3 className="font-semibold text-[#0D1117] text-sm mb-5">Market Breadth</h3>
+                <div className="space-y-3.5">
                   {[
                     { label: 'Advances', value: 1284, color: '#16A34A' },
                     { label: 'Declines', value: 932, color: '#DC2626' },
@@ -333,8 +333,8 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="card-plain p-5">
-                <h3 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-3">FII / DII Activity</h3>
+              <div className="card-plain p-6">
+                <h3 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-4">FII / DII Activity</h3>
                 <div className="flex items-center justify-between py-1.5">
                   <span className="text-sm text-[#4A5568]">FII Net</span>
                   <span className="tnum text-sm font-semibold text-[#16A34A]">+₹1,248 Cr</span>
@@ -350,8 +350,8 @@ export default function Home() {
 
         {/* Sector performance */}
         <Reveal>
-          <div className="card-plain p-5 mt-5">
-            <h3 className="font-semibold text-[#0D1117] text-sm mb-4">Sector Performance</h3>
+          <div className="card-plain p-6 mt-6">
+            <h3 className="font-semibold text-[#0D1117] text-sm mb-5">Sector Performance</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-3">
               {SECTORS.map(s => {
                 const pos = s.change >= 0;
@@ -390,10 +390,10 @@ export default function Home() {
             </div>
           </Reveal>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {PRE_BUILT_SCREENS.map((screen, i) => (
               <Reveal key={screen.id} delay={i * 50}>
-                <Link href="/screens" className="card-plain lift p-5 block h-full group">
+                <Link href="/screens" className="card-plain lift p-6 block h-full group">
                   <div className="flex items-start justify-between mb-2.5">
                     <h3 className="font-semibold text-[#0D1117] text-sm group-hover:text-[#F97316] transition-colors">{screen.title}</h3>
                     <span className="tnum text-xs font-semibold px-2 py-0.5 rounded-full bg-[#EEF1F7] text-[#4A5568]">{screen.count}</span>
@@ -416,12 +416,12 @@ export default function Home() {
           </div>
         </Reveal>
 
-        <div className="grid md:grid-cols-3 gap-5">
+        <div className="grid md:grid-cols-3 gap-6">
           {[
             {
               icon: SlidersHorizontal,
-              title: 'Powerful screener',
-              desc: 'Filter 5,000+ stocks across 47 fundamental and valuation metrics. Build, sort, and save custom screens in seconds.',
+              title: 'Powerful explorer',
+              desc: 'Filter 5,000+ stocks across 47 fundamental and valuation metrics. Build, sort, and explore custom views in seconds.',
             },
             {
               icon: LineChart,
@@ -435,7 +435,7 @@ export default function Home() {
             },
           ].map((f, i) => (
             <Reveal key={f.title} delay={i * 70}>
-              <div className="card-plain lift p-6 h-full">
+              <div className="card-plain lift p-7 h-full">
                 <div className="w-11 h-11 rounded-xl bg-[#FFF7ED] flex items-center justify-center mb-4">
                   <f.icon size={20} className="text-[#F97316]" />
                 </div>
@@ -456,11 +456,11 @@ export default function Home() {
               <Zap size={28} className="text-[#F97316] mx-auto mb-4" />
               <h2 className="h-section text-white mb-3">Find your next investment idea</h2>
               <p className="text-white/55 text-base max-w-lg mx-auto mb-8">
-                Open the screener and start filtering the entire Indian market — completely free.
+                Open the Explorer and start filtering the entire Indian market — completely free.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link href="/screener" className="btn btn-primary">
-                  Launch Screener <ArrowRight size={16} />
+                  Launch Explorer <ArrowRight size={16} />
                 </Link>
                 <Link href="/screens" className="btn btn-on-dark">
                   Browse ready-made screens

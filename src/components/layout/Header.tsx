@@ -7,7 +7,7 @@ import { Search, X, Menu, TrendingUp, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV = [
-  { href: '/screener', label: 'Screener' },
+  { href: '/screener', label: 'Explorer' },
   { href: '/markets', label: 'Markets' },
   { href: '/screens', label: 'Screens' },
 ];
