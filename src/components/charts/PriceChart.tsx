@@ -34,7 +34,8 @@ export default function PriceChart({ symbol, currentPrice }: PriceChartProps) {
   const fetchPrices = useCallback(async (p: Period) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/stocks/${symbol}/prices?period=${p}`);
+      const priceParam = currentPrice > 0 ? `&price=${currentPrice}` : '';
+      const res = await fetch(`/api/stocks/${symbol}/prices?period=${p}${priceParam}`);
       const data: PricePoint[] = await res.json();
       setPrices(data);
 

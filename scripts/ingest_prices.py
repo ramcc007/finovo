@@ -118,7 +118,7 @@ def run():
         quote_records.append({
             "symbol": sym, "price": close, "change": change, "change_pct": change_pct,
             "open": o, "high": h, "low": lo, "prev_close": prev,
-            "volume": int(vol) if vol is not None else None, "updated_at": "now()",
+            "volume": int(vol) if vol is not None else None,
         })
 
     def upsert(table, records, conflict):

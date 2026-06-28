@@ -60,9 +60,22 @@ export async function GET(
       .order('quarter', { ascending: false })
       .limit(4);
 
+    // If live quote is missing, synthesize from latest ratios price
+    const effectiveQuote = quote ?? (ratios?.price ? {
+      symbol: sym,
+      price: ratios.price,
+      change: null,
+      change_pct: null,
+      open: ratios.price,
+      high: ratios.week_high_52 ?? ratios.price,
+      low: ratios.week_low_52 ?? ratios.price,
+      prev_close: ratios.price,
+      volume: null,
+    } : null);
+
     return NextResponse.json({
       company,
-      quote,
+      quote: effectiveQuote,
       ratios,
       financials: { annual: annualFin ?? [], quarterly: quarterlyFin ?? [] },
       shareholding: shareholding ?? [],

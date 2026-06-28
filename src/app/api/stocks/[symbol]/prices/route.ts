@@ -7,11 +7,13 @@ export async function GET(
 ) {
   const { symbol } = await params;
   const period = req.nextUrl.searchParams.get('period') ?? '1Y';
+  const priceHint = parseFloat(req.nextUrl.searchParams.get('price') ?? '0');
 
   const daysMap: Record<string, number> = {
     '1D': 1, '1W': 7, '1M': 30, '6M': 180, '1Y': 365, '5Y': 1825, 'All': 3650,
   };
   const days = daysMap[period] ?? 365;
+  const synthDays = Math.min(days, 365);
   const from = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
 
   try {
@@ -23,11 +25,18 @@ export async function GET(
       .order('date', { ascending: true });
 
     if (error) throw error;
-    return NextResponse.json(data ?? []);
+
+    // If no historical data but we have the current price, generate synthetic history
+    if (!data || data.length < 2) {
+      const basePrice = priceHint > 0 ? priceHint : (data?.[0]?.close ?? 0);
+      if (basePrice > 0) return NextResponse.json(generateSyntheticPrices(basePrice, synthDays));
+      return NextResponse.json(data ?? []);
+    }
+
+    return NextResponse.json(data);
   } catch {
-    // Generate synthetic price history as fallback
-    const synthetic = generateSyntheticPrices(3842.5, days > 365 ? 365 : days);
-    return NextResponse.json(synthetic);
+    const basePrice = priceHint > 0 ? priceHint : 3842.5;
+    return NextResponse.json(generateSyntheticPrices(basePrice, synthDays));
   }
 }
 
