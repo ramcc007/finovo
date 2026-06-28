@@ -1,16 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  Search, ArrowRight, ArrowUpRight, TrendingUp, TrendingDown,
+  Search, ArrowRight, ArrowUpRight, Loader2,
   SlidersHorizontal, LineChart, ShieldCheck, Zap, Check,
 } from 'lucide-react';
 import TickerBar from '@/components/layout/TickerBar';
 import Reveal from '@/components/ui/Reveal';
-import { TOP_GAINERS, TOP_LOSERS, SECTORS, PRE_BUILT_SCREENS, SCREENER_STOCKS } from '@/lib/mock-data';
+import { TOP_GAINERS, TOP_LOSERS, SECTORS, PRE_BUILT_SCREENS } from '@/lib/mock-data';
 import { cn, formatPrice } from '@/lib/utils';
+
+interface SearchHit { symbol: string; name: string; sector: string }
 
 function ChangeBadge({ value }: { value: number }) {
   const pos = value >= 0;
@@ -46,14 +48,28 @@ function Sparkline() {
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'gainers' | 'losers'>('gainers');
   const [query, setQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchHit[]>([]);
+  const [searching, setSearching] = useState(false);
   const router = useRouter();
 
-  const searchResults = query.length > 1
-    ? SCREENER_STOCKS.filter(s =>
-        s.symbol.toLowerCase().includes(query.toLowerCase()) ||
-        s.name.toLowerCase().includes(query.toLowerCase())
-      ).slice(0, 5)
-    : [];
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) { setSearchResults([]); setSearching(false); return; }
+    setSearching(true);
+    const ctrl = new AbortController();
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, { signal: ctrl.signal });
+        const data = await res.json();
+        setSearchResults(Array.isArray(data) ? data.slice(0, 6) : []);
+      } catch {
+        /* aborted */
+      } finally {
+        setSearching(false);
+      }
+    }, 180);
+    return () => { clearTimeout(t); ctrl.abort(); };
+  }, [query]);
 
   const stocks = activeTab === 'gainers' ? TOP_GAINERS : TOP_LOSERS;
 
@@ -102,25 +118,33 @@ export default function Home() {
                     }}
                     className="bg-transparent text-[15px] text-[#0D1117] placeholder:text-[#8A96A8] outline-none flex-1"
                   />
-                  <kbd className="hidden sm:inline text-[10px] text-[#8A96A8] border border-[#E2E8F0] rounded px-1.5 py-0.5 font-sans">↵</kbd>
+                  {searching
+                    ? <Loader2 size={16} className="text-[#8A96A8] shrink-0 animate-spin" />
+                    : <kbd className="hidden sm:inline text-[10px] text-[#8A96A8] border border-[#E2E8F0] rounded px-1.5 py-0.5 font-sans">↵</kbd>}
                 </div>
 
-                {searchResults.length > 0 && (
+                {query.trim().length >= 2 && (
                   <div className="absolute top-full mt-2 left-0 right-0 bg-white border border-[#E2E8F0] rounded-xl shadow-xl overflow-hidden z-50 text-left">
-                    {searchResults.map(s => (
-                      <Link
-                        key={s.symbol}
-                        href={`/stocks/${s.symbol}`}
-                        onClick={() => setQuery('')}
-                        className="flex items-center justify-between px-4 py-3 hover:bg-[#FFF7ED] transition-colors border-b border-[#EDF0F7] last:border-0"
-                      >
-                        <div>
-                          <span className="text-sm font-semibold text-[#0D1117]">{s.symbol}</span>
-                          <span className="text-xs text-[#4A5568] ml-2">{s.name}</span>
-                        </div>
-                        <span className="text-xs text-[#8A96A8] bg-[#F4F6FA] px-2 py-0.5 rounded">{s.sector}</span>
-                      </Link>
-                    ))}
+                    {searchResults.length > 0 ? (
+                      searchResults.map(s => (
+                        <Link
+                          key={s.symbol}
+                          href={`/stocks/${s.symbol}`}
+                          onClick={() => setQuery('')}
+                          className="flex items-center justify-between px-4 py-3 hover:bg-[#FFF7ED] transition-colors border-b border-[#EDF0F7] last:border-0"
+                        >
+                          <div>
+                            <span className="text-sm font-semibold text-[#0D1117]">{s.symbol}</span>
+                            <span className="text-xs text-[#4A5568] ml-2">{s.name}</span>
+                          </div>
+                          {s.sector && <span className="text-xs text-[#8A96A8] bg-[#F4F6FA] px-2 py-0.5 rounded shrink-0 ml-2">{s.sector}</span>}
+                        </Link>
+                      ))
+                    ) : (
+                      <div className="px-4 py-4 text-sm text-[#8A96A8]">
+                        {searching ? 'Searching…' : `No matches for "${query.trim()}"`}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
