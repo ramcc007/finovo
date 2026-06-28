@@ -16,6 +16,7 @@ import os
 import time
 from datetime import date
 import yfinance as yf
+from curl_cffi import requests as cffi_requests
 from supabase import create_client
 from dotenv import load_dotenv
 
@@ -25,6 +26,13 @@ SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_SERVICE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 DELAY = 1.5          # seconds between each symbol (yfinance rate limit)
 MAX_SYMBOLS = int(os.environ.get("MAX_SYMBOLS", "2000"))
+
+
+def make_session():
+    """yfinance via plain requests is blocked by Yahoo from datacenter IPs
+    (empty responses). curl_cffi impersonates a real Chrome TLS fingerprint,
+    which gets past Yahoo's bot wall."""
+    return cffi_requests.Session(impersonate="chrome")
 
 
 def get_active_symbols(client) -> list[str]:
@@ -49,11 +57,14 @@ def safe_int(val) -> int | None:
         return None
 
 
-def ingest_one(client, symbol: str):
-    ticker = yf.Ticker(f"{symbol}.NS")
+def ingest_one(client, symbol: str, session):
+    ticker = yf.Ticker(f"{symbol}.NS", session=session)
 
     # ── RATIOS from ticker.info ──────────────────────────────
     info = ticker.info or {}
+    if not info or info.get("trailingPE") is None and info.get("marketCap") is None and info.get("currentPrice") is None:
+        # Empty payload => Yahoo blocked/threw nothing useful; skip this symbol
+        raise ValueError("empty info payload")
 
     ratio_record = {
         "symbol": symbol,
@@ -188,16 +199,18 @@ def run():
     symbols = get_active_symbols(client)[:MAX_SYMBOLS]
     print(f"  {len(symbols)} symbols to process")
 
+    session = make_session()
     success = error = 0
     for i, symbol in enumerate(symbols):
         try:
-            ingest_one(client, symbol)
+            ingest_one(client, symbol, session)
             success += 1
             if (i + 1) % 50 == 0:
                 print(f"  [{i+1}/{len(symbols)}] {success} ok, {error} errors")
         except Exception as e:
             error += 1
-            print(f"  Error [{symbol}]: {e}")
+            if error <= 10 or (i + 1) % 50 == 0:
+                print(f"  Error [{symbol}]: {e}")
         time.sleep(DELAY)
 
     print(f"Done. {success} success, {error} errors.")

@@ -5,6 +5,11 @@ on:
     # Every Sunday at 08:00 UTC (1:30 PM IST)
     - cron: '0 8 * * 0'
   workflow_dispatch:
+    inputs:
+      max_symbols:
+        description: 'Max symbols to process (use a small number to test)'
+        required: false
+        default: '2000'
 
 jobs:
   ingest:
@@ -28,5 +33,5 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          MAX_SYMBOLS: '2000'
+          MAX_SYMBOLS: ${{ github.event.inputs.max_symbols || '2000' }}
         run: python scripts/ingest_fundamentals.py
