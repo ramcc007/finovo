@@ -1,5 +1,5 @@
 yfinance==0.2.51
-supabase==2.15.0
+supabase==2.31.0
 pandas==2.2.3
 requests==2.32.3
 python-dotenv==1.1.0
