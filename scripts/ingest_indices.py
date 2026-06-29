@@ -120,13 +120,32 @@ def run():
     df["_vol"] = df[vol_col].map(_num) if vol_col else 0
     df = df[df["_close"].notna()]
 
-    # Rank by volume (fallback to 0 when the file has no volume column).
     df["_volrank"] = df["_vol"].fillna(0)
-    top = df.sort_values("_volrank", ascending=False).head(TOP_N).copy()
+    df["_norm"] = df["_name"].str.lower().str.replace(r"\s+", " ", regex=True).str.strip()
 
-    # Always include India VIX if present anywhere in the file.
-    vix = df[df["_name"].str.upper().str.contains("VIX")]
-    if len(vix) and not top["_name"].str.upper().str.contains("VIX").any():
+    # Headline, widely-followed indices (the prominent ones on Groww). We restrict
+    # to these so the ticker shows recognisable indices, then order them by traded
+    # volume per the requirement — a raw "top by volume" ranking otherwise surfaces
+    # obscure composite baskets (e.g. "Nifty500 Multicap 50:25:25") and omits
+    # NIFTY 50 / Bank Nifty entirely.
+    PREFERRED = {
+        "nifty 50", "nifty next 50", "nifty 100", "nifty 200", "nifty 500",
+        "nifty bank", "nifty financial services", "nifty midcap 100",
+        "nifty midcap select", "nifty smallcap 100", "nifty it", "nifty auto",
+        "nifty pharma", "nifty fmcg", "nifty metal", "nifty realty",
+        "nifty energy", "nifty infrastructure", "nifty psu bank",
+        "nifty private bank", "nifty oil & gas", "nifty consumer durables",
+    }
+    pref = df[df["_norm"].isin(PREFERRED)].copy()
+    top = pref.sort_values("_volrank", ascending=False).head(TOP_N).copy()
+
+    # Safety net: if NSE label drift means too few matched, fall back to raw volume.
+    if len(top) < 5:
+        top = df.sort_values("_volrank", ascending=False).head(TOP_N).copy()
+
+    # Always include India VIX.
+    vix = df[df["_norm"] == "india vix"]
+    if len(vix) and not top["_norm"].eq("india vix").any():
         top = pd.concat([top, vix.head(1)])
 
     records = []
