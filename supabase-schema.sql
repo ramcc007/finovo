@@ -139,6 +139,20 @@ create table if not exists quotes (
 );
 
 -- ─────────────────────────────────────────────────────────────
+-- 6b. MARKET INDICES (top indices by volume + India VIX, EOD)
+-- ─────────────────────────────────────────────────────────────
+create table if not exists indices (
+  symbol     text primary key,    -- NSE index name e.g. 'NIFTY 50'
+  name       text not null,
+  last       numeric(14,2) not null,
+  change     numeric(12,2),
+  change_pct numeric(8,4),
+  volume     bigint,
+  rank       int,                 -- display order (0 = highest volume)
+  updated_at timestamptz default now()
+);
+
+-- ─────────────────────────────────────────────────────────────
 -- 7. ROW LEVEL SECURITY (enable public read, restrict writes)
 -- ─────────────────────────────────────────────────────────────
 alter table companies   enable row level security;
@@ -147,6 +161,7 @@ alter table fundamentals enable row level security;
 alter table ratios      enable row level security;
 alter table shareholding enable row level security;
 alter table quotes      enable row level security;
+alter table indices     enable row level security;
 
 -- Public read access for all tables
 create policy "Public read companies"    on companies    for select using (true);
@@ -155,6 +170,7 @@ create policy "Public read fundamentals" on fundamentals for select using (true)
 create policy "Public read ratios"       on ratios       for select using (true);
 create policy "Public read shareholding" on shareholding for select using (true);
 create policy "Public read quotes"       on quotes       for select using (true);
+create policy "Public read indices"      on indices      for select using (true);
 
 -- ─────────────────────────────────────────────────────────────
 -- 8. SCREENER VIEW (latest ratios joined with company info)

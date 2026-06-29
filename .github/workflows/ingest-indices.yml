@@ -1,0 +1,32 @@
+name: Daily Index Ingestion
+
+on:
+  schedule:
+    # 4:35 PM IST = 11:05 UTC, Mon–Fri (just after the price ingestion)
+    - cron: '5 11 * * 1-5'
+  workflow_dispatch:  # allow manual trigger
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: scripts/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Run index ingestion
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TOP_INDICES: '10'
+        run: python scripts/ingest_indices.py
