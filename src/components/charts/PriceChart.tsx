@@ -22,9 +22,14 @@ type Period = typeof PERIODS[number];
 
 export default function PriceChart({ symbol, currentPrice }: PriceChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<unknown>(null);
-  const seriesRef = useRef<unknown>(null);
-  const volumeSeriesRef = useRef<unknown>(null);
+  // Keep latest currentPrice in a ref so fetchPrices never has a stale closure.
+  const currentPriceRef = useRef(currentPrice);
+  useEffect(() => { currentPriceRef.current = currentPrice; }, [currentPrice]);
+
+  // Track the live chart instance so we can safely remove it before re-creating.
+  const chartRef = useRef<{ remove: () => void } | null>(null);
+  const roRef = useRef<ResizeObserver | null>(null);
+
   const [period, setPeriod] = useState<Period>('1Y');
   const [chartType, setChartType] = useState<'line' | 'candle'>('line');
   const [prices, setPrices] = useState<PricePoint[]>([]);
@@ -34,7 +39,8 @@ export default function PriceChart({ symbol, currentPrice }: PriceChartProps) {
   const fetchPrices = useCallback(async (p: Period) => {
     setLoading(true);
     try {
-      const priceParam = currentPrice > 0 ? `&price=${currentPrice}` : '';
+      const price = currentPriceRef.current;
+      const priceParam = price > 0 ? `&price=${price}` : '';
       const res = await fetch(`/api/stocks/${symbol}/prices?period=${p}${priceParam}`);
       const data: PricePoint[] = await res.json();
       setPrices(data);
@@ -57,19 +63,21 @@ export default function PriceChart({ symbol, currentPrice }: PriceChartProps) {
   useEffect(() => {
     if (!chartContainerRef.current || prices.length === 0) return;
 
-    let chart: ReturnType<typeof import('lightweight-charts').createChart> | null = null;
+    // Tear down previous chart and ResizeObserver before creating a new one.
+    roRef.current?.disconnect();
+    roRef.current = null;
+    chartRef.current?.remove();
+    chartRef.current = null;
+
+    let cancelled = false;
 
     import('lightweight-charts').then(({ createChart, ColorType, CrosshairMode, CandlestickSeries, AreaSeries, HistogramSeries }) => {
-      if (!chartContainerRef.current) return;
+      if (cancelled || !chartContainerRef.current) return;
 
-      // Clean up previous chart
-      if (chartRef.current) {
-        (chartRef.current as { remove: () => void }).remove();
-      }
-
-      chart = createChart(chartContainerRef.current, {
-        width: chartContainerRef.current.clientWidth || 600,
-        height: chartContainerRef.current.clientHeight || 256,
+      const el = chartContainerRef.current;
+      const chart = createChart(el, {
+        width: el.clientWidth || 600,
+        height: el.clientHeight || 256,
         layout: {
           background: { type: ColorType.Solid, color: '#FFFFFF' },
           textColor: '#56616F',
@@ -102,7 +110,6 @@ export default function PriceChart({ symbol, currentPrice }: PriceChartProps) {
       const isPositive = priceChange.pct >= 0;
       const lineColor = isPositive ? '#16A34A' : '#DC2626';
       const areaTopColor = isPositive ? 'rgba(22,163,74,0.12)' : 'rgba(220,38,38,0.12)';
-      const areaBottomColor = 'rgba(255,255,255,0)';
 
       const timeData = prices.map(p => ({
         time: p.date as `${number}-${number}-${number}`,
@@ -124,17 +131,15 @@ export default function PriceChart({ symbol, currentPrice }: PriceChartProps) {
           priceScaleId: 'right',
         });
         cs.setData(timeData);
-        seriesRef.current = cs;
       } else {
         const as = chart.addSeries(AreaSeries, {
           lineColor,
           topColor: areaTopColor,
-          bottomColor: areaBottomColor,
+          bottomColor: 'rgba(255,255,255,0)',
           lineWidth: 2,
           priceScaleId: 'right',
         });
         as.setData(timeData);
-        seriesRef.current = as;
       }
 
       // Volume bars
@@ -152,13 +157,10 @@ export default function PriceChart({ symbol, currentPrice }: PriceChartProps) {
         value: p.volume,
         color: p.close >= p.open ? 'rgba(22,163,74,0.4)' : 'rgba(220,38,38,0.4)',
       })));
-      volumeSeriesRef.current = vs;
 
-      // Force an explicit resize to the container's real dimensions, then fit.
-      // (createChart's initial measurement can land before layout settles.)
-      const el = chartContainerRef.current;
+      // Resize to real container dimensions, then fit.
       const sync = () => {
-        if (chart && el && el.clientWidth > 0) {
+        if (el.clientWidth > 0) {
           chart.resize(el.clientWidth, el.clientHeight, true);
           chart.timeScale().fitContent();
         }
@@ -166,20 +168,22 @@ export default function PriceChart({ symbol, currentPrice }: PriceChartProps) {
       sync();
       requestAnimationFrame(sync);
 
-      // Responsive resize
       const ro = new ResizeObserver(entries => {
-        if (chart && entries[0]) {
+        if (entries[0]) {
           const { width, height } = entries[0].contentRect;
           chart.resize(width, height, true);
         }
       });
       ro.observe(el);
-
-      return () => ro.disconnect();
+      roRef.current = ro;
     });
 
     return () => {
-      if (chart) chart.remove();
+      cancelled = true;
+      roRef.current?.disconnect();
+      roRef.current = null;
+      chartRef.current?.remove();
+      chartRef.current = null;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prices, chartType]);
@@ -205,7 +209,7 @@ export default function PriceChart({ symbol, currentPrice }: PriceChartProps) {
           </div>
 
           {/* Period return */}
-          {!loading && prices.length > 0 && (
+          {!loading && prices.length > 1 && (
             <span className={cn(
               'text-xs font-mono font-semibold px-2 py-0.5 rounded',
               priceChange.pct >= 0 ? 'badge-positive' : 'badge-negative'
@@ -241,7 +245,7 @@ export default function PriceChart({ symbol, currentPrice }: PriceChartProps) {
         </div>
       ) : prices.length === 0 ? (
         <div className="h-64 flex items-center justify-center text-[#8A96A8] text-sm">
-          No price data available
+          No price data available for this period
         </div>
       ) : (
         <div ref={chartContainerRef} className="h-64 w-full" />

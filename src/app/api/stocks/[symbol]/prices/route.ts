@@ -7,13 +7,11 @@ export async function GET(
 ) {
   const { symbol } = await params;
   const period = req.nextUrl.searchParams.get('period') ?? '1Y';
-  const priceHint = parseFloat(req.nextUrl.searchParams.get('price') ?? '0');
 
   const daysMap: Record<string, number> = {
     '1D': 1, '1W': 7, '1M': 30, '6M': 180, '1Y': 365, '5Y': 1825, 'All': 3650,
   };
   const days = daysMap[period] ?? 365;
-  const synthDays = Math.min(days, 365);
   const from = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
 
   try {
@@ -25,46 +23,8 @@ export async function GET(
       .order('date', { ascending: true });
 
     if (error) throw error;
-
-    // If no historical data but we have the current price, generate synthetic history
-    if (!data || data.length < 2) {
-      const basePrice = priceHint > 0 ? priceHint : (data?.[0]?.close ?? 0);
-      if (basePrice > 0) return NextResponse.json(generateSyntheticPrices(basePrice, synthDays));
-      return NextResponse.json(data ?? []);
-    }
-
-    return NextResponse.json(data);
+    return NextResponse.json(data ?? []);
   } catch {
-    const basePrice = priceHint > 0 ? priceHint : 3842.5;
-    return NextResponse.json(generateSyntheticPrices(basePrice, synthDays));
+    return NextResponse.json([]);
   }
-}
-
-function generateSyntheticPrices(currentPrice: number, days: number) {
-  const prices = [];
-  let price = currentPrice * 0.85; // start lower
-  const now = Date.now();
-
-  for (let i = days; i >= 0; i--) {
-    const date = new Date(now - i * 86400000);
-    // skip weekends
-    if (date.getDay() === 0 || date.getDay() === 6) continue;
-
-    const change = (Math.random() - 0.48) * price * 0.02;
-    price = Math.max(price + change, currentPrice * 0.5);
-
-    const open = price * (1 + (Math.random() - 0.5) * 0.005);
-    const high = Math.max(open, price) * (1 + Math.random() * 0.01);
-    const low = Math.min(open, price) * (1 - Math.random() * 0.01);
-
-    prices.push({
-      date: date.toISOString().split('T')[0],
-      open: +open.toFixed(2),
-      high: +high.toFixed(2),
-      low: +low.toFixed(2),
-      close: +price.toFixed(2),
-      volume: Math.floor(Math.random() * 5000000 + 1000000),
-    });
-  }
-  return prices;
 }

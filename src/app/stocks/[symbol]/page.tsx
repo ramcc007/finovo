@@ -458,6 +458,12 @@ export default function StockPage() {
               </h3>
               {loading ? (
                 <div className="space-y-4">{Array(4).fill(0).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}</div>
+              ) : !data?.shareholding?.length ? (
+                <div className="py-10 text-center text-[#8A96A8] text-sm">
+                  Shareholding data not yet available.
+                  <br />
+                  <span className="text-xs mt-1 block">Updated quarterly from regulatory filings.</span>
+                </div>
               ) : (
                 <>
                   {[
@@ -497,29 +503,33 @@ export default function StockPage() {
               <div className="px-5 py-4 border-b border-[#EDF0F7]">
                 <h3 className="font-semibold text-[#0D1117] text-sm">Shareholding Trend</h3>
               </div>
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Holder</th>
-                    {data?.shareholding.map(s => <th key={s.quarter}>{s.quarter}</th>)}
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    { label: 'Promoters', key: 'promoter_pct' },
-                    { label: 'FII/FPI', key: 'fii_pct' },
-                    { label: 'DII', key: 'dii_pct' },
-                    { label: 'Public', key: 'public_pct' },
-                  ].map(row => (
-                    <tr key={row.key}>
-                      <td>{row.label}</td>
-                      {data?.shareholding.map((s, i) => (
-                        <td key={i}>{Number(s[row.key as keyof typeof s] ?? 0).toFixed(2)}%</td>
-                      ))}
+              {!data?.shareholding?.length ? (
+                <div className="p-10 text-center text-[#8A96A8] text-sm">No trend data available yet.</div>
+              ) : (
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Holder</th>
+                      {data?.shareholding.map(s => <th key={s.quarter}>{s.quarter}</th>)}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {[
+                      { label: 'Promoters', key: 'promoter_pct' },
+                      { label: 'FII/FPI', key: 'fii_pct' },
+                      { label: 'DII', key: 'dii_pct' },
+                      { label: 'Public', key: 'public_pct' },
+                    ].map(row => (
+                      <tr key={row.key}>
+                        <td>{row.label}</td>
+                        {data?.shareholding.map((s, i) => (
+                          <td key={i}>{Number(s[row.key as keyof typeof s] ?? 0).toFixed(2)}%</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         )}
