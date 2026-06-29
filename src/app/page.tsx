@@ -78,25 +78,25 @@ export default function Home() {
       <TickerBar />
 
       {/* ───────────────── HERO ───────────────── */}
-      <section className="hero-dark">
-        <div className="hero-grid" />
+      <section className="hero-light">
+        <div className="hero-grid-light" />
         <div className="relative max-w-7xl mx-auto px-4 md:px-6 pt-16 md:pt-24 pb-20 md:pb-28">
           <div className="grid lg:grid-cols-[1.05fr_0.95fr] gap-12 lg:gap-16 items-center">
 
             {/* Left: copy */}
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/5 px-3 py-1.5 mb-7">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A]" />
-                <span className="eyebrow text-white/70">Free forever · NSE &amp; BSE</span>
+              <div className="inline-flex items-center gap-2 rounded-full border border-[#E6EAF1] bg-white px-3 py-1.5 mb-7 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#15A05B]" />
+                <span className="eyebrow text-[#56616F]">Free forever · NSE &amp; BSE</span>
               </div>
 
-              <h1 className="h-display text-white mb-5">
+              <h1 className="h-display text-[#131A24] mb-5">
                 Research Indian stocks{' '}
                 <br className="hidden sm:block" />
                 like a <span className="text-[#F97316]">professional.</span>
               </h1>
 
-              <p className="text-white/60 text-base md:text-lg leading-relaxed max-w-xl mb-8">
+              <p className="text-[#56616F] text-base md:text-lg leading-relaxed max-w-xl mb-8">
                 Screen 5,000+ NSE &amp; BSE companies with a decade of fundamentals,
                 financial ratios, and clean financial statements. No login. No paywall.
               </p>
@@ -151,12 +151,12 @@ export default function Home() {
 
               {/* Quick chips */}
               <div className="flex items-center gap-2 mb-8 flex-wrap">
-                <span className="text-xs text-white/40">Popular:</span>
+                <span className="text-xs text-[#8A94A4]">Popular:</span>
                 {['TCS', 'RELIANCE', 'HDFCBANK', 'INFY'].map(sym => (
                   <Link
                     key={sym}
                     href={`/stocks/${sym}`}
-                    className="text-xs font-medium text-white/80 bg-white/5 border border-white/10 px-3 py-1 rounded-full hover:bg-white/10 hover:border-white/20 transition-colors"
+                    className="text-xs font-medium text-[#56616F] bg-white border border-[#E6EAF1] px-3 py-1 rounded-full hover:border-[#F97316]/40 hover:text-[#EA580C] hover:bg-[#FFF7ED] transition-colors shadow-[0_1px_2px_rgba(16,24,40,0.03)]"
                   >
                     {sym}
                   </Link>
@@ -168,7 +168,7 @@ export default function Home() {
                 <Link href="/screener" className="btn btn-primary">
                   Open Explorer <ArrowRight size={16} />
                 </Link>
-                <Link href="/markets" className="btn btn-on-dark">
+                <Link href="/markets" className="btn btn-secondary">
                   Explore markets
                 </Link>
               </div>
@@ -177,8 +177,8 @@ export default function Home() {
             {/* Right: product preview */}
             <Reveal delay={120} className="hidden lg:block">
               <div className="relative">
-                <div className="absolute -inset-4 bg-gradient-to-br from-[#F97316]/10 to-transparent rounded-3xl blur-2xl" />
-                <div className="relative bg-white rounded-2xl border border-white/10 shadow-[0_24px_60px_rgba(0,0,0,0.35)] overflow-hidden">
+                <div className="absolute -inset-5 bg-gradient-to-br from-[#F97316]/15 via-[#F97316]/5 to-transparent rounded-3xl blur-2xl" />
+                <div className="relative bg-white rounded-2xl border border-[#E9EDF4] shadow-[0_20px_50px_rgba(16,24,40,0.14)] overflow-hidden">
                   {/* preview header */}
                   <div className="flex items-center justify-between px-5 py-4 border-b border-[#EDF0F7]">
                     <div>
@@ -221,7 +221,7 @@ export default function Home() {
         </div>
 
         {/* Trust strip */}
-        <div className="relative border-t border-white/8">
+        <div className="relative border-t border-[#E9EDF4] bg-white/40">
           <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 grid grid-cols-2 md:grid-cols-4 gap-6">
             {[
               { v: '5,000+', l: 'Listed companies' },
@@ -230,8 +230,8 @@ export default function Home() {
               { v: '₹0', l: 'Cost, forever' },
             ].map(s => (
               <div key={s.l} className="text-center md:text-left">
-                <div className="tnum text-2xl font-bold text-white">{s.v}</div>
-                <div className="text-xs text-white/45 mt-0.5">{s.l}</div>
+                <div className="tnum text-2xl font-bold text-[#131A24]">{s.v}</div>
+                <div className="text-xs text-[#8A94A4] mt-0.5">{s.l}</div>
               </div>
             ))}
           </div>

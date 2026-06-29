@@ -68,9 +68,11 @@ export default function PriceChart({ symbol, currentPrice }: PriceChartProps) {
       }
 
       chart = createChart(chartContainerRef.current, {
+        width: chartContainerRef.current.clientWidth || 600,
+        height: chartContainerRef.current.clientHeight || 256,
         layout: {
           background: { type: ColorType.Solid, color: '#FFFFFF' },
-          textColor: '#4A5568',
+          textColor: '#56616F',
           fontFamily: 'Inter, sans-serif',
           fontSize: 11,
         },
@@ -152,16 +154,26 @@ export default function PriceChart({ symbol, currentPrice }: PriceChartProps) {
       })));
       volumeSeriesRef.current = vs;
 
-      chart.timeScale().fitContent();
+      // Force an explicit resize to the container's real dimensions, then fit.
+      // (createChart's initial measurement can land before layout settles.)
+      const el = chartContainerRef.current;
+      const sync = () => {
+        if (chart && el && el.clientWidth > 0) {
+          chart.resize(el.clientWidth, el.clientHeight, true);
+          chart.timeScale().fitContent();
+        }
+      };
+      sync();
+      requestAnimationFrame(sync);
 
       // Responsive resize
       const ro = new ResizeObserver(entries => {
         if (chart && entries[0]) {
           const { width, height } = entries[0].contentRect;
-          chart.applyOptions({ width, height });
+          chart.resize(width, height, true);
         }
       });
-      ro.observe(chartContainerRef.current);
+      ro.observe(el);
 
       return () => ro.disconnect();
     });

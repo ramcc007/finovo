@@ -7,13 +7,13 @@ export default function TickerBar() {
   const items = [...INDICES, ...INDICES];
 
   return (
-    <div className="bg-[#1C2D3D] text-white h-9 flex items-center overflow-hidden border-b border-white/5">
+    <div className="bg-white text-[#131A24] h-9 flex items-center overflow-hidden border-b border-[#E9EDF4]">
       <div className="flex animate-ticker whitespace-nowrap">
         {items.map((idx, i) => (
-          <span key={i} className="inline-flex items-center gap-2 px-5 border-r border-white/10">
-            <span className="text-[11px] text-white/50 font-medium tracking-wide">{idx.name}</span>
-            <span className="text-[11px] font-mono font-semibold text-white">{idx.value.toLocaleString('en-IN')}</span>
-            <span className={cn('text-[11px] font-mono font-semibold', idx.changePct >= 0 ? 'text-emerald-400' : 'text-red-400')}>
+          <span key={i} className="inline-flex items-center gap-2 px-5 border-r border-[#EEF1F7]">
+            <span className="text-[11px] text-[#8A94A4] font-medium tracking-wide">{idx.name}</span>
+            <span className="text-[11px] font-mono font-semibold text-[#131A24]">{idx.value.toLocaleString('en-IN')}</span>
+            <span className={cn('text-[11px] font-mono font-semibold', idx.changePct >= 0 ? 'text-[#15A05B]' : 'text-[#E0392B]')}>
               {idx.changePct >= 0 ? '▲' : '▼'} {Math.abs(idx.changePct).toFixed(2)}%
             </span>
           </span>
