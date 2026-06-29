@@ -123,27 +123,27 @@ def run():
     df["_volrank"] = df["_vol"].fillna(0)
     df["_norm"] = df["_name"].str.lower().str.replace(r"\s+", " ", regex=True).str.strip()
 
-    # Headline, widely-followed indices (the prominent ones on Groww). We restrict
-    # to these so the ticker shows recognisable indices, then order them by traded
-    # volume per the requirement — a raw "top by volume" ranking otherwise surfaces
-    # obscure composite baskets (e.g. "Nifty500 Multicap 50:25:25") and omits
-    # NIFTY 50 / Bank Nifty entirely.
+    # The recognisable indices shown on Groww's indices page (broad market +
+    # key sectorals). We keep these, order them by traded volume, cap at TOP_N,
+    # and always pin India VIX. (A raw volume sort over all 160 NSE indices
+    # surfaces obscure composite baskets like "Nifty500 Multicap 50:25:25".)
     PREFERRED = {
         "nifty 50", "nifty next 50", "nifty 100", "nifty 200", "nifty 500",
-        "nifty bank", "nifty financial services", "nifty midcap 100",
-        "nifty midcap select", "nifty smallcap 100", "nifty it", "nifty auto",
-        "nifty pharma", "nifty fmcg", "nifty metal", "nifty realty",
-        "nifty energy", "nifty infrastructure", "nifty psu bank",
-        "nifty private bank", "nifty oil & gas", "nifty consumer durables",
+        "nifty total market", "nifty bank", "nifty financial services",
+        "nifty midcap 100", "nifty midcap select", "nifty smallcap 100",
+        "nifty auto", "nifty fmcg", "nifty it", "nifty pharma", "nifty metal",
+        "nifty realty", "nifty energy", "nifty infrastructure",
+        "nifty psu bank", "nifty private bank", "nifty oil & gas",
+        "nifty consumer durables",
     }
     pref = df[df["_norm"].isin(PREFERRED)].copy()
     top = pref.sort_values("_volrank", ascending=False).head(TOP_N).copy()
 
-    # Safety net: if NSE label drift means too few matched, fall back to raw volume.
+    # Safety net: if NSE label drift matched too few, fall back to raw volume.
     if len(top) < 5:
         top = df.sort_values("_volrank", ascending=False).head(TOP_N).copy()
 
-    # Always include India VIX.
+    # Always include India VIX (no volume of its own, so pinned on separately).
     vix = df[df["_norm"] == "india vix"]
     if len(vix) and not top["_norm"].eq("india vix").any():
         top = pd.concat([top, vix.head(1)])
