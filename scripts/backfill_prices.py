@@ -95,7 +95,10 @@ def fetch_bhavcopy(session: requests.Session, d: date) -> pd.DataFrame | None:
             if resp.status_code == 404:
                 return None  # holiday
             if resp.status_code == 200 and resp.text.strip():
-                df = pd.read_csv(io.StringIO(resp.text))
+                try:
+                    df = pd.read_csv(io.StringIO(resp.text))
+                except Exception:
+                    return None  # malformed response (HTML error page, etc.)
                 df.columns = [c.strip() for c in df.columns]
                 if "SYMBOL" in df.columns and len(df):
                     return df
