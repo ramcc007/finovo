@@ -22,10 +22,19 @@ export async function GET(req: NextRequest) {
     promoter_min: p.get('promoter_min') ? +p.get('promoter_min')! : null,
     pledge_max: p.get('pledge_max') ? +p.get('pledge_max')! : null,
     sort_by: p.get('sort_by') ?? 'market_cap',
-    sort_dir: (p.get('sort_dir') ?? 'desc') as 'asc' | 'desc',
-    page: p.get('page') ? +p.get('page')! : 1,
-    per_page: p.get('per_page') ? +p.get('per_page')! : 20,
+    sort_dir: p.get('sort_dir') === 'asc' ? 'asc' : 'desc',
+    page: Math.max(1, p.get('page') ? +p.get('page')! : 1),
+    per_page: Math.min(100, Math.max(1, p.get('per_page') ? +p.get('per_page')! : 20)),
   };
+
+  const ALLOWED_SORT_COLS = new Set([
+    'market_cap', 'mcap', 'pe', 'pb', 'roe', 'roce', 'price',
+    'revenue_growth_1y', 'profit_growth_1y', 'dividend_yield',
+    'debt_to_equity', 'promoter_pct', 'pledge_pct', 'name', 'symbol',
+  ]);
+  if (!ALLOWED_SORT_COLS.has(filters.sort_by)) {
+    filters.sort_by = 'market_cap';
+  }
 
   try {
     let query = supabase
