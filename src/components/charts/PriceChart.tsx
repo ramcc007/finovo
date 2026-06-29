@@ -17,7 +17,7 @@ interface PriceChartProps {
   currentPrice: number;
 }
 
-const PERIODS = ['1D', '1W', '1M', '6M', '1Y', '5Y', 'All'] as const;
+const PERIODS = ['1D', '1W', '1M', '6M', '1Y', '5Y'] as const;
 type Period = typeof PERIODS[number];
 
 export default function PriceChart({ symbol, currentPrice }: PriceChartProps) {
