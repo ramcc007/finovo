@@ -1,14 +1,9 @@
 """
-Daily index ingestion via NSE's official "ind_close_all" archive.
+Daily index ingestion via NSE's official "ind_close_all" archive + BSE Sensex.
 
-Like the equity Bhavcopy, NSE publishes a single CSV with the day's OHLC,
-change, volume and turnover for every published index. It is served from the
-same archive host (nsearchives.nseindia.com) that the price ingestion already
-uses successfully from GitHub Actions, whereas the live www.nseindia.com/api
-endpoints block datacenter IPs.
-
-We keep the top N indices by traded volume plus India VIX (the volatility
-index), and store them in the `indices` table for the homepage ticker.
+Stores exactly 10 headline indices in the user-specified display order.
+Sensex (BSE) is fetched via yfinance since it is not in NSE's index file.
+NSE indices come from nsearchives.nseindia.com (CI-reachable).
 
 Schedule: GitHub Actions, daily after market close on weekdays.
 """
@@ -27,10 +22,8 @@ load_dotenv()
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_SERVICE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 
-TOP_N = int(os.environ.get("TOP_INDICES", "10"))
 LOOKBACK_DAYS = 10
 
-# NSE serves the index close file from a couple of archive hosts; try both.
 URL_TEMPLATES = [
     "https://nsearchives.nseindia.com/content/indices/ind_close_all_{ddmmyyyy}.csv",
     "https://archives.nseindia.com/content/indices/ind_close_all_{ddmmyyyy}.csv",
@@ -44,8 +37,24 @@ HEADERS = {
     "Referer": "https://www.nseindia.com/",
 }
 
+# Exact display order. Tuples of (normalised match key, fallback display name).
+# Sensex is missing from NSE's file — handled separately.
+NSE_PINNED = [
+    ("nifty 50",           "Nifty 50"),
+    ("nifty bank",         "Nifty Bank"),
+    ("nifty it",           "Nifty IT"),
+    ("nifty midcap 100",   "Nifty Midcap 100"),
+    ("nifty smallcap 100", "Nifty Smallcap 100"),
+    ("nifty next 50",      "Nifty Next 50"),
+    ("india vix",          "India VIX"),
+    ("nifty total market", "Nifty Total Market"),
+    ("nifty energy",       "Nifty Energy"),
+]
+# Sensex slot sits at rank 1 (between Nifty 50 and Nifty Bank).
+SENSEX_RANK = 1
 
-def fetch_latest() -> tuple[pd.DataFrame, date]:
+
+def fetch_nse() -> tuple[pd.DataFrame, date]:
     session = requests.Session()
     session.headers.update(HEADERS)
     try:
@@ -66,22 +75,39 @@ def fetch_latest() -> tuple[pd.DataFrame, date]:
                     df = pd.read_csv(io.StringIO(resp.text))
                     df.columns = [c.strip() for c in df.columns]
                     if len(df) and any("Index" in c for c in df.columns):
-                        print(f"  Using index close for {d.isoformat()} ({len(df)} indices) from {url}")
+                        print(f"  NSE index file: {d.isoformat()} ({len(df)} rows) from {url}")
                         return df, d
             except requests.RequestException as e:
                 print(f"    {d.isoformat()} {url}: {e}")
-                continue
-    raise RuntimeError("No index close file found in the last %d days" % LOOKBACK_DAYS)
+    raise RuntimeError("No NSE index close file found in the last %d days" % LOOKBACK_DAYS)
+
+
+def fetch_sensex() -> dict | None:
+    """Try yfinance for BSE Sensex (^BSESN). Returns a partial record or None."""
+    try:
+        import yfinance as yf
+        ticker = yf.Ticker("^BSESN")
+        hist = ticker.history(period="5d")
+        if hist.empty:
+            return None
+        last_row = hist.iloc[-1]
+        prev_close = hist["Close"].iloc[-2] if len(hist) >= 2 else None
+        close = float(last_row["Close"])
+        pts = round(close - float(prev_close), 2) if prev_close is not None else None
+        pct = round((pts / float(prev_close)) * 100, 2) if pts is not None and prev_close else None
+        print(f"  Sensex (yfinance): {close}  pts={pts}  pct={pct}%")
+        return {"symbol": "SENSEX", "name": "Sensex", "last": close, "change": pts, "change_pct": pct, "volume": None}
+    except Exception as e:
+        print(f"  Sensex fetch failed: {e}")
+        return None
 
 
 def _col(df: pd.DataFrame, *candidates: str) -> str | None:
-    """Find the first column whose normalised name matches a candidate."""
     norm = {c.lower().replace(" ", "").replace("_", ""): c for c in df.columns}
     for cand in candidates:
         key = cand.lower().replace(" ", "").replace("_", "")
         if key in norm:
             return norm[key]
-    # loose contains match
     for cand in candidates:
         key = cand.lower().replace(" ", "")
         for nk, original in norm.items():
@@ -103,68 +129,76 @@ def run():
     client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
     print("Fetching NSE index close file...")
-    df, trade_date = fetch_latest()
+    df, trade_date = fetch_nse()
 
     name_col = _col(df, "Index Name", "IndexName", "Index")
     close_col = _col(df, "Closing Index Value", "Closing", "Close", "ClosingIndexValue")
-    chg_col = _col(df, "Change(%)", "Change %", "Percent Change", "Change")
-    pts_col = _col(df, "Points Change", "Points", "Net Change")
-    vol_col = _col(df, "Volume", "Volume(shares)", "Traded Quantity")
+    chg_col   = _col(df, "Change(%)", "Change %", "Percent Change", "Change")
+    pts_col   = _col(df, "Points Change", "Points", "Net Change")
+    vol_col   = _col(df, "Volume", "Volume(shares)", "Traded Quantity")
     if not name_col or not close_col:
         raise RuntimeError(f"Unexpected columns: {list(df.columns)}")
 
-    df["_name"] = df[name_col].astype(str).str.strip()
-    df["_close"] = df[close_col].map(_num)
+    df["_norm"]   = df[name_col].astype(str).str.strip().str.lower().str.replace(r"\s+", " ", regex=True)
+    df["_close"]  = df[close_col].map(_num)
     df["_chgpct"] = df[chg_col].map(_num) if chg_col else None
-    df["_pts"] = df[pts_col].map(_num) if pts_col else None
-    df["_vol"] = df[vol_col].map(_num) if vol_col else 0
+    df["_pts"]    = df[pts_col].map(_num) if pts_col else None
+    df["_vol"]    = df[vol_col].map(_num) if vol_col else 0
+    df["_name"]   = df[name_col].astype(str).str.strip()
     df = df[df["_close"].notna()]
 
-    df["_volrank"] = df["_vol"].fillna(0)
-    df["_norm"] = df["_name"].str.lower().str.replace(r"\s+", " ", regex=True).str.strip()
-
-    # The recognisable indices shown on Groww's indices page (broad market +
-    # key sectorals). We keep these, order them by traded volume, cap at TOP_N,
-    # and always pin India VIX. (A raw volume sort over all 160 NSE indices
-    # surfaces obscure composite baskets like "Nifty500 Multicap 50:25:25".)
-    PREFERRED = {
-        "nifty 50", "nifty next 50", "nifty 100", "nifty 200", "nifty 500",
-        "nifty total market", "nifty bank", "nifty financial services",
-        "nifty midcap 100", "nifty midcap select", "nifty smallcap 100",
-        "nifty auto", "nifty fmcg", "nifty it", "nifty pharma", "nifty metal",
-        "nifty realty", "nifty energy", "nifty infrastructure",
-        "nifty psu bank", "nifty private bank", "nifty oil & gas",
-        "nifty consumer durables",
-    }
-    pref = df[df["_norm"].isin(PREFERRED)].copy()
-    top = pref.sort_values("_volrank", ascending=False).head(TOP_N).copy()
-
-    # Safety net: if NSE label drift matched too few, fall back to raw volume.
-    if len(top) < 5:
-        top = df.sort_values("_volrank", ascending=False).head(TOP_N).copy()
-
-    # Always include India VIX (no volume of its own, so pinned on separately).
-    vix = df[df["_norm"] == "india vix"]
-    if len(vix) and not top["_norm"].eq("india vix").any():
-        top = pd.concat([top, vix.head(1)])
-
-    records = []
-    for rank, (_, row) in enumerate(top.iterrows()):
-        records.append({
-            "symbol": row["_name"],
-            "name": row["_name"],
-            "last": row["_close"],
-            "change": row["_pts"],
+    # Build NSE records in pinned order.
+    nse_records: list[dict] = []
+    for norm_key, fallback_name in NSE_PINNED:
+        match = df[df["_norm"] == norm_key]
+        if match.empty:
+            # Loose contains match.
+            match = df[df["_norm"].str.contains(norm_key, na=False)]
+        if match.empty:
+            print(f"  WARNING: '{norm_key}' not found in NSE file — skipped")
+            continue
+        row = match.iloc[0]
+        nse_records.append({
+            "symbol":     row["_name"],
+            "name":       row["_name"],
+            "last":       row["_close"],
+            "change":     row["_pts"],
             "change_pct": row["_chgpct"],
-            "volume": int(row["_vol"]) if row["_vol"] and row["_vol"] == row["_vol"] else None,
-            "rank": rank,
+            "volume":     int(row["_vol"]) if row["_vol"] and row["_vol"] == row["_vol"] else None,
         })
+
+    # Fetch Sensex and splice it in at SENSEX_RANK.
+    print("Fetching BSE Sensex...")
+    sensex = fetch_sensex()
+
+    # Assign ranks: Nifty 50 = 0, Sensex = 1 (if available), rest shift.
+    records: list[dict] = []
+    nse_iter = iter(nse_records)
+    rank = 0
+
+    # Slot 0: first NSE entry (Nifty 50)
+    first = next(nse_iter, None)
+    if first:
+        first["rank"] = rank
+        records.append(first)
+        rank += 1
+
+    # Slot 1: Sensex (if fetched)
+    if sensex:
+        sensex["rank"] = rank
+        records.append(sensex)
+        rank += 1
+
+    # Remaining NSE entries
+    for rec in nse_iter:
+        rec["rank"] = rank
+        records.append(rec)
+        rank += 1
 
     print(f"Upserting {len(records)} indices for {trade_date.isoformat()}:")
     for r in records:
-        print(f"  #{r['rank']:>2} {r['symbol']:<28} {r['last']}  ({r['change_pct']}%)  vol={r['volume']}")
+        print(f"  #{r['rank']:>2}  {r['name']:<28}  {r['last']}  ({r['change_pct']}%)")
 
-    # Replace the previous snapshot so stale indices drop out of the top list.
     client.table("indices").delete().neq("symbol", "").execute()
     if records:
         client.table("indices").upsert(records, on_conflict="symbol").execute()
