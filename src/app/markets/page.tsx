@@ -1,55 +1,75 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import TickerBar from '@/components/layout/TickerBar';
-import { INDICES, TOP_GAINERS, TOP_LOSERS, SECTORS } from '@/lib/mock-data';
-import { cn, formatPrice } from '@/lib/utils';
+import { cn, formatPrice, formatVolume, formatCrores, formatTradeDate } from '@/lib/utils';
 
-type MarketTab = 'gainers' | 'losers' | '52high' | '52low' | 'active';
+type MarketTab = 'gainers' | 'losers' | 'active' | 'high52' | 'low52';
+
+interface Mover {
+  symbol: string; name: string; sector: string | null;
+  price: number | null; change: number | null; change_pct: number | null;
+  volume: number | null; market_cap: number | null;
+}
+interface MarketsData {
+  tradeDate: string | null;
+  total: number;
+  gainers: Mover[]; losers: Mover[]; active: Mover[]; high52: Mover[]; low52: Mover[];
+  sectors: { name: string; change: number; count: number }[];
+  breadth: { advances: number; declines: number; unchanged: number; high52: number; low52: number };
+}
+
+const TABS: { key: MarketTab; label: string }[] = [
+  { key: 'gainers', label: 'Top Gainers' },
+  { key: 'losers', label: 'Top Losers' },
+  { key: 'active', label: 'Most Active' },
+  { key: 'high52', label: '52W High' },
+  { key: 'low52', label: '52W Low' },
+];
 
 export default function MarketsPage() {
   const [tab, setTab] = useState<MarketTab>('gainers');
+  const [mkt, setMkt] = useState<MarketsData | null>(null);
   const router = useRouter();
-  const stocks = tab === 'losers' ? TOP_LOSERS : TOP_GAINERS;
+
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/markets')
+      .then(r => r.json())
+      .then(d => { if (alive) setMkt(d); })
+      .catch(() => { if (alive) setMkt(null); });
+    return () => { alive = false; };
+  }, []);
+
+  const rows: Mover[] | null = mkt ? mkt[tab] : null;
+  const breadth = mkt?.breadth;
+  const total = breadth ? Math.max(breadth.advances + breadth.declines + breadth.unchanged, 1) : 1;
 
   return (
     <div className="min-h-screen bg-[#F4F6FA]">
       <TickerBar />
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-10 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-10 md:py-14 space-y-6">
         <div>
           <h1 className="h-section text-[#0D1117]">Market Overview</h1>
-          <p className="text-sm text-[#4A5568] mt-1">Live data — NSE &amp; BSE · Last updated 3:30 PM IST</p>
+          <p className="text-sm text-[#4A5568] mt-1.5">
+            Official NSE close
+            {mkt?.tradeDate
+              ? <> · as of <span className="font-medium text-[#0D1117]">{formatTradeDate(mkt.tradeDate)}</span></>
+              : ' · updating…'}
+            {mkt && mkt.total > 0 ? <> · {mkt.total.toLocaleString('en-IN')} stocks tracked</> : null}
+          </p>
         </div>
 
-        {/* Index Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
-          {INDICES.map(idx => (
-            <div key={idx.name} className="card-plain lift p-4">
-              <div className="text-xs text-[#4A5568] mb-1">{idx.name}</div>
-              <div className="tnum text-lg font-bold text-[#0D1117]">{idx.value.toLocaleString('en-IN')}</div>
-              <div className={cn('tnum text-xs font-semibold mt-1', idx.changePct >= 0 ? 'text-positive' : 'text-negative')}>
-                {idx.changePct >= 0 ? '▲' : '▼'} {idx.change.toFixed(2)} ({Math.abs(idx.changePct).toFixed(2)}%)
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main table */}
           <div className="lg:col-span-2 card-plain p-0 overflow-hidden">
             <div className="px-4 pt-3 pb-3 border-b border-[#EDF0F7] overflow-x-auto">
               <div className="inline-flex items-center gap-0.5 bg-[#EEF1F7] p-0.5 rounded-lg">
-                {[
-                  { key: 'gainers', label: 'Top Gainers' },
-                  { key: 'losers', label: 'Top Losers' },
-                  { key: 'active', label: 'Most Active' },
-                  { key: '52high', label: '52W High' },
-                  { key: '52low', label: '52W Low' },
-                ].map(t => (
+                {TABS.map(t => (
                   <button
                     key={t.key}
-                    onClick={() => setTab(t.key as MarketTab)}
+                    onClick={() => setTab(t.key)}
                     className={cn(
                       'text-xs font-semibold px-3 py-1.5 rounded-md transition-all whitespace-nowrap',
                       tab === t.key ? 'bg-white text-[#0D1117] shadow-sm' : 'text-[#4A5568] hover:text-[#0D1117]'
@@ -60,105 +80,120 @@ export default function MarketsPage() {
                 ))}
               </div>
             </div>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Company</th>
-                  <th>Price (₹)</th>
-                  <th>Change</th>
-                  <th>% Change</th>
-                  <th>Volume</th>
-                  <th>Mkt Cap</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stocks.map(s => (
-                  <tr key={s.symbol} className="group" onClick={() => router.push(`/stocks/${s.symbol}`)}>
-                    <td>
-                      <div className="font-semibold text-[#0D1117] group-hover:text-[#F97316] transition-colors">{s.symbol}</div>
-                      <div className="text-[11px] text-[#8A96A8] font-sans mt-0.5">{s.name}</div>
-                    </td>
-                    <td>{formatPrice(s.price)}</td>
-                    <td className={s.change >= 0 ? 'text-positive' : 'text-negative'}>
-                      {s.change >= 0 ? '+' : ''}₹{Math.abs(s.change).toFixed(2)}
-                    </td>
-                    <td>
-                      <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono font-semibold', s.changePct >= 0 ? 'badge-positive' : 'badge-negative')}>
-                        {s.changePct >= 0 ? '▲' : '▼'} {Math.abs(s.changePct).toFixed(2)}%
-                      </span>
-                    </td>
-                    <td className="text-[#4A5568]">{s.volume}</td>
-                    <td className="text-[#4A5568]">{s.marketCap}</td>
+            <div className="overflow-x-auto">
+              <table className="data-table min-w-[640px]">
+                <thead>
+                  <tr>
+                    <th>Company</th>
+                    <th>Price (₹)</th>
+                    <th>Change</th>
+                    <th>% Change</th>
+                    <th>Volume</th>
+                    <th>Mkt Cap</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {!rows ? (
+                    Array(10).fill(0).map((_, i) => (
+                      <tr key={i}>{Array(6).fill(0).map((_, j) => (
+                        <td key={j}><div className="h-4 bg-[#EEF1F7] rounded animate-pulse" /></td>
+                      ))}</tr>
+                    ))
+                  ) : rows.length === 0 ? (
+                    <tr><td colSpan={6} className="text-center py-12 text-[#8A96A8] font-sans">
+                      Market data is updating — check back after the next market close.
+                    </td></tr>
+                  ) : rows.map(s => (
+                    <tr key={s.symbol} className="group" onClick={() => router.push(`/stocks/${s.symbol}`)}>
+                      <td>
+                        <div className="font-semibold text-[#0D1117] group-hover:text-[#F97316] transition-colors">{s.symbol}</div>
+                        <div className="text-[11px] text-[#8A96A8] font-sans mt-0.5 max-w-[200px] truncate">{s.name}</div>
+                      </td>
+                      <td>{s.price != null ? formatPrice(s.price) : '—'}</td>
+                      <td className={s.change == null ? 'text-[#8A96A8]' : s.change >= 0 ? 'text-positive' : 'text-negative'}>
+                        {s.change == null ? '—' : `${s.change >= 0 ? '+' : ''}₹${Math.abs(s.change).toFixed(2)}`}
+                      </td>
+                      <td>
+                        {s.change_pct == null ? '—' : (
+                          <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono font-semibold', s.change_pct >= 0 ? 'badge-positive' : 'badge-negative')}>
+                            {s.change_pct >= 0 ? '▲' : '▼'} {Math.abs(s.change_pct).toFixed(2)}%
+                          </span>
+                        )}
+                      </td>
+                      <td className="text-[#4A5568]">{formatVolume(s.volume)}</td>
+                      <td className="text-[#4A5568]">{s.market_cap != null ? formatCrores(s.market_cap) : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-4">
+          <div className="space-y-6">
             {/* Sector Performance */}
-            <div className="card p-5">
+            <div className="card-plain p-6">
               <h3 className="text-sm font-semibold text-[#0D1117] mb-4">Sector Performance</h3>
-              <div className="space-y-2.5">
-                {SECTORS.map(s => {
-                  const pos = s.change >= 0;
-                  const barWidth = Math.min(Math.abs(s.change) / 2 * 100, 100);
-                  return (
-                    <div key={s.name}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-[#4A5568]">{s.name}</span>
-                        <span className={cn('num text-xs font-semibold', pos ? 'text-positive' : 'text-negative')}>
-                          {pos ? '+' : ''}{s.change.toFixed(2)}%
-                        </span>
+              {!mkt ? (
+                <div className="space-y-2.5">{Array(6).fill(0).map((_, i) => <div key={i} className="h-5 bg-[#EEF1F7] rounded animate-pulse" />)}</div>
+              ) : mkt.sectors.length === 0 ? (
+                <p className="text-sm text-[#8A96A8]">Updating.</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {mkt.sectors.map(s => {
+                    const pos = s.change >= 0;
+                    const barWidth = Math.min(Math.abs(s.change) / 2 * 100, 100);
+                    return (
+                      <div key={s.name}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs text-[#4A5568] truncate pr-2">{s.name}</span>
+                          <span className={cn('num text-xs font-semibold shrink-0', pos ? 'text-positive' : 'text-negative')}>
+                            {pos ? '+' : ''}{s.change.toFixed(2)}%
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-[#EEF1F7] rounded-full overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${barWidth}%`, background: pos ? '#16A34A' : '#DC2626' }} />
+                        </div>
                       </div>
-                      <div className="h-1.5 bg-[#EEF1F7] rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full"
-                          style={{ width: `${barWidth}%`, background: pos ? '#16A34A' : '#DC2626' }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* FII/DII */}
-            <div className="card p-5">
-              <h3 className="text-sm font-semibold text-[#0D1117] mb-4">FII / DII Activity</h3>
-              <div className="space-y-3">
-                {[
-                  { label: 'FII Buy', value: '₹8,432 Cr', color: '#16A34A' },
-                  { label: 'FII Sell', value: '₹7,184 Cr', color: '#DC2626' },
-                  { label: 'FII Net', value: '+₹1,248 Cr', bold: true, color: '#16A34A' },
-                  { label: 'DII Buy', value: '₹5,234 Cr', color: '#16A34A' },
-                  { label: 'DII Sell', value: '₹5,666 Cr', color: '#DC2626' },
-                  { label: 'DII Net', value: '−₹432 Cr', bold: true, color: '#DC2626' },
-                ].map(item => (
-                  <div key={item.label} className={cn('flex justify-between items-center', item.bold ? 'border-t border-[#EDF0F7] pt-2 mt-1' : '')}>
-                    <span className={cn('text-sm text-[#4A5568]', item.bold ? 'font-semibold text-[#0D1117]' : '')}>{item.label}</span>
-                    <span className={cn('num text-sm', item.bold ? 'font-bold' : 'font-medium')} style={{ color: item.color }}>{item.value}</span>
-                  </div>
-                ))}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Market Breadth */}
-            <div className="card-plain p-4">
-              <h3 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-3">Market Breadth (NSE)</h3>
-              <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="card-plain p-6">
+              <h3 className="text-sm font-semibold text-[#0D1117] mb-4">Market Breadth</h3>
+              <div className="grid grid-cols-3 gap-2 text-center mb-4">
                 {[
-                  { label: 'Up', value: 1284, color: '#16A34A' },
-                  { label: 'Down', value: 932, color: '#DC2626' },
-                  { label: 'Flat', value: 124, color: '#8A96A8' },
+                  { label: 'Advancing', value: breadth?.advances, color: '#16A34A' },
+                  { label: 'Declining', value: breadth?.declines, color: '#DC2626' },
+                  { label: 'Unchanged', value: breadth?.unchanged, color: '#8A96A8' },
                 ].map(b => (
                   <div key={b.label} className="p-2 rounded-[8px] bg-[#F4F6FA]">
-                    <div className="num text-lg font-bold" style={{ color: b.color }}>{b.value}</div>
+                    <div className="num text-lg font-bold" style={{ color: b.color }}>
+                      {b.value != null ? b.value.toLocaleString('en-IN') : '—'}
+                    </div>
                     <div className="text-[11px] text-[#8A96A8]">{b.label}</div>
                   </div>
                 ))}
               </div>
+              {breadth && (
+                <>
+                  <div className="h-2 rounded-full overflow-hidden flex bg-[#EEF1F7]">
+                    <div className="h-full bg-[#16A34A]" style={{ width: `${(breadth.advances / total) * 100}%` }} />
+                    <div className="h-full bg-[#DC2626]" style={{ width: `${(breadth.declines / total) * 100}%` }} />
+                  </div>
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#EDF0F7] text-xs">
+                    <span className="text-[#4A5568]">Near 52W High</span>
+                    <span className="num font-semibold text-[#F97316]">{breadth.high52.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1.5 text-xs">
+                    <span className="text-[#4A5568]">Near 52W Low</span>
+                    <span className="num font-semibold text-[#D97706]">{breadth.low52.toLocaleString('en-IN')}</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

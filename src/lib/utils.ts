@@ -18,6 +18,23 @@ export function formatCrores(value: number): string {
   return `${value.toFixed(2)} Cr`;
 }
 
+/** Format a raw share volume into Indian abbreviations (L = lakh, Cr = crore). */
+export function formatVolume(value: number | null | undefined): string {
+  if (value == null || !isFinite(value)) return '—';
+  if (value >= 10000000) return `${(value / 10000000).toFixed(2)}Cr`;
+  if (value >= 100000) return `${(value / 100000).toFixed(2)}L`;
+  if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
+  return String(Math.round(value));
+}
+
+/** Render an ISO date (YYYY-MM-DD) as e.g. "26 Jun 2026". */
+export function formatTradeDate(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
 export function formatChange(value: number): string {
   const sign = value >= 0 ? '+' : '';
   return `${sign}${value.toFixed(2)}%`;

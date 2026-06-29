@@ -9,10 +9,23 @@ import {
 } from 'lucide-react';
 import TickerBar from '@/components/layout/TickerBar';
 import Reveal from '@/components/ui/Reveal';
-import { TOP_GAINERS, TOP_LOSERS, SECTORS, PRE_BUILT_SCREENS } from '@/lib/mock-data';
-import { cn, formatPrice } from '@/lib/utils';
+import { PRE_BUILT_SCREENS } from '@/lib/mock-data';
+import { cn, formatPrice, formatVolume, formatCrores, formatTradeDate } from '@/lib/utils';
 
 interface SearchHit { symbol: string; name: string; sector: string }
+
+interface Mover {
+  symbol: string; name: string; sector: string | null;
+  price: number | null; change: number | null; change_pct: number | null;
+  volume: number | null; market_cap: number | null;
+}
+interface MarketsData {
+  tradeDate: string | null;
+  total: number;
+  gainers: Mover[]; losers: Mover[];
+  sectors: { name: string; change: number; count: number }[];
+  breadth: { advances: number; declines: number; unchanged: number; high52: number; low52: number };
+}
 
 function ChangeBadge({ value }: { value: number }) {
   const pos = value >= 0;
@@ -50,7 +63,17 @@ export default function Home() {
   const [query, setQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchHit[]>([]);
   const [searching, setSearching] = useState(false);
+  const [mkt, setMkt] = useState<MarketsData | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/markets')
+      .then(r => r.json())
+      .then(d => { if (alive) setMkt(d); })
+      .catch(() => { if (alive) setMkt(null); });
+    return () => { alive = false; };
+  }, []);
 
   useEffect(() => {
     const q = query.trim();
@@ -71,7 +94,11 @@ export default function Home() {
     return () => { clearTimeout(t); ctrl.abort(); };
   }, [query]);
 
-  const stocks = activeTab === 'gainers' ? TOP_GAINERS : TOP_LOSERS;
+  const stocks = mkt ? (activeTab === 'gainers' ? mkt.gainers : mkt.losers) : null;
+  const breadth = mkt?.breadth;
+  const totalBreadth = breadth ? Math.max(breadth.advances + breadth.declines + breadth.unchanged, 1) : 1;
+  const bullPct = breadth ? Math.round((breadth.advances / totalBreadth) * 100) : 0;
+  const bearPct = breadth ? Math.round((breadth.declines / totalBreadth) * 100) : 0;
 
   return (
     <div>
@@ -238,13 +265,16 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ───────────────── LIVE MARKET ───────────────── */}
+      {/* ───────────────── LATEST MARKET ───────────────── */}
       <section className="max-w-7xl mx-auto px-4 md:px-6 py-14 md:py-20">
         <Reveal>
           <div className="flex items-end justify-between mb-7">
             <div>
-              <h2 className="h-section text-[#0D1117]">Today&apos;s market</h2>
-              <p className="text-sm text-[#4A5568] mt-1">Live movers and breadth across the Indian markets.</p>
+              <h2 className="h-section text-[#0D1117]">Latest market</h2>
+              <p className="text-sm text-[#4A5568] mt-1">
+                Official close across NSE-listed companies
+                {mkt?.tradeDate ? <> · as of <span className="font-medium text-[#0D1117]">{formatTradeDate(mkt.tradeDate)}</span></> : null}
+              </p>
             </div>
             <Link href="/markets" className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium text-[#F97316] hover:gap-2.5 transition-all">
               Full overview <ArrowRight size={14} />
@@ -284,16 +314,26 @@ export default function Home() {
                   </tr>
                 </thead>
                 <tbody>
-                  {stocks.map(s => (
+                  {!stocks ? (
+                    Array(6).fill(0).map((_, i) => (
+                      <tr key={i}>{Array(5).fill(0).map((_, j) => (
+                        <td key={j}><div className="h-4 bg-[#EEF1F7] rounded animate-pulse" /></td>
+                      ))}</tr>
+                    ))
+                  ) : stocks.length === 0 ? (
+                    <tr><td colSpan={5} className="text-center py-10 text-[#8A96A8] font-sans">
+                      Market data is updating — check back after the next market close.
+                    </td></tr>
+                  ) : stocks.slice(0, 6).map(s => (
                     <tr key={s.symbol} className="group" onClick={() => router.push(`/stocks/${s.symbol}`)}>
                       <td>
                         <div className="font-semibold text-[#0D1117] group-hover:text-[#F97316] transition-colors">{s.symbol}</div>
-                        <div className="text-[11px] text-[#8A96A8] font-sans mt-0.5">{s.name}</div>
+                        <div className="text-[11px] text-[#8A96A8] font-sans mt-0.5 max-w-[200px] truncate">{s.name}</div>
                       </td>
-                      <td>{formatPrice(s.price)}</td>
-                      <td><ChangeBadge value={s.changePct} /></td>
-                      <td className="hidden sm:table-cell text-[#4A5568]">{s.volume}</td>
-                      <td className="hidden md:table-cell text-[#4A5568]">{s.marketCap}</td>
+                      <td>{s.price != null ? formatPrice(s.price) : '—'}</td>
+                      <td>{s.change_pct != null ? <ChangeBadge value={s.change_pct} /> : '—'}</td>
+                      <td className="hidden sm:table-cell text-[#4A5568]">{formatVolume(s.volume)}</td>
+                      <td className="hidden md:table-cell text-[#4A5568]">{s.market_cap != null ? `₹${formatCrores(s.market_cap)}` : '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -301,48 +341,35 @@ export default function Home() {
             </div>
           </Reveal>
 
-          {/* Breadth + FII/DII */}
+          {/* Breadth */}
           <Reveal delay={80}>
-            <div className="space-y-6">
-              <div className="card-plain p-6">
-                <h3 className="font-semibold text-[#0D1117] text-sm mb-5">Market Breadth</h3>
-                <div className="space-y-3.5">
-                  {[
-                    { label: 'Advances', value: 1284, color: '#16A34A' },
-                    { label: 'Declines', value: 932, color: '#DC2626' },
-                    { label: 'Unchanged', value: 124, color: '#8A96A8' },
-                    { label: '52W Highs', value: 47, color: '#F97316' },
-                    { label: '52W Lows', value: 12, color: '#D97706' },
-                  ].map(item => (
-                    <div key={item.label} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full" style={{ background: item.color }} />
-                        <span className="text-sm text-[#4A5568]">{item.label}</span>
-                      </div>
-                      <span className="tnum text-sm font-semibold text-[#0D1117]">{item.value.toLocaleString('en-IN')}</span>
+            <div className="card-plain p-6">
+              <h3 className="font-semibold text-[#0D1117] text-sm mb-5">Market Breadth</h3>
+              <div className="space-y-3.5">
+                {[
+                  { label: 'Advances', value: breadth?.advances, color: '#16A34A' },
+                  { label: 'Declines', value: breadth?.declines, color: '#DC2626' },
+                  { label: 'Unchanged', value: breadth?.unchanged, color: '#8A96A8' },
+                  { label: 'Near 52W High', value: breadth?.high52, color: '#F97316' },
+                  { label: 'Near 52W Low', value: breadth?.low52, color: '#D97706' },
+                ].map(item => (
+                  <div key={item.label} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full" style={{ background: item.color }} />
+                      <span className="text-sm text-[#4A5568]">{item.label}</span>
                     </div>
-                  ))}
-                </div>
-                <div className="mt-5 h-2 rounded-full overflow-hidden flex">
-                  <div className="h-full bg-[#16A34A]" style={{ width: '57%' }} />
-                  <div className="h-full bg-[#8A96A8]" style={{ width: '6%' }} />
-                  <div className="h-full bg-[#DC2626]" style={{ width: '37%' }} />
-                </div>
-                <div className="flex justify-between text-[10px] text-[#8A96A8] mt-1.5">
-                  <span>57% Bullish</span><span>37% Bearish</span>
-                </div>
+                    <span className="tnum text-sm font-semibold text-[#0D1117]">
+                      {item.value != null ? item.value.toLocaleString('en-IN') : '—'}
+                    </span>
+                  </div>
+                ))}
               </div>
-
-              <div className="card-plain p-6">
-                <h3 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-4">FII / DII Activity</h3>
-                <div className="flex items-center justify-between py-1.5">
-                  <span className="text-sm text-[#4A5568]">FII Net</span>
-                  <span className="tnum text-sm font-semibold text-[#16A34A]">+₹1,248 Cr</span>
-                </div>
-                <div className="flex items-center justify-between py-1.5">
-                  <span className="text-sm text-[#4A5568]">DII Net</span>
-                  <span className="tnum text-sm font-semibold text-[#DC2626]">−₹432 Cr</span>
-                </div>
+              <div className="mt-5 h-2 rounded-full overflow-hidden flex bg-[#EEF1F7]">
+                <div className="h-full bg-[#16A34A]" style={{ width: `${bullPct}%` }} />
+                <div className="h-full bg-[#DC2626]" style={{ width: `${bearPct}%` }} />
+              </div>
+              <div className="flex justify-between text-[10px] text-[#8A96A8] mt-1.5">
+                <span>{bullPct}% Advancing</span><span>{bearPct}% Declining</span>
               </div>
             </div>
           </Reveal>
@@ -352,25 +379,30 @@ export default function Home() {
         <Reveal>
           <div className="card-plain p-6 mt-6">
             <h3 className="font-semibold text-[#0D1117] text-sm mb-5">Sector Performance</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-3">
-              {SECTORS.map(s => {
-                const pos = s.change >= 0;
-                const width = Math.min(Math.abs(s.change) / 1.5 * 100, 100);
-                return (
-                  <div key={s.name}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-[#0D1117]">{s.name}</span>
-                      <span className={cn('tnum text-xs font-semibold', pos ? 'text-positive' : 'text-negative')}>
-                        {pos ? '+' : ''}{s.change.toFixed(2)}%
-                      </span>
+            {mkt && mkt.sectors.length === 0 ? (
+              <p className="text-sm text-[#8A96A8]">Sector data is updating.</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-3">
+                {(mkt?.sectors ?? Array(8).fill(null)).slice(0, 8).map((s, i) => {
+                  if (!s) return <div key={i}><div className="h-4 bg-[#EEF1F7] rounded animate-pulse mb-1" /><div className="h-1.5 bg-[#EEF1F7] rounded animate-pulse" /></div>;
+                  const pos = s.change >= 0;
+                  const width = Math.min(Math.abs(s.change) / 1.5 * 100, 100);
+                  return (
+                    <div key={s.name}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium text-[#0D1117] truncate pr-2">{s.name}</span>
+                        <span className={cn('tnum text-xs font-semibold shrink-0', pos ? 'text-positive' : 'text-negative')}>
+                          {pos ? '+' : ''}{s.change.toFixed(2)}%
+                        </span>
+                      </div>
+                      <div className="h-1.5 bg-[#EEF1F7] rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${width}%`, background: pos ? '#16A34A' : '#DC2626' }} />
+                      </div>
                     </div>
-                    <div className="h-1.5 bg-[#EEF1F7] rounded-full overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${width}%`, background: pos ? '#16A34A' : '#DC2626' }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </Reveal>
       </section>
@@ -396,7 +428,7 @@ export default function Home() {
                 <Link href="/screens" className="card-plain lift p-6 block h-full group">
                   <div className="flex items-start justify-between mb-2.5">
                     <h3 className="font-semibold text-[#0D1117] text-sm group-hover:text-[#F97316] transition-colors">{screen.title}</h3>
-                    <span className="tnum text-xs font-semibold px-2 py-0.5 rounded-full bg-[#EEF1F7] text-[#4A5568]">{screen.count}</span>
+                    <ArrowUpRight size={15} className="text-[#8A96A8] group-hover:text-[#F97316] transition-colors shrink-0 mt-0.5" />
                   </div>
                   <p className="text-xs text-[#4A5568] mb-3 leading-relaxed">{screen.description}</p>
                   <p className="text-[11px] text-[#8A96A8] tnum">{screen.filters}</p>

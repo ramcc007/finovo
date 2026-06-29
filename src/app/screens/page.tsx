@@ -2,12 +2,29 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
-import { PRE_BUILT_SCREENS, SCREENER_STOCKS } from '@/lib/mock-data';
-import { cn } from '@/lib/utils';
+import { PRE_BUILT_SCREENS } from '@/lib/mock-data';
+import { cn, formatPrice, formatCrores } from '@/lib/utils';
+
+interface SampleRow {
+  symbol: string; name: string; sector: string; price: number;
+  pe: number; roe: number; revenue_growth_1y: number; debt_to_equity: number; market_cap: number;
+}
 
 export default function ScreensPage() {
   const router = useRouter();
+  const [sample, setSample] = useState<SampleRow[] | null>(null);
+
+  // Real "high quality compounders" sample, run against the live screener.
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/screener?roe_min=20&debt_equity_max=0.5&sort_by=roe&sort_dir=desc&per_page=8')
+      .then(r => r.json())
+      .then(d => { if (alive) setSample(d.data ?? []); })
+      .catch(() => { if (alive) setSample([]); });
+    return () => { alive = false; };
+  }, []);
 
   const categoryMap: Record<string, typeof PRE_BUILT_SCREENS> = {
     Quality: PRE_BUILT_SCREENS.filter(s => ['high-roe-low-debt', 'debt-free'].includes(s.id)),
@@ -44,7 +61,7 @@ export default function ScreensPage() {
                   >
                     <div className="flex items-start justify-between mb-2">
                       <h3 className="font-semibold text-[#0D1117] text-sm group-hover:text-[#F97316] transition-colors">{screen.title}</h3>
-                      <span className="num text-xs font-semibold px-2 py-0.5 rounded-full bg-[#EEF1F7] text-[#4A5568] shrink-0 ml-2">{screen.count} stocks</span>
+                      <ArrowRight size={15} className="text-[#8A96A8] group-hover:text-[#F97316] transition-colors shrink-0 mt-0.5" />
                     </div>
                     <p className="text-xs text-[#4A5568] mb-3 leading-relaxed">{screen.description}</p>
                     <div className="flex flex-wrap gap-1 mb-3">
@@ -66,14 +83,16 @@ export default function ScreensPage() {
         <div className="mt-10 card p-0 overflow-hidden">
           <div className="px-6 py-5 border-b border-[#EDF0F7]">
             <h3 className="font-semibold text-[#0D1117] text-sm">Sample: High Quality Compounders</h3>
-            <p className="text-xs text-[#8A96A8] mt-0.5">ROE &gt; 20% · Debt/Equity &lt; 0.5 · Profit Growth 3Y &gt; 15%</p>
+            <p className="text-xs text-[#8A96A8] mt-0.5">ROE &gt; 20% · Debt/Equity &lt; 0.5 · sorted by ROE · live data</p>
           </div>
-          <table className="data-table">
+          <div className="overflow-x-auto">
+          <table className="data-table min-w-[640px]">
             <thead>
               <tr>
                 <th>Company</th>
                 <th>Sector</th>
                 <th>Price (₹)</th>
+                <th>Mkt Cap</th>
                 <th>P/E</th>
                 <th>ROE %</th>
                 <th>Rev Gr 1Y</th>
@@ -81,24 +100,34 @@ export default function ScreensPage() {
               </tr>
             </thead>
             <tbody>
-              {SCREENER_STOCKS.filter(s => s.roe > 20 && s.debtEquity < 0.5).slice(0, 8).map(s => (
+              {sample === null ? (
+                Array(6).fill(0).map((_, i) => (
+                  <tr key={i}>{Array(8).fill(0).map((_, j) => (
+                    <td key={j}><div className="h-4 bg-[#EEF1F7] rounded animate-pulse" /></td>
+                  ))}</tr>
+                ))
+              ) : sample.length === 0 ? (
+                <tr><td colSpan={8} className="text-center py-10 text-[#8A96A8] font-sans">Screen data is updating — check back after the next market close.</td></tr>
+              ) : sample.map(s => (
                 <tr key={s.symbol} className="group" onClick={() => router.push(`/stocks/${s.symbol}`)}>
                   <td>
                     <div className="font-semibold text-[#0D1117] group-hover:text-[#F97316] transition-colors">{s.symbol}</div>
-                    <div className="text-[11px] text-[#8A96A8] font-sans mt-0.5 max-w-[160px] truncate">{s.name}</div>
+                    <div className="text-[11px] text-[#8A96A8] font-sans mt-0.5 max-w-[180px] truncate">{s.name}</div>
                   </td>
                   <td className="text-[#4A5568] font-sans text-xs">{s.sector}</td>
-                  <td>{s.price.toLocaleString('en-IN')}</td>
-                  <td className={s.pe < 25 ? 'text-positive' : ''}>{s.pe}x</td>
-                  <td className="text-positive font-semibold">{s.roe}%</td>
-                  <td className={cn(s.revGrowth1Y >= 0 ? 'text-positive' : 'text-negative')}>
-                    {s.revGrowth1Y >= 0 ? '+' : ''}{s.revGrowth1Y}%
+                  <td>{s.price != null ? formatPrice(s.price) : '—'}</td>
+                  <td className="text-[#4A5568]">{s.market_cap != null ? formatCrores(s.market_cap) : '—'}</td>
+                  <td className={s.pe && s.pe < 25 ? 'text-positive' : ''}>{s.pe ? `${s.pe}x` : '—'}</td>
+                  <td className="text-positive font-semibold">{s.roe != null ? `${s.roe}%` : '—'}</td>
+                  <td className={cn(s.revenue_growth_1y == null ? '' : s.revenue_growth_1y >= 0 ? 'text-positive' : 'text-negative')}>
+                    {s.revenue_growth_1y != null ? `${s.revenue_growth_1y >= 0 ? '+' : ''}${s.revenue_growth_1y}%` : '—'}
                   </td>
-                  <td className="text-positive">{s.debtEquity}x</td>
+                  <td className="text-positive">{s.debt_to_equity != null ? `${s.debt_to_equity}x` : '—'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
           <div className="px-5 py-3 border-t border-[#EDF0F7]">
             <Link href="/screener" className="text-xs text-[#F97316] hover:underline flex items-center gap-1">
               Open in Explorer with these filters <ArrowRight size={12} />

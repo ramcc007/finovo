@@ -47,37 +47,15 @@ function ChangeBadge({ value }: { value: number }) {
   );
 }
 
-function RatioRow({ label, value, unit = '', industryAvg, inverse = false }: {
-  label: string; value: number | null | undefined; unit?: string; industryAvg?: number; inverse?: boolean;
+function RatioRow({ label, value, unit = '' }: {
+  label: string; value: number | null | undefined; unit?: string;
 }) {
-  if (value === null || value === undefined) return (
-    <div className="py-3 border-b border-[#EDF0F7] last:border-0 flex justify-between">
-      <span className="text-sm text-[#4A5568]">{label}</span>
-      <span className="text-sm text-[#8A96A8]">—</span>
-    </div>
-  );
-
-  let color = '#8A96A8';
-  if (industryAvg !== undefined) {
-    const better = inverse ? value < industryAvg : value > industryAvg;
-    color = better ? '#16A34A' : '#D97706';
-  }
-  const pct = industryAvg ? Math.min((value / (industryAvg * 2)) * 100, 100) : 50;
-
   return (
-    <div className="py-3 border-b border-[#EDF0F7] last:border-0">
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-sm text-[#4A5568]">{label}</span>
-        <span className="num text-sm font-semibold text-[#0D1117]">{value.toFixed(1)}{unit}</span>
-      </div>
-      {industryAvg !== undefined && (
-        <div className="flex items-center gap-2">
-          <div className="flex-1 h-1.5 bg-[#EEF1F7] rounded-full overflow-hidden">
-            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
-          </div>
-          <span className="text-[11px] text-[#8A96A8] shrink-0">Ind avg: {industryAvg}{unit}</span>
-        </div>
-      )}
+    <div className="py-3 border-b border-[#EDF0F7] last:border-0 flex items-center justify-between">
+      <span className="text-sm text-[#4A5568]">{label}</span>
+      <span className="num text-sm font-semibold text-[#0D1117]">
+        {value === null || value === undefined ? <span className="text-[#8A96A8]">—</span> : `${value.toFixed(1)}${unit}`}
+      </span>
     </div>
   );
 }
@@ -177,7 +155,7 @@ export default function StockPage() {
                 <div className="text-sm text-[#4A5568] flex items-center gap-2">
                   <span className="num">{(q?.change ?? 0) >= 0 ? '+' : ''}₹{(q?.change ?? 0).toFixed(2)}</span>
                   <span>·</span>
-                  <span>As of 3:30 PM, NSE</span>
+                  <span>At last market close · NSE</span>
                 </div>
                 <button
                   onClick={() => setWatchlisted(w => !w)}
@@ -421,24 +399,24 @@ export default function StockPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="card p-5">
               <h3 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-4">Valuation</h3>
-              <RatioRow label="P/E Ratio" value={r?.pe} unit="x" industryAvg={22} />
-              <RatioRow label="P/B Ratio" value={r?.pb} unit="x" industryAvg={4.2} />
-              <RatioRow label="EV/EBITDA" value={r?.ev_ebitda} unit="x" industryAvg={14} />
-              <RatioRow label="Dividend Yield" value={r?.dividend_yield} unit="%" industryAvg={1.5} />
-              <RatioRow label="PEG Ratio" value={r?.peg_ratio} unit="x" industryAvg={1.8} inverse />
+              <RatioRow label="P/E Ratio" value={r?.pe} unit="x" />
+              <RatioRow label="P/B Ratio" value={r?.pb} unit="x" />
+              <RatioRow label="EV/EBITDA" value={r?.ev_ebitda} unit="x" />
+              <RatioRow label="Dividend Yield" value={r?.dividend_yield} unit="%" />
+              <RatioRow label="PEG Ratio" value={r?.peg_ratio} unit="x" />
             </div>
             <div className="card p-5">
               <h3 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-4">Profitability</h3>
-              <RatioRow label="ROE" value={r?.roe} unit="%" industryAvg={18} />
-              <RatioRow label="ROCE" value={r?.roce} unit="%" industryAvg={22} />
-              <RatioRow label="Net Profit Margin" value={r?.net_margin} unit="%" industryAvg={14} />
-              <RatioRow label="Operating Margin" value={r?.operating_margin} unit="%" industryAvg={18} />
+              <RatioRow label="ROE" value={r?.roe} unit="%" />
+              <RatioRow label="ROCE" value={r?.roce} unit="%" />
+              <RatioRow label="Net Profit Margin" value={r?.net_margin} unit="%" />
+              <RatioRow label="Operating Margin" value={r?.operating_margin} unit="%" />
             </div>
             <div className="card p-5">
               <h3 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-4">Financial Health</h3>
-              <RatioRow label="Debt to Equity" value={r?.debt_to_equity} unit="x" industryAvg={0.5} inverse />
-              <RatioRow label="Current Ratio" value={r?.current_ratio} unit="x" industryAvg={1.5} />
-              <RatioRow label="Quick Ratio" value={r?.quick_ratio} unit="x" industryAvg={1.2} />
+              <RatioRow label="Debt to Equity" value={r?.debt_to_equity} unit="x" />
+              <RatioRow label="Current Ratio" value={r?.current_ratio} unit="x" />
+              <RatioRow label="Quick Ratio" value={r?.quick_ratio} unit="x" />
             </div>
             <div className="card p-5">
               <h3 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-4">Growth (CAGR)</h3>
@@ -554,7 +532,7 @@ export default function StockPage() {
                 Peer Comparison — {c?.sector ?? 'Sector'}
               </h3>
               <div className="flex items-center gap-1 text-xs text-[#8A96A8]">
-                <RefreshCw size={11} /> Live data
+                <RefreshCw size={11} /> Latest close
               </div>
             </div>
             <table className="data-table">
@@ -570,7 +548,9 @@ export default function StockPage() {
                 </tr>
               </thead>
               <tbody>
-                {(data?.peers ?? PEERS).map(p => (
+                {(data?.peers ?? PEERS).length === 0 ? (
+                  <tr><td colSpan={7} className="text-center py-10 text-[#8A96A8] font-sans">No peer data available for this sector.</td></tr>
+                ) : (data?.peers ?? PEERS).map(p => (
                   <tr
                     key={p.symbol}
                     className={p.symbol === symbol ? 'bg-[#FFF7ED]' : ''}
