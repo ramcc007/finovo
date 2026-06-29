@@ -1,0 +1,43 @@
+name: Backfill Historical Prices
+
+on:
+  workflow_dispatch:
+    inputs:
+      years_back:
+        description: 'Years of history to backfill (default: 5)'
+        required: false
+        default: '5'
+      from_date:
+        description: 'Start date override (YYYY-MM-DD), overrides years_back'
+        required: false
+      to_date:
+        description: 'End date override (YYYY-MM-DD), default: yesterday'
+        required: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: scripts/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Backfill historical prices
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          YEARS_BACK: ${{ inputs.years_back || '5' }}
+          FROM_DATE: ${{ inputs.from_date }}
+          TO_DATE: ${{ inputs.to_date }}
+          DELAY: '0.8'
+        run: python scripts/backfill_prices.py
