@@ -72,9 +72,9 @@ def ingest_one(client, symbol: str, session):
         "pe": safe_float(info.get("trailingPE")),
         "pb": safe_float(info.get("priceToBook")),
         "price_to_sales": safe_float(info.get("priceToSalesTrailing12Months")),
-        "dividend_yield": safe_float(
-            (info.get("dividendYield") or 0) * 100
-        ),
+        # yfinance now returns dividendYield already as a percentage
+        # (e.g. 1.63 means 1.63%), not a fraction — do not multiply by 100.
+        "dividend_yield": safe_float(info.get("dividendYield") or 0),
         "peg_ratio": safe_float(info.get("pegRatio")),
         "roe": safe_float(
             (info.get("returnOnEquity") or 0) * 100
