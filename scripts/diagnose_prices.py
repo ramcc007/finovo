@@ -20,6 +20,20 @@ def run():
     client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
     for symbol in SYMBOLS:
+        comp = (
+            client.table("companies")
+            .select("symbol,is_active")
+            .ilike("symbol", symbol)
+            .execute()
+        )
+        print(f"\n--- companies row(s) for {symbol}: {comp.data}")
+
+    active_count = (
+        client.table("companies").select("symbol", count="exact").eq("is_active", True).limit(1).execute()
+    )
+    print(f"\nTotal active companies: {active_count.count}")
+
+    for symbol in SYMBOLS:
         print(f"\n=== {symbol} ===")
         cnt = (
             client.table("prices")
