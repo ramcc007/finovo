@@ -54,16 +54,21 @@ def trading_days(start: date, end: date) -> list[date]:
     return days
 
 
-def get_existing_dates(client) -> set[str]:
-    """Fetch distinct dates already in prices table to skip re-downloading."""
-    existing: set[str] = set()
+def get_existing_pairs(client) -> set[tuple[str, str]]:
+    """Fetch (symbol, date) pairs already in prices table to skip re-upserting.
+
+    Must be per-symbol, not just per-date: a date can already have rows for
+    some symbols (e.g. from daily ingestion) while still missing most of the
+    other ~2400 active symbols for that same date.
+    """
+    existing: set[tuple[str, str]] = set()
     page_size = 1000
     offset = 0
-    print("  Scanning existing dates in prices table...")
+    print("  Scanning existing (symbol, date) pairs in prices table...")
     while True:
         resp = (
             client.table("prices")
-            .select("date")
+            .select("symbol,date")
             .range(offset, offset + page_size - 1)
             .execute()
         )
@@ -71,11 +76,11 @@ def get_existing_dates(client) -> set[str]:
         if not rows:
             break
         for r in rows:
-            existing.add(r["date"])
+            existing.add((r["symbol"], r["date"]))
         if len(rows) < page_size:
             break
         offset += page_size
-    print(f"  Found {len(existing)} existing dates, will skip them")
+    print(f"  Found {len(existing)} existing (symbol, date) pairs")
     return existing
 
 
@@ -130,7 +135,7 @@ def run():
     days = trading_days(start, end)
     print(f"  {len(days)} trading days to process")
 
-    existing_dates = get_existing_dates(client)
+    existing_pairs = get_existing_pairs(client)
 
     # Fetch active symbols
     resp = client.table("companies").select("symbol").eq("is_active", True).execute()
@@ -152,10 +157,6 @@ def run():
     for i, d in enumerate(days):
         iso = d.isoformat()
 
-        if iso in existing_dates:
-            skipped += 1
-            continue
-
         df = fetch_bhavcopy(session, d)
         if df is None:
             # Market holiday or file missing
@@ -174,6 +175,9 @@ def run():
         records = []
         for _, row in df.iterrows():
             sym = row["SYMBOL"]
+            if (sym, iso) in existing_pairs:
+                skipped += 1
+                continue
             close = _num(row.get("CLOSE_PRICE"))
             if close is None:
                 continue
@@ -193,9 +197,10 @@ def run():
                     records[j:j+500], on_conflict="symbol,date"
                 ).execute()
             total_rows += len(records)
+            for r in records:
+                existing_pairs.add((r["symbol"], r["date"]))
 
         done += 1
-        existing_dates.add(iso)
 
         if done % 10 == 0 or i == len(days) - 1:
             print(
