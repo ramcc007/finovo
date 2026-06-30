@@ -67,8 +67,27 @@ def fetch_latest_bhavcopy() -> tuple[pd.DataFrame, date]:
 
 
 def get_active_symbols(client) -> set[str]:
-    resp = client.table("companies").select("symbol").eq("is_active", True).execute()
-    return {r["symbol"] for r in resp.data}
+    """Paginated fetch — a single .execute() silently truncates to PostgREST's
+    default row cap, well under the ~2400 active companies."""
+    symbols: set[str] = set()
+    page_size = 1000
+    offset = 0
+    while True:
+        resp = (
+            client.table("companies")
+            .select("symbol")
+            .eq("is_active", True)
+            .range(offset, offset + page_size - 1)
+            .execute()
+        )
+        rows = resp.data
+        if not rows:
+            break
+        symbols.update(r["symbol"] for r in rows)
+        if len(rows) < page_size:
+            break
+        offset += page_size
+    return symbols
 
 
 def _num(v):

@@ -137,9 +137,26 @@ def run():
 
     existing_pairs = get_existing_pairs(client)
 
-    # Fetch active symbols
-    resp = client.table("companies").select("symbol").eq("is_active", True).execute()
-    active = {r["symbol"] for r in resp.data}
+    # Fetch active symbols (paginated — a single .execute() silently
+    # truncates to PostgREST's default row cap, well under ~2400 companies)
+    active: set[str] = set()
+    offset = 0
+    page_size = 1000
+    while True:
+        resp = (
+            client.table("companies")
+            .select("symbol")
+            .eq("is_active", True)
+            .range(offset, offset + page_size - 1)
+            .execute()
+        )
+        rows = resp.data
+        if not rows:
+            break
+        active.update(r["symbol"] for r in rows)
+        if len(rows) < page_size:
+            break
+        offset += page_size
     print(f"  {len(active)} active symbols")
 
     session = requests.Session()
