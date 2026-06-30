@@ -15,15 +15,19 @@ export async function GET(
   const from = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
 
   try {
+    // Order descending + explicit limit so that if the server's row cap is
+    // ever hit, we lose the oldest days rather than silently dropping the
+    // most recent ones (which is what the chart and % change calc need).
     const { data, error } = await supabase
       .from('prices')
       .select('date, open, high, low, close, volume')
       .eq('symbol', symbol.toUpperCase())
       .gte('date', from)
-      .order('date', { ascending: true });
+      .order('date', { ascending: false })
+      .limit(days);
 
     if (error) throw error;
-    return NextResponse.json(data ?? []);
+    return NextResponse.json((data ?? []).reverse());
   } catch {
     return NextResponse.json([]);
   }
