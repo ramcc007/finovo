@@ -49,7 +49,7 @@ export default function PriceChart({ symbol, currentPrice }: PriceChartProps) {
         const first = data[0].close;
         const last = data[data.length - 1].close;
         const change = last - first;
-        setPriceChange({ value: +change.toFixed(2), pct: +((change / first) * 100).toFixed(2) });
+        setPriceChange({ value: +change.toFixed(2), pct: +(first > 0 ? (change / first) * 100 : 0).toFixed(2) });
       }
     } catch {
       setPrices([]);

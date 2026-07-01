@@ -7,8 +7,8 @@ export async function GET(req: NextRequest) {
 
   const filters = {
     sector: p.get('sector') ?? '',
-    mcap_min: p.get('mcap_min') ? +p.get('mcap_min')! * 100 : null,
-    mcap_max: p.get('mcap_max') ? +p.get('mcap_max')! * 100 : null,
+    mcap_min: p.get('mcap_min') ? +p.get('mcap_min')! : null,
+    mcap_max: p.get('mcap_max') ? +p.get('mcap_max')! : null,
     pe_min: p.get('pe_min') ? +p.get('pe_min')! : null,
     pe_max: p.get('pe_max') ? +p.get('pe_max')! : null,
     pb_min: p.get('pb_min') ? +p.get('pb_min')! : null,

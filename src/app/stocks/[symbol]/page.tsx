@@ -79,7 +79,11 @@ export default function StockPage() {
     setLoading(true);
     fetch(`/api/stocks/${symbol}`)
       .then(r => r.json())
-      .then(d => { setData(d); setLoading(false); })
+      .then(d => {
+        if (d?.error) throw new Error(d.error);
+        setData(d);
+        setLoading(false);
+      })
       .catch(() => {
         // Construct fallback from mock
         setData({
@@ -104,13 +108,13 @@ export default function StockPage() {
   const range52w = weekHigh - weekLow;
   const pricePos = range52w > 0 ? Math.min(((price - weekLow) / range52w) * 100, 100) : 50;
 
-  const annualFin = data?.financials.annual ?? [];
-  const quarterlyFin = data?.financials.quarterly ?? [];
+  const annualFin = data?.financials?.annual ?? [];
+  const quarterlyFin = data?.financials?.quarterly ?? [];
   const finData = finPeriod === 'annual' ? annualFin : quarterlyFin;
 
   // Detect field names (API vs mock data have slightly different keys)
   const periodKey = finData[0] && ('year' in finData[0] ? 'year' : 'period');
-  const revKey = finData[0] && ('revenue' in finData[0] ? 'revenue' : 'revenue');
+  const revKey = finData[0] && ('revenue' in finData[0] ? 'revenue' : 'rev');
   const npKey = 'net_profit' in (finData[0] ?? {}) ? 'net_profit' : 'netProfit';
 
   return (
@@ -177,8 +181,8 @@ export default function StockPage() {
           {!loading && (
             <div className="mt-4 max-w-md">
               <div className="flex justify-between text-[11px] text-[#8A96A8] mb-1.5">
-                <span>52W Low: <span className="num font-semibold text-[#DC2626]">₹{weekLow.toLocaleString('en-IN')}</span></span>
-                <span>52W High: <span className="num font-semibold text-[#16A34A]">₹{weekHigh.toLocaleString('en-IN')}</span></span>
+                <span>52W Low: <span className="num font-semibold text-[#DC2626]">₹{formatPrice(weekLow)}</span></span>
+                <span>52W High: <span className="num font-semibold text-[#16A34A]">₹{formatPrice(weekHigh)}</span></span>
               </div>
               <div className="relative h-2 rounded-full overflow-hidden bg-gradient-to-r from-[#FEE2E2] via-[#FFF7ED] to-[#DCFCE7]">
                 <div
@@ -236,8 +240,8 @@ export default function StockPage() {
                   { label: 'EV/EBITDA', value: r?.ev_ebitda ? `${r.ev_ebitda.toFixed(1)}x` : '—' },
                   { label: 'Dividend Yield', value: r?.dividend_yield ? `${r.dividend_yield.toFixed(2)}%` : '—' },
                   { label: 'EPS (TTM)', value: r?.eps ? `₹ ${r.eps.toFixed(2)}` : '—' },
-                  { label: '52W High', value: weekHigh ? `₹ ${weekHigh.toLocaleString('en-IN')}` : '—' },
-                  { label: '52W Low', value: weekLow ? `₹ ${weekLow.toLocaleString('en-IN')}` : '—' },
+                  { label: '52W High', value: weekHigh ? `₹ ${formatPrice(weekHigh)}` : '—' },
+                  { label: '52W Low', value: weekLow ? `₹ ${formatPrice(weekLow)}` : '—' },
                   { label: "Today's Open", value: q?.open ? `₹ ${formatPrice(q.open)}` : '—' },
                   { label: "Today's High", value: q?.high ? `₹ ${formatPrice(q.high)}` : '—' },
                   { label: "Today's Low", value: q?.low ? `₹ ${formatPrice(q.low)}` : '—' },

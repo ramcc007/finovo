@@ -21,9 +21,9 @@ export function formatCrores(value: number): string {
 /** Format a raw share volume into Indian abbreviations (L = lakh, Cr = crore). */
 export function formatVolume(value: number | null | undefined): string {
   if (value == null || !isFinite(value)) return '—';
-  if (value >= 10000000) return `${(value / 10000000).toFixed(2)}Cr`;
-  if (value >= 100000) return `${(value / 100000).toFixed(2)}L`;
-  if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
+  if (value >= 10000000) return `${(value / 10000000).toFixed(2)} Cr`;
+  if (value >= 100000) return `${(value / 100000).toFixed(2)} L`;
+  if (value >= 1000) return `${(value / 1000).toFixed(1)} K`;
   return String(Math.round(value));
 }
 

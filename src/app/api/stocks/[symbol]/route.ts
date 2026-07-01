@@ -89,8 +89,8 @@ export async function GET(
       change: null,
       change_pct: null,
       open: ratios.price,
-      high: ratios.week_high_52 ?? ratios.price,
-      low: ratios.week_low_52 ?? ratios.price,
+      high: ratios.price,
+      low: ratios.price,
       prev_close: ratios.price,
       volume: null,
     } : null);

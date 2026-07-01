@@ -386,7 +386,7 @@ export default function Home() {
                 {(mkt?.sectors ?? Array(8).fill(null)).slice(0, 8).map((s, i) => {
                   if (!s) return <div key={i}><div className="h-4 bg-[#EEF1F7] rounded animate-pulse mb-1" /><div className="h-1.5 bg-[#EEF1F7] rounded animate-pulse" /></div>;
                   const pos = s.change >= 0;
-                  const width = Math.min(Math.abs(s.change) / 1.5 * 100, 100);
+                  const width = Math.min(Math.abs(s.change) / 2 * 100, 100);
                   return (
                     <div key={s.name}>
                       <div className="flex items-center justify-between mb-1">
