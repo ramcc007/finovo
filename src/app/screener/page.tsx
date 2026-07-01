@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { SlidersHorizontal, Download, RotateCcw, ChevronUp, ChevronDown, X } from 'lucide-react';
 import { cn, formatCrores } from '@/lib/utils';
+import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
 
 type SortKey = 'market_cap' | 'pe' | 'pb' | 'roe' | 'revenue_growth_1y' | 'profit_growth_1y' | 'debt_to_equity' | 'dividend_yield';
 
@@ -175,6 +176,7 @@ export default function ScreenerPage() {
   return (
     <div className="min-h-screen bg-[#F4F6FA]">
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-10 md:py-14">
+        <AdviceDisclaimer />
         <div className="flex items-end justify-between mb-8 gap-4">
           <div>
             <h1 className="h-section text-[#0D1117]">Stock Explorer</h1>

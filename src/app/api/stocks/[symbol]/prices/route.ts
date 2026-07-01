@@ -6,6 +6,10 @@ export async function GET(
   { params }: { params: Promise<{ symbol: string }> }
 ) {
   const { symbol } = await params;
+  const sym = symbol.toUpperCase();
+  if (!/^[A-Z0-9&-]{1,20}$/.test(sym)) {
+    return NextResponse.json([]);
+  }
   const period = req.nextUrl.searchParams.get('period') ?? '1Y';
 
   const daysMap: Record<string, number> = {
@@ -21,7 +25,7 @@ export async function GET(
     const { data, error } = await supabase
       .from('prices')
       .select('date, open, high, low, close, volume')
-      .eq('symbol', symbol.toUpperCase())
+      .eq('symbol', sym)
       .gte('date', from)
       .order('date', { ascending: false })
       .limit(days);

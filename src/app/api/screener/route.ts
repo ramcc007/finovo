@@ -2,29 +2,38 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { SCREENER_STOCKS } from '@/lib/mock-data';
 
+// Parses a numeric query param, clamping to a sane finite range so that
+// garbage/huge input (Infinity, NaN, absurd magnitudes) can't reach the DB query.
+function num(raw: string | null, max = 1e9): number | null {
+  if (!raw) return null;
+  const n = +raw;
+  if (!Number.isFinite(n)) return null;
+  return Math.max(-max, Math.min(max, n));
+}
+
 export async function GET(req: NextRequest) {
   const p = req.nextUrl.searchParams;
 
   const filters = {
-    sector: p.get('sector') ?? '',
-    mcap_min: p.get('mcap_min') ? +p.get('mcap_min')! : null,
-    mcap_max: p.get('mcap_max') ? +p.get('mcap_max')! : null,
-    pe_min: p.get('pe_min') ? +p.get('pe_min')! : null,
-    pe_max: p.get('pe_max') ? +p.get('pe_max')! : null,
-    pb_min: p.get('pb_min') ? +p.get('pb_min')! : null,
-    pb_max: p.get('pb_max') ? +p.get('pb_max')! : null,
-    roe_min: p.get('roe_min') ? +p.get('roe_min')! : null,
-    roe_max: p.get('roe_max') ? +p.get('roe_max')! : null,
-    debt_equity_max: p.get('debt_equity_max') ? +p.get('debt_equity_max')! : null,
-    rev_growth_1y_min: p.get('rev_growth_1y_min') ? +p.get('rev_growth_1y_min')! : null,
-    profit_growth_1y_min: p.get('profit_growth_1y_min') ? +p.get('profit_growth_1y_min')! : null,
-    div_yield_min: p.get('div_yield_min') ? +p.get('div_yield_min')! : null,
-    promoter_min: p.get('promoter_min') ? +p.get('promoter_min')! : null,
-    pledge_max: p.get('pledge_max') ? +p.get('pledge_max')! : null,
+    sector: (p.get('sector') ?? '').slice(0, 50),
+    mcap_min: num(p.get('mcap_min')),
+    mcap_max: num(p.get('mcap_max')),
+    pe_min: num(p.get('pe_min')),
+    pe_max: num(p.get('pe_max')),
+    pb_min: num(p.get('pb_min')),
+    pb_max: num(p.get('pb_max')),
+    roe_min: num(p.get('roe_min')),
+    roe_max: num(p.get('roe_max')),
+    debt_equity_max: num(p.get('debt_equity_max')),
+    rev_growth_1y_min: num(p.get('rev_growth_1y_min')),
+    profit_growth_1y_min: num(p.get('profit_growth_1y_min')),
+    div_yield_min: num(p.get('div_yield_min')),
+    promoter_min: num(p.get('promoter_min')),
+    pledge_max: num(p.get('pledge_max')),
     sort_by: p.get('sort_by') ?? 'market_cap',
     sort_dir: p.get('sort_dir') === 'asc' ? 'asc' : 'desc',
-    page: Math.max(1, p.get('page') ? +p.get('page')! : 1),
-    per_page: Math.min(100, Math.max(1, p.get('per_page') ? +p.get('per_page')! : 20)),
+    page: Math.max(1, Math.min(1e6, num(p.get('page')) ?? 1)),
+    per_page: Math.min(100, Math.max(1, num(p.get('per_page')) ?? 20)),
   };
 
   const ALLOWED_SORT_COLS = new Set([

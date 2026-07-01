@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { ArrowLeft, Plus, Check, ExternalLink, RefreshCw } from 'lucide-react';
 import { cn, formatPrice, formatCrores } from '@/lib/utils';
 import PriceChart from '@/components/charts/PriceChart';
+import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
 import { STOCK_TCS, PEERS } from '@/lib/mock-data';
 
 const TABS = ['Overview', 'Financials', 'Ratios', 'Shareholding', 'Peers'] as const;
@@ -214,6 +215,7 @@ export default function StockPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
+        <AdviceDisclaimer />
 
         {/* OVERVIEW */}
         {activeTab === 'Overview' && (

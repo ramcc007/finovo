@@ -9,6 +9,9 @@ export async function GET(
 ) {
   const { symbol } = await params;
   const sym = symbol.toUpperCase();
+  if (!/^[A-Z0-9&-]{1,20}$/.test(sym)) {
+    return NextResponse.json({ error: 'Invalid symbol' }, { status: 400 });
+  }
 
   try {
     // Company info

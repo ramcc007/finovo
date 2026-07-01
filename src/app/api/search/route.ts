@@ -3,20 +3,29 @@ import { supabase } from '@/lib/supabase';
 import { SCREENER_STOCKS } from '@/lib/mock-data';
 
 export async function GET(req: NextRequest) {
-  const q = (req.nextUrl.searchParams.get('q')?.trim() ?? '').slice(0, 50);
+  const raw = (req.nextUrl.searchParams.get('q')?.trim() ?? '').slice(0, 50);
+  // Strip characters with special meaning in PostgREST's filter-string syntax
+  // (comma/parens separate or() clauses; % is the ilike wildcard) so user
+  // input can't inject additional filter conditions.
+  const q = raw.replace(/[,()%*]/g, '');
   if (q.length < 2) return NextResponse.json([]);
 
   try {
-    const { data, error } = await supabase
-      .from('companies')
-      .select('symbol, name, sector')
-      .or(`symbol.ilike.${q}%,name.ilike.%${q}%`)
-      .eq('is_active', true)
-      .order('symbol')
-      .limit(8);
+    const [bySymbol, byName] = await Promise.all([
+      supabase.from('companies').select('symbol, name, sector')
+        .ilike('symbol', `${q}%`).eq('is_active', true).order('symbol').limit(8),
+      supabase.from('companies').select('symbol, name, sector')
+        .ilike('name', `%${q}%`).eq('is_active', true).order('symbol').limit(8),
+    ]);
+    if (bySymbol.error) throw bySymbol.error;
+    if (byName.error) throw byName.error;
 
-    if (error) throw error;
-    return NextResponse.json(data);
+    const seen = new Set<string>();
+    const merged = [...(bySymbol.data ?? []), ...(byName.data ?? [])]
+      .filter(r => (seen.has(r.symbol) ? false : (seen.add(r.symbol), true)))
+      .slice(0, 8);
+
+    return NextResponse.json(merged);
   } catch {
     // Fallback to mock data
     const lower = q.toLowerCase();
