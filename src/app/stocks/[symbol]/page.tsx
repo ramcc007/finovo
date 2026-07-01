@@ -178,7 +178,7 @@ export default function StockPage() {
           )}
 
           {/* 52W Range */}
-          {!loading && (
+          {!loading && weekHigh > 0 && weekLow > 0 && (
             <div className="mt-4 max-w-md">
               <div className="flex justify-between text-[11px] text-[#8A96A8] mb-1.5">
                 <span>52W Low: <span className="num font-semibold text-[#DC2626]">₹{formatPrice(weekLow)}</span></span>
