@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { Suspense, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { SlidersHorizontal, Download, RotateCcw, ChevronUp, ChevronDown, X } from 'lucide-react';
-import { cn, formatCrores } from '@/lib/utils';
+import { cn, formatCrores, formatPrice } from '@/lib/utils';
 import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
 
-type SortKey = 'market_cap' | 'pe' | 'pb' | 'roe' | 'revenue_growth_1y' | 'profit_growth_1y' | 'debt_to_equity' | 'dividend_yield';
+type SortKey = 'market_cap' | 'price' | 'pe' | 'pb' | 'roe' | 'revenue_growth_1y' | 'profit_growth_1y' | 'debt_to_equity' | 'dividend_yield';
 
 interface Filters {
   sector: string;
@@ -94,16 +95,43 @@ function MinInput({ label, filterKey, filters, onChange, unit = '' }: {
 }
 
 interface ScreenerRow {
-  symbol: string; name: string; sector: string; price: number;
+  symbol: string; name: string; sector: string; price: number; change_pct: number;
   pe: number; pb: number; roe: number; roce: number; market_cap: number;
   debt_to_equity: number; revenue_growth_1y: number; profit_growth_1y: number;
   dividend_yield: number; promoter_pct: number; pledge_pct: number;
 }
 
-export default function ScreenerPage() {
-  const [filters, setFilters] = useState<Filters>(defaultFilters);
-  const [sortKey, setSortKey] = useState<SortKey>('market_cap');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+// Maps the /api/screener query-param names (used by pre-built screen links)
+// straight onto the filter panel's internal state keys.
+const PARAM_TO_FILTER_KEY: Record<string, keyof Filters> = {
+  sector: 'sector',
+  mcap_min: 'mcapMin', mcap_max: 'mcapMax',
+  pe_min: 'peMin', pe_max: 'peMax',
+  pb_min: 'pbMin', pb_max: 'pbMax',
+  roe_min: 'roeMin', roe_max: 'roeMax',
+  rev_growth_1y_min: 'revGrowthMin',
+  profit_growth_1y_min: 'profGrowthMin',
+  debt_equity_max: 'debtEquityMax',
+  div_yield_min: 'divYieldMin',
+  promoter_min: 'promoterMin',
+  pledge_max: 'pledgeMax',
+};
+
+function ScreenerPageInner() {
+  const searchParams = useSearchParams();
+
+  const initialFilters = (): Filters => {
+    const f = { ...defaultFilters };
+    for (const [param, key] of Object.entries(PARAM_TO_FILTER_KEY)) {
+      const v = searchParams.get(param);
+      if (v) f[key] = v;
+    }
+    return f;
+  };
+
+  const [filters, setFilters] = useState<Filters>(initialFilters);
+  const [sortKey, setSortKey] = useState<SortKey>((searchParams.get('sort_by') as SortKey) || 'market_cap');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>(searchParams.get('sort_dir') === 'asc' ? 'asc' : 'desc');
   const [page, setPage] = useState(1);
   const [results, setResults] = useState<ScreenerRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -293,6 +321,7 @@ export default function ScreenerPage() {
                   <tr>
                     <th className="text-left">Company</th>
                     {[
+                      { key: 'price', label: 'Price (₹)' },
                       { key: 'market_cap', label: 'Mkt Cap' },
                       { key: 'pe', label: 'P/E' },
                       { key: 'pb', label: 'P/B' },
@@ -318,14 +347,14 @@ export default function ScreenerPage() {
                   {loading ? (
                     Array(8).fill(0).map((_, i) => (
                       <tr key={i}>
-                        {Array(9).fill(0).map((_, j) => (
+                        {Array(10).fill(0).map((_, j) => (
                           <td key={j}><div className="h-4 bg-[#EEF1F7] rounded animate-pulse" /></td>
                         ))}
                       </tr>
                     ))
                   ) : results.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="text-center py-12 text-[#8A96A8] font-sans">
+                      <td colSpan={10} className="text-center py-12 text-[#8A96A8] font-sans">
                         No stocks match your filters. Try relaxing the criteria.
                       </td>
                     </tr>
@@ -337,14 +366,22 @@ export default function ScreenerPage() {
                           <div className="text-[11px] text-[#8A96A8] font-sans mt-0.5 max-w-[180px] truncate">{s.name}</div>
                         </Link>
                       </td>
+                      <td>
+                        {s.price != null ? formatPrice(s.price) : '—'}
+                        {s.change_pct != null && (
+                          <div className={cn('text-[11px] font-medium', s.change_pct >= 0 ? 'text-positive' : 'text-negative')}>
+                            {s.change_pct >= 0 ? '+' : ''}{s.change_pct.toFixed(2)}%
+                          </div>
+                        )}
+                      </td>
                       <td>{s.market_cap ? formatCrores(s.market_cap) : '—'}</td>
-                      <td className={!s.pe ? '' : s.pe < 15 ? 'text-positive' : s.pe > 35 ? 'text-negative' : ''}>{s.pe ? `${s.pe}x` : '—'}</td>
-                      <td className={!s.pb ? '' : s.pb < 2 ? 'text-positive' : s.pb > 10 ? 'text-negative' : ''}>{s.pb ? `${s.pb}x` : '—'}</td>
-                      <td className={!s.roe ? '' : s.roe > 20 ? 'text-positive' : s.roe < 10 ? 'text-negative' : ''}>{s.roe ? `${s.roe}%` : '—'}</td>
-                      <td className={s.revenue_growth_1y == null ? '' : s.revenue_growth_1y >= 0 ? 'text-positive' : 'text-negative'}>{s.revenue_growth_1y != null ? `${s.revenue_growth_1y >= 0 ? '+' : ''}${s.revenue_growth_1y}%` : '—'}</td>
-                      <td className={s.profit_growth_1y == null ? '' : s.profit_growth_1y >= 0 ? 'text-positive' : 'text-negative'}>{s.profit_growth_1y != null ? `${s.profit_growth_1y >= 0 ? '+' : ''}${s.profit_growth_1y}%` : '—'}</td>
-                      <td className={!s.debt_to_equity ? '' : s.debt_to_equity < 0.5 ? 'text-positive' : s.debt_to_equity > 2 ? 'text-negative' : ''}>{s.debt_to_equity != null ? `${s.debt_to_equity}x` : '—'}</td>
-                      <td>{s.dividend_yield != null ? `${s.dividend_yield}%` : '—'}</td>
+                      <td className={!s.pe ? '' : s.pe < 15 ? 'text-positive' : s.pe > 35 ? 'text-negative' : ''}>{s.pe ? `${s.pe.toFixed(1)}x` : '—'}</td>
+                      <td className={!s.pb ? '' : s.pb < 2 ? 'text-positive' : s.pb > 10 ? 'text-negative' : ''}>{s.pb ? `${s.pb.toFixed(1)}x` : '—'}</td>
+                      <td className={!s.roe ? '' : s.roe > 20 ? 'text-positive' : s.roe < 10 ? 'text-negative' : ''}>{s.roe ? `${s.roe.toFixed(1)}%` : '—'}</td>
+                      <td className={s.revenue_growth_1y == null ? '' : s.revenue_growth_1y >= 0 ? 'text-positive' : 'text-negative'}>{s.revenue_growth_1y != null ? `${s.revenue_growth_1y >= 0 ? '+' : ''}${s.revenue_growth_1y.toFixed(1)}%` : '—'}</td>
+                      <td className={s.profit_growth_1y == null ? '' : s.profit_growth_1y >= 0 ? 'text-positive' : 'text-negative'}>{s.profit_growth_1y != null ? `${s.profit_growth_1y >= 0 ? '+' : ''}${s.profit_growth_1y.toFixed(1)}%` : '—'}</td>
+                      <td className={!s.debt_to_equity ? '' : s.debt_to_equity < 0.5 ? 'text-positive' : s.debt_to_equity > 2 ? 'text-negative' : ''}>{s.debt_to_equity != null ? `${s.debt_to_equity.toFixed(2)}x` : '—'}</td>
+                      <td>{s.dividend_yield != null ? `${s.dividend_yield.toFixed(2)}%` : '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -385,5 +422,13 @@ export default function ScreenerPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ScreenerPage() {
+  return (
+    <Suspense fallback={null}>
+      <ScreenerPageInner />
+    </Suspense>
   );
 }

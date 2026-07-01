@@ -425,7 +425,7 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {PRE_BUILT_SCREENS.map((screen, i) => (
               <Reveal key={screen.id} delay={i * 50}>
-                <Link href="/screens" className="card-plain lift p-6 block h-full group">
+                <Link href={screen.query ? `/screener?${screen.query}` : '/screens'} className="card-plain lift p-6 block h-full group">
                   <div className="flex items-start justify-between mb-2.5">
                     <h3 className="font-semibold text-[#0D1117] text-sm group-hover:text-[#F97316] transition-colors">{screen.title}</h3>
                     <ArrowUpRight size={15} className="text-[#8A96A8] group-hover:text-[#F97316] transition-colors shrink-0 mt-0.5" />

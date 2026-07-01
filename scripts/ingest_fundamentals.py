@@ -118,6 +118,14 @@ def ingest_one(client, symbol: str, session):
         "revenue_growth_1y": safe_float(
             (info.get("revenueGrowth") or 0) * 100
         ),
+        # yfinance has no distinct "net profit growth" field; earningsGrowth
+        # (trailing YoY EPS growth) is the closest proxy and is what backs
+        # both eps_growth_1y and profit_growth_1y here. Previously this
+        # column was never written, so it was permanently null for every
+        # symbol regardless of how many times ingestion ran.
+        "profit_growth_1y": safe_float(
+            (info.get("earningsGrowth") or 0) * 100
+        ),
         "eps_growth_1y": safe_float(
             (info.get("earningsGrowth") or 0) * 100
         ),

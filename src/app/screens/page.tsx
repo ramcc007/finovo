@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Clock } from 'lucide-react';
 import { PRE_BUILT_SCREENS } from '@/lib/mock-data';
 import { cn, formatPrice, formatCrores } from '@/lib/utils';
 
@@ -52,28 +52,46 @@ export default function ScreensPage() {
             <div key={category}>
               <h2 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-4">{category} Investing</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {screens.map(screen => (
-                  <div
-                    key={screen.id}
-                    className="card-plain lift p-6 cursor-pointer group"
-                    style={{ borderTop: `3px solid ${screen.color}` }}
-                    onClick={() => router.push('/screener')}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-semibold text-[#0D1117] text-sm group-hover:text-[#F97316] transition-colors">{screen.title}</h3>
-                      <ArrowRight size={15} className="text-[#8A96A8] group-hover:text-[#F97316] transition-colors shrink-0 mt-0.5" />
+                {screens.map(screen => {
+                  const comingSoon = !screen.query;
+                  const card = (
+                    <div
+                      className={cn(
+                        'card-plain p-6 group h-full',
+                        comingSoon ? 'opacity-70 cursor-default' : 'lift cursor-pointer'
+                      )}
+                      style={{ borderTop: `3px solid ${screen.color}` }}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="font-semibold text-[#0D1117] text-sm group-hover:text-[#F97316] transition-colors">{screen.title}</h3>
+                        {comingSoon
+                          ? <Clock size={14} className="text-[#8A96A8] shrink-0 mt-0.5" />
+                          : <ArrowRight size={15} className="text-[#8A96A8] group-hover:text-[#F97316] transition-colors shrink-0 mt-0.5" />
+                        }
+                      </div>
+                      <p className="text-xs text-[#4A5568] mb-3 leading-relaxed">{screen.description}</p>
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {screen.filters.split('·').map(f => (
+                          <span key={f} className="text-[11px] font-mono bg-[#F4F6FA] text-[#8A96A8] px-2 py-0.5 rounded border border-[#EDF0F7]">{f.trim()}</span>
+                        ))}
+                      </div>
+                      {comingSoon ? (
+                        <div className="flex items-center gap-1 text-xs text-[#8A96A8] font-medium">
+                          <Clock size={12} /> Coming soon
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-xs text-[#F97316] font-medium group-hover:gap-2 transition-all">
+                          View stocks <ArrowRight size={12} />
+                        </div>
+                      )}
                     </div>
-                    <p className="text-xs text-[#4A5568] mb-3 leading-relaxed">{screen.description}</p>
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {screen.filters.split('·').map(f => (
-                        <span key={f} className="text-[11px] font-mono bg-[#F4F6FA] text-[#8A96A8] px-2 py-0.5 rounded border border-[#EDF0F7]">{f.trim()}</span>
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-[#F97316] font-medium group-hover:gap-2 transition-all">
-                      View stocks <ArrowRight size={12} />
-                    </div>
-                  </div>
-                ))}
+                  );
+                  return comingSoon ? (
+                    <div key={screen.id}>{card}</div>
+                  ) : (
+                    <Link key={screen.id} href={`/screener?${screen.query}`}>{card}</Link>
+                  );
+                })}
               </div>
             </div>
           ))}

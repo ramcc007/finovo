@@ -138,29 +138,35 @@ export const SCREENER_STOCKS = [
   { symbol: 'TECHM', name: 'Tech Mahindra', sector: 'IT', price: 1487, mcap: 145000, pe: 31.2, pb: 4.8, roe: 15.2, roce: 18.4, revGrowth1Y: 2.8, profGrowth1Y: 42.4, debtEquity: 0.02, divYield: 1.8, promoter: 35.14 },
 ];
 
+// `query` holds the exact /api/screener query-string params this screen
+// applies — every chip in `filters` must correspond to a real, supported
+// filter so the "one click to run" promise on the UI is actually true.
+// Screens whose criteria aren't expressible with current filters/data
+// (require trend analysis, volume averages, etc.) have `query: null` and
+// are shown as "Coming soon" instead of silently linking to unrelated results.
 export const PRE_BUILT_SCREENS = [
   {
     id: 'high-roe-low-debt',
     title: 'High Quality Compounders',
     description: 'Companies with consistently high returns and minimal debt',
-    filters: 'ROE > 20% · Debt/Equity < 0.5 · Profit Growth 3Y > 15%',
-    count: 142,
+    filters: 'ROE > 20% · Debt/Equity < 0.5',
+    query: 'roe_min=20&debt_equity_max=0.5&sort_by=roe&sort_dir=desc',
     color: '#F97316',
   },
   {
     id: 'value-picks',
     title: 'Value Picks',
     description: 'Undervalued stocks with solid fundamentals',
-    filters: 'PE < 15 · PB < 2 · Profit Growth > 15% · ROE > 15%',
-    count: 87,
+    filters: 'PE < 15 · PB < 2 · ROE > 15%',
+    query: 'pe_max=15&pb_max=2&roe_min=15&sort_by=pe&sort_dir=asc',
     color: '#16A34A',
   },
   {
     id: 'dividend-stars',
     title: 'Dividend Stars',
     description: 'Consistent high-dividend paying companies',
-    filters: 'Div Yield > 3% · Debt/Equity < 1 · Payout consistent 5Y',
-    count: 63,
+    filters: 'Div Yield > 3% · Debt/Equity < 1',
+    query: 'div_yield_min=3&debt_equity_max=1&sort_by=dividend_yield&sort_dir=desc',
     color: '#D97706',
   },
   {
@@ -168,15 +174,15 @@ export const PRE_BUILT_SCREENS = [
     title: 'Momentum Picks',
     description: 'Stocks near 52-week highs with volume surge',
     filters: '3M Return > 10% · Near 52W High · Volume > 2x avg',
-    count: 211,
+    query: null,
     color: '#2563EB',
   },
   {
     id: 'debt-free',
     title: 'Debt-Free Companies',
-    description: 'Zero debt companies with positive free cash flow',
-    filters: 'Debt/Equity = 0 · Cash > Debt · Positive FCF',
-    count: 178,
+    description: 'Companies carrying zero net debt',
+    filters: 'Debt/Equity = 0',
+    query: 'debt_equity_max=0&sort_by=roe&sort_dir=desc',
     color: '#16A34A',
   },
   {
@@ -184,7 +190,7 @@ export const PRE_BUILT_SCREENS = [
     title: 'Turnaround Stories',
     description: 'Companies returning to profitability',
     filters: 'Loss to Profit · Improving margins · Promoter buying',
-    count: 34,
+    query: null,
     color: '#DC2626',
   },
 ];
