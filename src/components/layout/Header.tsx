@@ -61,6 +61,8 @@ export default function Header() {
 
   useEffect(() => { setMobileOpen(false); }, [pathname]);
 
+  if (pathname?.startsWith('/portfolio')) return null;
+
   return (
     <>
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-[#E9EDF4] h-16 flex items-center px-4 md:px-6 gap-4">
