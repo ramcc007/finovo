@@ -91,8 +91,14 @@ def run():
             print(f"    {s}")
 
     print("\n=== 4. Freshness ===")
-    latest = client.table("prices").select("date").order("date", desc=True).limit(1).execute().data
-    print(f"  latest prices date: {latest}")
+    # A global ORDER BY date on the ~1.3M-row prices table can't use the
+    # (symbol, date) index and hits the statement timeout — probe one
+    # liquid symbol instead.
+    latest = (
+        client.table("prices").select("date").eq("symbol", "RELIANCE")
+        .order("date", desc=True).limit(1).execute().data
+    )
+    print(f"  latest RELIANCE price date: {latest}")
     quotes_n = client.table("quotes").select("symbol", count="exact").limit(1).execute().count
     print(f"  quotes rows: {quotes_n}")
 

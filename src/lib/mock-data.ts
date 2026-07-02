@@ -180,9 +180,12 @@ export const PRE_BUILT_SCREENS = [
   {
     id: 'debt-free',
     title: 'Debt-Free Companies',
-    description: 'Companies carrying zero net debt',
-    filters: 'Debt/Equity = 0',
-    query: 'debt_equity_max=0&sort_by=roe&sort_dir=desc',
+    // Exact D/E = 0 is rare in reported data (true zero-debt firms report
+    // tiny residuals like 0.0003), so use the conventional "virtually
+    // debt-free" threshold instead.
+    description: 'Companies carrying virtually no debt',
+    filters: 'Debt/Equity < 0.05',
+    query: 'debt_equity_max=0.05&sort_by=roe&sort_dir=desc',
     color: '#16A34A',
   },
   {

@@ -297,17 +297,13 @@ function ScreenerPageInner() {
                 </FilterSection>
 
                 <FilterSection title="Shareholding">
-                  <MinInput label="Promoter Holding" filterKey="promoterMin" filters={filters} onChange={updateFilter} unit="%" />
-                  <div>
-                    <label className="block text-xs text-[#8A96A8] mb-1.5">Max Pledge % (0 = No Pledge)</label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 0"
-                      value={filters.pledgeMax}
-                      onChange={e => updateFilter('pledgeMax', e.target.value)}
-                      className="w-full text-xs bg-[#F4F6FA] border border-[#E2E8F0] rounded-[6px] px-2.5 py-2 text-[#0D1117] placeholder:text-[#8A96A8] outline-none focus:border-[#F97316] transition-colors"
-                    />
-                  </div>
+                  {/* Shareholding data isn't ingested yet — a promoter/pledge
+                      filter here would silently match nothing. Re-enable the
+                      inputs once the shareholding pipeline exists. */}
+                  <p className="text-xs text-[#8A96A8] leading-relaxed">
+                    Promoter holding &amp; pledge filters are coming soon — quarterly
+                    shareholding data isn&apos;t available yet.
+                  </p>
                 </FilterSection>
               </div>
             </div>

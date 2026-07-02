@@ -25,7 +25,25 @@ load_dotenv()
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_SERVICE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
 DELAY = 1.5          # seconds between each symbol (yfinance rate limit)
-MAX_SYMBOLS = int(os.environ.get("MAX_SYMBOLS", "2000"))
+# Default must exceed the ~2400 active companies — the old cap of 2000
+# permanently excluded the last ~394 symbols from every ratios ingestion.
+MAX_SYMBOLS = int(os.environ.get("MAX_SYMBOLS", "5000"))
+
+# yfinance GICS-style sector → our canonical sector labels
+# (same label set as scripts/ingest_companies.py INDUSTRY_MAP values).
+YF_SECTOR_MAP = {
+    "Financial Services": "Banking",
+    "Technology": "IT",
+    "Communication Services": "Telecom",
+    "Consumer Defensive": "FMCG",
+    "Consumer Cyclical": "Consumer",
+    "Healthcare": "Pharma",
+    "Industrials": "Capital Goods",
+    "Basic Materials": "Chemicals",
+    "Energy": "Oil & Gas",
+    "Utilities": "Power",
+    "Real Estate": "Realty",
+}
 
 
 def make_session():
@@ -130,11 +148,45 @@ def ingest_one(client, symbol: str, session):
         ratio_record, on_conflict="symbol,date"
     ).execute()
 
+    # ── SECTOR BACKFILL ──────────────────────────────────────
+    # NSE index files only classify the top ~500 stocks, leaving ~80% of
+    # companies as 'Other' and invisible to the sector filter. Use
+    # yfinance's GICS-style sector as a fallback for those.
+    yf_sector = YF_SECTOR_MAP.get(str(info.get("sector") or "").strip())
+    if yf_sector:
+        try:
+            comp = (
+                client.table("companies").select("sector")
+                .eq("symbol", symbol).limit(1).execute().data
+            )
+            if comp and comp[0].get("sector") in (None, "", "Other"):
+                client.table("companies").update(
+                    {"sector": yf_sector}
+                ).eq("symbol", symbol).execute()
+        except Exception:
+            pass  # classification is best-effort; never fail the ingest
+
     # ── ANNUAL FINANCIALS ────────────────────────────────────
     try:
         fin = ticker.financials  # columns = dates, rows = metrics
         bs = ticker.balance_sheet
         cf = ticker.cashflow
+
+        # ROCE = EBIT / capital employed (total assets − current liabilities).
+        # yfinance's info dict has no ROCE field, so this column had been
+        # 100% null since launch. Computed from the latest annual statements.
+        try:
+            latest = fin.columns[0]
+            ebit = safe_float(fin.loc["EBIT", latest]) if "EBIT" in fin.index else None
+            ta_ = bs.loc["Total Assets", latest] if bs is not None and "Total Assets" in bs.index and latest in bs.columns else None
+            cl_ = bs.loc["Current Liabilities", latest] if bs is not None and "Current Liabilities" in bs.index and latest in bs.columns else None
+            ta_, cl_ = safe_float(ta_), safe_float(cl_)
+            if ebit is not None and ta_ and cl_ is not None and (ta_ - cl_) > 0:
+                client.table("ratios").update(
+                    {"roce": round(ebit / (ta_ - cl_) * 100, 4)}
+                ).eq("symbol", symbol).eq("date", ratio_record["date"]).execute()
+        except Exception:
+            pass
 
         for col in fin.columns:
             period = col.strftime("%Y-%m")
