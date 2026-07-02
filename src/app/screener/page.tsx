@@ -30,7 +30,16 @@ const defaultFilters: Filters = {
   profGrowthMin: '', debtEquityMax: '', divYieldMin: '', promoterMin: '', pledgeMax: '',
 };
 
-const SECTORS = ['IT', 'Banking', 'NBFC', 'FMCG', 'Auto', 'Pharma', 'Oil & Gas', 'Power'];
+// Must match the canonical sector labels written by scripts/ingest_companies.py
+// (SECTOR_FILES + INDUSTRY_MAP). The old list included 'NBFC', which the
+// ingester maps to 'Banking' — selecting it always returned zero stocks —
+// and omitted 14 real sectors entirely.
+const SECTORS = [
+  'Auto', 'Banking', 'Capital Goods', 'Cement', 'Chemicals', 'Consumer',
+  'Diversified', 'FMCG', 'IT', 'Insurance', 'Logistics', 'Media', 'Metal',
+  'Oil & Gas', 'Other', 'Pharma', 'Power', 'Realty', 'Retail', 'Services',
+  'Telecom', 'Textiles',
+];
 
 function FilterSection({ title, children }: { title: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(true);

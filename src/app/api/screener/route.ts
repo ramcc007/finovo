@@ -77,7 +77,27 @@ export async function GET(req: NextRequest) {
     const { data, error, count } = await query;
     if (error) throw error;
 
-    return NextResponse.json({ data: data ?? [], total: count ?? 0 });
+    // screener_view.price comes from the *weekly* ratios ingestion and can be
+    // several days stale. Overlay the daily EOD quote (best-effort) so the
+    // table shows the latest close and day-change like the rest of the app.
+    let rows = data ?? [];
+    if (rows.length) {
+      const { data: quotes } = await supabase
+        .from('quotes')
+        .select('symbol, price, change_pct')
+        .in('symbol', rows.map(r => r.symbol));
+      if (quotes?.length) {
+        const qmap = new Map(quotes.map(q => [q.symbol, q]));
+        rows = rows.map(r => {
+          const q = qmap.get(r.symbol);
+          return q
+            ? { ...r, price: q.price ?? r.price, change_pct: q.change_pct ?? r.change_pct }
+            : r;
+        });
+      }
+    }
+
+    return NextResponse.json({ data: rows, total: count ?? 0 });
   } catch {
     // Fallback: filter mock data
     let results = [...SCREENER_STOCKS];

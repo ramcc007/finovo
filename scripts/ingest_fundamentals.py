@@ -76,6 +76,17 @@ def safe_int(val) -> int | None:
         return None
 
 
+def scaled(val, factor: float) -> float | None:
+    """Scale a raw yfinance value, propagating missing data as None.
+
+    The previous `(info.get(...) or 0) * factor` pattern silently stored 0
+    for every symbol where yfinance omitted the field, so unknown ROE/debt/
+    growth showed up as a hard 0 in the UI and polluted screens (e.g. banks
+    with missing debtToEquity matched the "Debt-Free" filter)."""
+    f = safe_float(val)
+    return round(f * factor, 4) if f is not None else None
+
+
 def ingest_one(client, symbol: str, session):
     ticker = yf.Ticker(f"{symbol}.NS", session=session)
 
@@ -93,42 +104,26 @@ def ingest_one(client, symbol: str, session):
         "price_to_sales": safe_float(info.get("priceToSalesTrailing12Months")),
         # yfinance now returns dividendYield already as a percentage
         # (e.g. 1.63 means 1.63%), not a fraction — do not multiply by 100.
-        "dividend_yield": safe_float(info.get("dividendYield") or 0),
+        "dividend_yield": safe_float(info.get("dividendYield")),
         "peg_ratio": safe_float(info.get("pegRatio")),
-        "roe": safe_float(
-            (info.get("returnOnEquity") or 0) * 100
-        ),
-        "net_margin": safe_float(
-            (info.get("profitMargins") or 0) * 100
-        ),
-        "operating_margin": safe_float(
-            (info.get("operatingMargins") or 0) * 100
-        ),
-        "debt_to_equity": safe_float(
-            (info.get("debtToEquity") or 0) / 100
-        ),
+        "roe": scaled(info.get("returnOnEquity"), 100),
+        "net_margin": scaled(info.get("profitMargins"), 100),
+        "operating_margin": scaled(info.get("operatingMargins"), 100),
+        "debt_to_equity": scaled(info.get("debtToEquity"), 0.01),
         "current_ratio": safe_float(info.get("currentRatio")),
         "quick_ratio": safe_float(info.get("quickRatio")),
-        "market_cap": safe_float(
-            (info.get("marketCap") or 0) / 1e7  # convert to Crores
-        ),
+        "market_cap": scaled(info.get("marketCap"), 1e-7),  # convert to Crores
         "week_high_52": safe_float(info.get("fiftyTwoWeekHigh")),
         "week_low_52": safe_float(info.get("fiftyTwoWeekLow")),
         "price": safe_float(info.get("currentPrice") or info.get("regularMarketPrice")),
-        "revenue_growth_1y": safe_float(
-            (info.get("revenueGrowth") or 0) * 100
-        ),
+        "revenue_growth_1y": scaled(info.get("revenueGrowth"), 100),
         # yfinance has no distinct "net profit growth" field; earningsGrowth
         # (trailing YoY EPS growth) is the closest proxy and is what backs
         # both eps_growth_1y and profit_growth_1y here. Previously this
         # column was never written, so it was permanently null for every
         # symbol regardless of how many times ingestion ran.
-        "profit_growth_1y": safe_float(
-            (info.get("earningsGrowth") or 0) * 100
-        ),
-        "eps_growth_1y": safe_float(
-            (info.get("earningsGrowth") or 0) * 100
-        ),
+        "profit_growth_1y": scaled(info.get("earningsGrowth"), 100),
+        "eps_growth_1y": scaled(info.get("earningsGrowth"), 100),
     }
 
     client.table("ratios").upsert(
