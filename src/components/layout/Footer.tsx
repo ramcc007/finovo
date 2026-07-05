@@ -1,7 +1,13 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { TrendingUp } from 'lucide-react';
 
 export default function Footer() {
+  const pathname = usePathname();
+  if (pathname?.startsWith('/portfolio')) return null;
+
   return (
     <footer className="bg-[#0B0E14] text-white mt-16">
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-10">
