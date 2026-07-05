@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-export const revalidate = 0;
+// EOD data changes once per trading day — cache the aggregate for 5 minutes
+// instead of re-scanning ~4,400 rows (screener_view + quotes) per request.
+export const revalidate = 300;
 
 interface Row {
   symbol: string;

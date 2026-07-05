@@ -14,55 +14,28 @@ export async function GET(
   }
 
   try {
-    // Company info
-    const { data: company, error: compErr } = await supabase
-      .from('companies')
-      .select('*')
-      .eq('symbol', sym)
-      .single();
+    // All lookups are independent — run them in parallel instead of paying
+    // six sequential round-trips to Supabase before the first byte.
+    const [
+      { data: company, error: compErr },
+      { data: ratios },
+      { data: quote },
+      { data: annualFin },
+      { data: quarterlyFin },
+      { data: shareholding },
+    ] = await Promise.all([
+      supabase.from('companies').select('*').eq('symbol', sym).single(),
+      supabase.from('ratios').select('*').eq('symbol', sym)
+        .order('date', { ascending: false }).limit(1).single(),
+      supabase.from('quotes').select('*').eq('symbol', sym).single(),
+      supabase.from('fundamentals').select('*').eq('symbol', sym)
+        .eq('period_type', 'annual').order('period', { ascending: false }).limit(5),
+      supabase.from('fundamentals').select('*').eq('symbol', sym)
+        .eq('period_type', 'quarterly').order('period', { ascending: false }).limit(8),
+      supabase.from('shareholding').select('*').eq('symbol', sym)
+        .order('quarter', { ascending: false }).limit(4),
+    ]);
     if (compErr) throw compErr;
-
-    // Latest ratios
-    const { data: ratios } = await supabase
-      .from('ratios')
-      .select('*')
-      .eq('symbol', sym)
-      .order('date', { ascending: false })
-      .limit(1)
-      .single();
-
-    // Live quote
-    const { data: quote } = await supabase
-      .from('quotes')
-      .select('*')
-      .eq('symbol', sym)
-      .single();
-
-    // Annual financials (last 5 years)
-    const { data: annualFin } = await supabase
-      .from('fundamentals')
-      .select('*')
-      .eq('symbol', sym)
-      .eq('period_type', 'annual')
-      .order('period', { ascending: false })
-      .limit(5);
-
-    // Quarterly financials (last 8 quarters)
-    const { data: quarterlyFin } = await supabase
-      .from('fundamentals')
-      .select('*')
-      .eq('symbol', sym)
-      .eq('period_type', 'quarterly')
-      .order('period', { ascending: false })
-      .limit(8);
-
-    // Shareholding (last 4 quarters)
-    const { data: shareholding } = await supabase
-      .from('shareholding')
-      .select('*')
-      .eq('symbol', sym)
-      .order('quarter', { ascending: false })
-      .limit(4);
 
     // Real peer set: largest companies in the same sector.
     let peers: Array<{ symbol: string; name: string; price: number; mcap: string; pe: number; pb: number; roe: number; revGrowth: number }> = [];
