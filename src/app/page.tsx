@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import TickerBar from '@/components/layout/TickerBar';
 import Reveal from '@/components/ui/Reveal';
+import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
 import { PRE_BUILT_SCREENS } from '@/lib/mock-data';
 import { cn, formatPrice, formatVolume, formatCrores, formatTradeDate } from '@/lib/utils';
 
@@ -112,6 +113,8 @@ export default function Home() {
 
             {/* Left: copy */}
             <div>
+              <AdviceDisclaimer />
+
               <div className="inline-flex items-center gap-2 rounded-full border border-[#E6EAF1] bg-white px-3 py-1.5 mb-7 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#15A05B]" />
                 <span className="eyebrow text-[#56616F]">Free forever · NSE &amp; BSE</span>
