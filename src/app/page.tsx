@@ -37,27 +37,34 @@ function ChangeBadge({ value }: { value: number }) {
   );
 }
 
-/* Static upward sparkline for the hero preview card */
-function Sparkline() {
+/* Sparkline for the hero preview card — trends up or down to match the badge */
+function Sparkline({ id, positive }: { id: string; positive: boolean }) {
+  const color = positive ? '#16A34A' : '#DC2626';
+  const line = positive
+    ? 'M0,62 C20,58 30,50 48,52 C66,54 78,38 96,40 C114,42 126,30 144,28 C162,26 174,34 192,30 C210,26 222,16 240,14 C258,12 270,10 280,8'
+    : 'M0,18 C20,22 30,30 48,28 C66,26 78,42 96,40 C114,38 126,50 144,52 C162,54 174,46 192,50 C210,54 222,64 240,66 C258,68 270,72 280,74';
+  const fill = `${line} L280,80 L0,80 Z`;
   return (
     <svg viewBox="0 0 280 80" className="w-full h-20" preserveAspectRatio="none">
       <defs>
-        <linearGradient id="spark" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#16A34A" stopOpacity="0.22" />
-          <stop offset="100%" stopColor="#16A34A" stopOpacity="0" />
+        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.22" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
-      <path
-        d="M0,62 C20,58 30,50 48,52 C66,54 78,38 96,40 C114,42 126,30 144,28 C162,26 174,34 192,30 C210,26 222,16 240,14 C258,12 270,10 280,8"
-        fill="none" stroke="#16A34A" strokeWidth="2" strokeLinecap="round"
-      />
-      <path
-        d="M0,62 C20,58 30,50 48,52 C66,54 78,38 96,40 C114,42 126,30 144,28 C162,26 174,34 192,30 C210,26 222,16 240,14 C258,12 270,10 280,8 L280,80 L0,80 Z"
-        fill="url(#spark)"
-      />
+      <path d={line} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" />
+      <path d={fill} fill={`url(#${id})`} />
     </svg>
   );
 }
+
+/* Illustrative examples for the hero preview slider — not live prices */
+const HERO_PREVIEWS = [
+  { symbol: 'TCS', name: 'Tata Consultancy Services', sector: 'IT Services', price: '₹3,842.50', changePct: 1.11, pe: '28.4', roe: '52.3%', de: '0.02' },
+  { symbol: 'RELIANCE', name: 'Reliance Industries', sector: 'Energy', price: '₹2,945.20', changePct: 0.68, pe: '24.1', roe: '9.8%', de: '0.35' },
+  { symbol: 'HDFCBANK', name: 'HDFC Bank', sector: 'Banking', price: '₹1,687.40', changePct: 0.42, pe: '19.6', roe: '17.2%', de: '6.80' },
+  { symbol: 'INFY', name: 'Infosys', sector: 'IT Services', price: '₹1,842.75', changePct: -0.25, pe: '26.8', roe: '31.4%', de: '0.09' },
+];
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'gainers' | 'losers'>('gainers');
@@ -74,6 +81,12 @@ export default function Home() {
       .then(d => { if (alive) setMkt(d); })
       .catch(() => { if (alive) setMkt(null); });
     return () => { alive = false; };
+  }, []);
+
+  const [previewIdx, setPreviewIdx] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setPreviewIdx(i => (i + 1) % HERO_PREVIEWS.length), 4000);
+    return () => clearInterval(t);
   }, []);
 
   useEffect(() => {
@@ -206,46 +219,69 @@ export default function Home() {
 
             {/* Right: product preview */}
             <Reveal delay={120} className="hidden lg:block">
-              <div className="relative">
-                <div className="absolute -inset-5 bg-gradient-to-br from-[#F97316]/15 via-[#F97316]/5 to-transparent rounded-3xl blur-2xl" />
-                <div className="relative bg-white rounded-2xl border border-[#E9EDF4] shadow-[0_20px_50px_rgba(16,24,40,0.14)] overflow-hidden">
-                  {/* preview header */}
-                  <div className="flex items-center justify-between px-5 py-4 border-b border-[#EDF0F7]">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-base font-bold text-[#0D1117]">TCS</span>
-                        <span className="text-[10px] bg-[#FFF7ED] text-[#F97316] px-2 py-0.5 rounded font-semibold">IT Services</span>
+              {(() => {
+                const pv = HERO_PREVIEWS[previewIdx];
+                const up = pv.changePct >= 0;
+                return (
+                  <div className="relative">
+                    <div className="absolute -inset-5 bg-gradient-to-br from-[#F97316]/15 via-[#F97316]/5 to-transparent rounded-3xl blur-2xl" />
+                    <div key={pv.symbol} className="relative bg-white rounded-2xl border border-[#E9EDF4] shadow-[0_20px_50px_rgba(16,24,40,0.14)] overflow-hidden animate-fadein">
+                      {/* preview header */}
+                      <div className="flex items-center justify-between px-5 py-4 border-b border-[#EDF0F7]">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-base font-bold text-[#0D1117]">{pv.symbol}</span>
+                            <span className="text-[10px] bg-[#FFF7ED] text-[#F97316] px-2 py-0.5 rounded font-semibold">{pv.sector}</span>
+                          </div>
+                          <div className="text-xs text-[#8A96A8]">{pv.name}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="tnum text-base font-bold text-[#0D1117]">{pv.price}</div>
+                          <div className={cn('tnum text-xs font-semibold', up ? 'text-[#16A34A]' : 'text-[#DC2626]')}>
+                            {up ? '▲' : '▼'} {Math.abs(pv.changePct).toFixed(2)}%
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-xs text-[#8A96A8]">Tata Consultancy Services</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="tnum text-base font-bold text-[#0D1117]">₹3,842.50</div>
-                      <div className="tnum text-xs font-semibold text-[#16A34A]">▲ 1.11%</div>
-                    </div>
-                  </div>
-                  {/* sparkline */}
-                  <div className="px-5 pt-4">
-                    <Sparkline />
-                  </div>
-                  {/* metrics grid */}
-                  <div className="grid grid-cols-3 divide-x divide-[#EDF0F7] border-t border-[#EDF0F7] mt-3">
-                    {[
-                      { k: 'P/E', v: '28.4' },
-                      { k: 'ROE', v: '52.3%' },
-                      { k: 'D/E', v: '0.02' },
-                    ].map(m => (
-                      <div key={m.k} className="px-4 py-3 text-center">
-                        <div className="text-[10px] uppercase tracking-wide text-[#8A96A8] mb-0.5">{m.k}</div>
-                        <div className="tnum text-sm font-bold text-[#0D1117]">{m.v}</div>
+                      {/* sparkline */}
+                      <div className="px-5 pt-4">
+                        <Sparkline id={`spark-${pv.symbol}`} positive={up} />
                       </div>
-                    ))}
+                      {/* metrics grid */}
+                      <div className="grid grid-cols-3 divide-x divide-[#EDF0F7] border-t border-[#EDF0F7] mt-3">
+                        {[
+                          { k: 'P/E', v: pv.pe },
+                          { k: 'ROE', v: pv.roe },
+                          { k: 'D/E', v: pv.de },
+                        ].map(m => (
+                          <div key={m.k} className="px-4 py-3 text-center">
+                            <div className="text-[10px] uppercase tracking-wide text-[#8A96A8] mb-0.5">{m.k}</div>
+                            <div className="tnum text-sm font-bold text-[#0D1117]">{m.v}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="px-5 py-3 bg-[#FAFBFD] border-t border-[#EDF0F7] flex items-center justify-between">
+                        <span className="text-xs text-[#4A5568]">10-year financials available</span>
+                        <ArrowUpRight size={14} className="text-[#F97316]" />
+                      </div>
+                    </div>
+
+                    {/* slider dots */}
+                    <div className="flex items-center justify-center gap-1.5 mt-4">
+                      {HERO_PREVIEWS.map((p, i) => (
+                        <button
+                          key={p.symbol}
+                          onClick={() => setPreviewIdx(i)}
+                          aria-label={`Show ${p.symbol} preview`}
+                          className={cn(
+                            'h-1.5 rounded-full transition-all',
+                            i === previewIdx ? 'w-5 bg-[#F97316]' : 'w-1.5 bg-[#D8DEE9] hover:bg-[#BCC5D3]',
+                          )}
+                        />
+                      ))}
+                    </div>
                   </div>
-                  <div className="px-5 py-3 bg-[#FAFBFD] border-t border-[#EDF0F7] flex items-center justify-between">
-                    <span className="text-xs text-[#4A5568]">10-year financials available</span>
-                    <ArrowUpRight size={14} className="text-[#F97316]" />
-                  </div>
-                </div>
-              </div>
+                );
+              })()}
             </Reveal>
           </div>
         </div>
