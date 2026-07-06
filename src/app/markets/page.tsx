@@ -2,8 +2,20 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import TickerBar from '@/components/layout/TickerBar';
 import { cn, formatPrice, formatVolume, formatCrores, formatTradeDate } from '@/lib/utils';
+
+// Maps a sector's average day-change % to a heatmap tile color — green for
+// gains, red for losses, intensity scaled to ±3% (a "big" day for a sector).
+function heatColor(change: number): { bg: string; text: string } {
+  const clamped = Math.max(-3, Math.min(3, change));
+  const intensity = Math.abs(clamped) / 3;
+  const strong = intensity > 0.6;
+  return change >= 0
+    ? { bg: `rgba(22,163,74,${0.10 + intensity * 0.65})`, text: strong ? '#fff' : '#14532D' }
+    : { bg: `rgba(220,38,38,${0.10 + intensity * 0.65})`, text: strong ? '#fff' : '#7F1D1D' };
+}
 
 type MarketTab = 'gainers' | 'losers' | 'active' | 'high52' | 'low52';
 
@@ -196,6 +208,36 @@ export default function MarketsPage() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Sector Heatmap */}
+        <div className="card-plain p-6">
+          <h3 className="text-sm font-semibold text-[#0D1117] mb-4">Sector Heatmap</h3>
+          {!mkt ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {Array(12).fill(0).map((_, i) => <div key={i} className="h-20 bg-[#EEF1F7] rounded-lg animate-pulse" />)}
+            </div>
+          ) : mkt.sectors.length === 0 ? (
+            <p className="text-sm text-[#8A96A8]">Updating.</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {mkt.sectors.map(s => {
+                const { bg, text } = heatColor(s.change);
+                return (
+                  <Link
+                    key={s.name}
+                    href={`/screener?sector=${encodeURIComponent(s.name)}`}
+                    className="rounded-lg p-3 transition-transform hover:scale-[1.03]"
+                    style={{ background: bg, color: text }}
+                  >
+                    <div className="text-xs font-semibold truncate">{s.name}</div>
+                    <div className="num text-lg font-bold mt-1">{s.change >= 0 ? '+' : ''}{s.change.toFixed(2)}%</div>
+                    <div className="text-[10px] opacity-80 mt-0.5">{s.count} stocks</div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
