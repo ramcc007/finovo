@@ -7,7 +7,7 @@ import { ArrowLeft, Plus, Check, ExternalLink, RefreshCw } from 'lucide-react';
 import { cn, formatPrice, formatCrores } from '@/lib/utils';
 import PriceChart from '@/components/charts/PriceChart';
 import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
-import { STOCK_TCS, PEERS } from '@/lib/mock-data';
+import type { PEERS } from '@/lib/mock-data';
 
 const TABS = ['Overview', 'Financials', 'Ratios', 'Shareholding', 'Peers'] as const;
 type Tab = typeof TABS[number];
@@ -71,6 +71,7 @@ export default function StockPage() {
 
   const [data, setData] = useState<StockData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('Overview');
   const [watchlisted, setWatchlisted] = useState(false);
   const [finPeriod, setFinPeriod] = useState<'annual' | 'quarterly'>('annual');
@@ -78,23 +79,23 @@ export default function StockPage() {
 
   useEffect(() => {
     setLoading(true);
+    setNotFound(false);
     fetch(`/api/stocks/${symbol}`)
       .then(r => r.json())
       .then(d => {
-        if (d?.error) throw new Error(d.error);
-        setData(d);
+        if (d?.error) {
+          // Genuinely unknown/mistyped symbol — show an honest "not found"
+          // state instead of fabricating a different company's financials.
+          setNotFound(true);
+          setData(null);
+        } else {
+          setData(d);
+        }
         setLoading(false);
       })
       .catch(() => {
-        // Construct fallback from mock
-        setData({
-          company: { symbol, name: STOCK_TCS.name, sector: STOCK_TCS.sector, industry: STOCK_TCS.industry, bse_code: STOCK_TCS.bse },
-          quote: { price: STOCK_TCS.price, change: STOCK_TCS.change, change_pct: STOCK_TCS.changePct, open: STOCK_TCS.open, high: STOCK_TCS.high, low: STOCK_TCS.low, prev_close: STOCK_TCS.prevClose, volume: 38400000 },
-          ratios: { pe: STOCK_TCS.pe, pb: STOCK_TCS.pb, ev_ebitda: STOCK_TCS.evEbitda, dividend_yield: STOCK_TCS.divYield, peg_ratio: STOCK_TCS.pegRatio, roe: STOCK_TCS.roe, roce: STOCK_TCS.roce, net_margin: STOCK_TCS.netMargin, operating_margin: STOCK_TCS.opMargin, debt_to_equity: STOCK_TCS.debtEquity, current_ratio: STOCK_TCS.currentRatio, quick_ratio: STOCK_TCS.quickRatio, market_cap: STOCK_TCS.marketCap, week_high_52: STOCK_TCS.weekHigh52, week_low_52: STOCK_TCS.weekLow52, eps: STOCK_TCS.eps, revenue_growth_1y: 6.8, profit_growth_1y: 8.9, revenue_growth_3y: 14.2, profit_growth_3y: 11.2, eps_growth_1y: 9.2 },
-          financials: STOCK_TCS.financials as unknown as StockData['financials'],
-          shareholding: STOCK_TCS.shareholding.map(s => ({ quarter: s.quarter, promoter_pct: s.promoter, fii_pct: s.fii, dii_pct: s.dii, public_pct: s.public, pledge_pct: 0 })) as StockData['shareholding'],
-          peers: PEERS,
-        });
+        setNotFound(true);
+        setData(null);
         setLoading(false);
       });
   }, [symbol]);
@@ -117,6 +118,34 @@ export default function StockPage() {
   const periodKey = finData[0] && ('year' in finData[0] ? 'year' : 'period');
   const revKey = finData[0] && ('revenue' in finData[0] ? 'revenue' : 'rev');
   const npKey = 'net_profit' in (finData[0] ?? {}) ? 'net_profit' : 'netProfit';
+
+  if (!loading && notFound) {
+    return (
+      <div className="min-h-screen bg-[#F4F6FA] flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <h1 className="text-xl font-bold text-[#0D1117] mb-2">Stock not found</h1>
+          <p className="text-sm text-[#4A5568] mb-6">
+            We couldn&apos;t find a listed company with symbol <span className="font-semibold">{symbol}</span>.
+            Check the spelling, or search for it below.
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <Link
+              href="/screener"
+              className="text-sm font-semibold px-5 py-2 rounded-[6px] bg-[#F97316] text-white hover:bg-[#EA580C] transition-colors"
+            >
+              Open Explorer
+            </Link>
+            <Link
+              href="/"
+              className="text-sm font-medium px-5 py-2 rounded-[6px] border border-[#E2E8F0] text-[#4A5568] hover:border-[#F97316] hover:text-[#F97316] transition-colors"
+            >
+              Back to Home
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F4F6FA]">
@@ -564,9 +593,9 @@ export default function StockPage() {
                 </tr>
               </thead>
               <tbody>
-                {(data?.peers ?? PEERS).length === 0 ? (
+                {(data?.peers ?? []).length === 0 ? (
                   <tr><td colSpan={7} className="text-center py-10 text-[#8A96A8] font-sans">No peer data available for this sector.</td></tr>
-                ) : (data?.peers ?? PEERS).map(p => (
+                ) : (data?.peers ?? []).map(p => (
                   <tr
                     key={p.symbol}
                     className={p.symbol === symbol ? 'bg-[#FFF7ED]' : ''}
