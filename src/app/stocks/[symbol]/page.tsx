@@ -286,7 +286,7 @@ export default function StockPage() {
                     { label: 'ROE', value: r?.roe ? `${r.roe.toFixed(1)}%` : '—', good: (r?.roe ?? 0) > 15 },
                     { label: 'ROCE', value: r?.roce ? `${r.roce.toFixed(1)}%` : '—', good: (r?.roce ?? 0) > 15 },
                     { label: 'Net Margin', value: r?.net_margin ? `${r.net_margin.toFixed(1)}%` : '—', good: (r?.net_margin ?? 0) > 10 },
-                    { label: 'Debt/Equity', value: r?.debt_to_equity !== undefined ? `${r.debt_to_equity.toFixed(2)}x` : '—', good: (r?.debt_to_equity ?? 999) < 1 },
+                    { label: 'Debt/Equity', value: r?.debt_to_equity != null ? `${r.debt_to_equity.toFixed(2)}x` : '—', good: (r?.debt_to_equity ?? 999) < 1 },
                     { label: 'Current Ratio', value: r?.current_ratio ? `${r.current_ratio.toFixed(2)}x` : '—', good: (r?.current_ratio ?? 0) > 1.5 },
                   ].map(row => (
                     <div key={row.label} className="flex items-center justify-between py-2 border-b border-[#EDF0F7] last:border-0">
