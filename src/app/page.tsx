@@ -125,8 +125,8 @@ export default function Home() {
 
               <p className="text-[#56616F] text-base md:text-lg leading-relaxed max-w-xl mb-8">
                 Screen 5,000+ NSE &amp; BSE companies with a decade of financial statements,
-                valuation ratios, and shareholding data — free to use, with an optional
-                account to sync your watchlist and screens across devices.
+                valuation ratios, and shareholding data. Free to use, with an account for
+                those who want it.
               </p>
 
               {/* Search */}
