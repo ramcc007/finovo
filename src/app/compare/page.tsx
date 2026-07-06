@@ -3,8 +3,8 @@
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, X, Loader2 } from 'lucide-react';
-import { cn, formatCrores, formatPrice } from '@/lib/utils';
+import { Search, X, Loader2, Download } from 'lucide-react';
+import { cn, formatCrores, formatPrice, toCSV, downloadTextFile } from '@/lib/utils';
 import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
 
 const MAX_SYMBOLS = 4;
@@ -112,11 +112,33 @@ function ComparePageInner() {
     <div className="min-h-screen bg-[#F4F6FA]">
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-10 md:py-14">
         <AdviceDisclaimer />
-        <div className="mb-6">
-          <h1 className="h-section text-[#0D1117]">Compare Stocks</h1>
-          <p className="text-sm text-[#4A5568] mt-1.5">
-            Pick up to {MAX_SYMBOLS} companies to compare side by side.
-          </p>
+        <div className="flex items-end justify-between mb-6 gap-4">
+          <div>
+            <h1 className="h-section text-[#0D1117]">Compare Stocks</h1>
+            <p className="text-sm text-[#4A5568] mt-1.5">
+              Pick up to {MAX_SYMBOLS} companies to compare side by side.
+            </p>
+          </div>
+          {ordered.length > 0 && (
+            <button
+              onClick={() => {
+                const csvRows = ordered.map(s => {
+                  const row: Record<string, unknown> = { symbol: s.symbol, name: s.name };
+                  for (const m of METRICS) row[m.key] = s[m.key];
+                  return row;
+                });
+                const csv = toCSV(csvRows, [
+                  { key: 'symbol', label: 'Symbol' },
+                  { key: 'name', label: 'Name' },
+                  ...METRICS.map(m => ({ key: m.key as string, label: m.label })),
+                ]);
+                downloadTextFile(`finovo-compare-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+              }}
+              className="btn btn-secondary !px-3 !py-2 !text-[13px] shrink-0"
+            >
+              <Download size={13} /> Export CSV
+            </button>
+          )}
         </div>
 
         {/* Symbol picker */}

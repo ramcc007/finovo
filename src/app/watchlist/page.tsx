@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Trash2, Star } from 'lucide-react';
-import { cn, formatCrores, formatPrice } from '@/lib/utils';
+import { Trash2, Star, Download } from 'lucide-react';
+import { cn, formatCrores, formatPrice, toCSV, downloadTextFile } from '@/lib/utils';
 import { useWatchlist } from '@/lib/useWatchlist';
 import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
 
@@ -32,11 +32,33 @@ export default function WatchlistPage() {
     <div className="min-h-screen bg-[#F4F6FA]">
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-10 md:py-14">
         <AdviceDisclaimer />
-        <div className="mb-8">
-          <h1 className="h-section text-[#0D1117]">Watchlist</h1>
-          <p className="text-sm text-[#4A5568] mt-1.5">
-            Stocks you&apos;re tracking — saved on this device, no account needed.
-          </p>
+        <div className="flex items-end justify-between mb-8 gap-4">
+          <div>
+            <h1 className="h-section text-[#0D1117]">Watchlist</h1>
+            <p className="text-sm text-[#4A5568] mt-1.5">
+              Stocks you&apos;re tracking — saved on this device, no account needed.
+            </p>
+          </div>
+          {ordered && ordered.length > 0 && (
+            <button
+              onClick={() => {
+                const csv = toCSV(ordered as unknown as Record<string, unknown>[], [
+                  { key: 'symbol', label: 'Symbol' },
+                  { key: 'name', label: 'Name' },
+                  { key: 'sector', label: 'Sector' },
+                  { key: 'price', label: 'Price' },
+                  { key: 'change_pct', label: 'Change %' },
+                  { key: 'market_cap', label: 'Market Cap (Cr)' },
+                  { key: 'pe', label: 'P/E' },
+                  { key: 'roe', label: 'ROE %' },
+                ]);
+                downloadTextFile(`finovo-watchlist-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+              }}
+              className="btn btn-secondary !px-3 !py-2 !text-[13px] shrink-0"
+            >
+              <Download size={13} /> Export CSV
+            </button>
+          )}
         </div>
 
         {symbols.length === 0 ? (

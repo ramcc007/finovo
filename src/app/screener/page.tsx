@@ -3,12 +3,12 @@
 import { Suspense, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { SlidersHorizontal, Download, RotateCcw, ChevronUp, ChevronDown, X, Bookmark, Trash2 } from 'lucide-react';
-import { cn, formatCrores, formatPrice } from '@/lib/utils';
+import { SlidersHorizontal, Download, RotateCcw, ChevronUp, ChevronDown, X, Bookmark, Trash2, Gauge } from 'lucide-react';
+import { cn, formatCrores, formatPrice, toCSV, downloadTextFile } from '@/lib/utils';
 import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
 import { useSavedScreens } from '@/lib/useSavedScreens';
 
-type SortKey = 'market_cap' | 'price' | 'pe' | 'pb' | 'roe' | 'revenue_growth_1y' | 'profit_growth_1y' | 'debt_to_equity' | 'dividend_yield';
+type SortKey = 'market_cap' | 'price' | 'pe' | 'pb' | 'roe' | 'revenue_growth_1y' | 'profit_growth_1y' | 'debt_to_equity' | 'dividend_yield' | 'finovo_score';
 
 interface Filters {
   sector: string;
@@ -23,13 +23,24 @@ interface Filters {
   divYieldMin: string;
   promoterMin: string;
   pledgeMax: string;
+  scoreMin: string;
 }
 
 const defaultFilters: Filters = {
   sector: '', mcapMin: '', mcapMax: '', peMin: '', peMax: '',
   pbMin: '', pbMax: '', roeMin: '', roeMax: '', revGrowthMin: '',
   profGrowthMin: '', debtEquityMax: '', divYieldMin: '', promoterMin: '', pledgeMax: '',
+  scoreMin: '',
 };
+
+// One-click filter presets — each just sets a subset of the filter panel's
+// own state, so they compose with (and can be overridden by) manual filters.
+const QUICK_FILTERS: { label: string; patch: Partial<Filters> }[] = [
+  { label: 'Low P/E', patch: { peMax: '15' } },
+  { label: 'High ROE', patch: { roeMin: '20' } },
+  { label: 'Zero debt', patch: { debtEquityMax: '0.1' } },
+  { label: 'Strong Finovo Score', patch: { scoreMin: '75' } },
+];
 
 // Must match the canonical sector labels written by scripts/ingest_companies.py
 // (SECTOR_FILES + INDUSTRY_MAP). The old list included 'NBFC', which the
@@ -109,6 +120,7 @@ interface ScreenerRow {
   pe: number; pb: number; roe: number; roce: number; market_cap: number;
   debt_to_equity: number; revenue_growth_1y: number; profit_growth_1y: number;
   dividend_yield: number; promoter_pct: number; pledge_pct: number;
+  finovo_score?: number;
 }
 
 // Maps the /api/screener query-param names (used by pre-built screen links)
@@ -125,7 +137,11 @@ const PARAM_TO_FILTER_KEY: Record<string, keyof Filters> = {
   div_yield_min: 'divYieldMin',
   promoter_min: 'promoterMin',
   pledge_max: 'pledgeMax',
+  score_min: 'scoreMin',
 };
+
+const SCORE_BAND_COLOR = (score: number): string =>
+  score >= 75 ? 'text-positive' : score >= 40 ? 'text-[#D97706]' : 'text-negative';
 
 function ScreenerPageInner() {
   const searchParams = useSearchParams();
@@ -167,6 +183,7 @@ function ScreenerPageInner() {
     if (f.divYieldMin) params.set('div_yield_min', f.divYieldMin);
     if (f.promoterMin) params.set('promoter_min', f.promoterMin);
     if (f.pledgeMax) params.set('pledge_max', f.pledgeMax);
+    if (f.scoreMin) params.set('score_min', f.scoreMin);
     params.set('sort_by', sk);
     params.set('sort_dir', sd);
     params.set('page', String(pg));
@@ -195,6 +212,61 @@ function ScreenerPageInner() {
   };
 
   const clearFilters = () => { setFilters(defaultFilters); setPage(1); };
+
+  const applyQuickFilter = (patch: Partial<Filters>) => {
+    setFilters(f => ({ ...f, ...patch }));
+    setPage(1);
+  };
+
+  const [exporting, setExporting] = useState(false);
+  const exportCSV = async () => {
+    setExporting(true);
+    const params = new URLSearchParams();
+    if (filters.sector) params.set('sector', filters.sector);
+    if (filters.mcapMin) params.set('mcap_min', filters.mcapMin);
+    if (filters.mcapMax) params.set('mcap_max', filters.mcapMax);
+    if (filters.peMin) params.set('pe_min', filters.peMin);
+    if (filters.peMax) params.set('pe_max', filters.peMax);
+    if (filters.pbMin) params.set('pb_min', filters.pbMin);
+    if (filters.pbMax) params.set('pb_max', filters.pbMax);
+    if (filters.roeMin) params.set('roe_min', filters.roeMin);
+    if (filters.roeMax) params.set('roe_max', filters.roeMax);
+    if (filters.revGrowthMin) params.set('rev_growth_1y_min', filters.revGrowthMin);
+    if (filters.profGrowthMin) params.set('profit_growth_1y_min', filters.profGrowthMin);
+    if (filters.debtEquityMax) params.set('debt_equity_max', filters.debtEquityMax);
+    if (filters.divYieldMin) params.set('div_yield_min', filters.divYieldMin);
+    if (filters.promoterMin) params.set('promoter_min', filters.promoterMin);
+    if (filters.pledgeMax) params.set('pledge_max', filters.pledgeMax);
+    if (filters.scoreMin) params.set('score_min', filters.scoreMin);
+    params.set('sort_by', sortKey);
+    params.set('sort_dir', sortDir);
+    params.set('page', '1');
+    params.set('per_page', '2000');
+
+    try {
+      const res = await fetch(`/api/screener?${params}`);
+      const data = await res.json();
+      const rows: ScreenerRow[] = data.data ?? [];
+      const csv = toCSV(rows as unknown as Record<string, unknown>[], [
+        { key: 'symbol', label: 'Symbol' },
+        { key: 'name', label: 'Name' },
+        { key: 'sector', label: 'Sector' },
+        { key: 'price', label: 'Price' },
+        { key: 'market_cap', label: 'Market Cap (Cr)' },
+        { key: 'pe', label: 'P/E' },
+        { key: 'pb', label: 'P/B' },
+        { key: 'roe', label: 'ROE %' },
+        { key: 'revenue_growth_1y', label: 'Revenue Growth 1Y %' },
+        { key: 'profit_growth_1y', label: 'Profit Growth 1Y %' },
+        { key: 'debt_to_equity', label: 'Debt/Equity' },
+        { key: 'dividend_yield', label: 'Dividend Yield %' },
+        { key: 'finovo_score', label: 'Finovo Score' },
+      ]);
+      downloadTextFile(`finovo-screener-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const totalPages = Math.ceil(total / PER_PAGE);
 
@@ -291,8 +363,8 @@ function ScreenerPageInner() {
                 </div>
               )}
             </div>
-            <button onClick={() => {}} className="btn btn-secondary !px-3 !py-2 !text-[13px]">
-              <Download size={13} /> <span className="hidden sm:inline">Export CSV</span>
+            <button onClick={exportCSV} disabled={exporting} className="btn btn-secondary !px-3 !py-2 !text-[13px] disabled:opacity-60">
+              <Download size={13} /> <span className="hidden sm:inline">{exporting ? 'Exporting…' : 'Export CSV'}</span>
             </button>
           </div>
         </div>
@@ -379,6 +451,26 @@ function ScreenerPageInner() {
 
           {/* Results */}
           <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              {QUICK_FILTERS.map(qf => {
+                const active = Object.entries(qf.patch).every(([k, v]) => filters[k as keyof Filters] === v);
+                return (
+                  <button
+                    key={qf.label}
+                    onClick={() => applyQuickFilter(active ? Object.fromEntries(Object.keys(qf.patch).map(k => [k, ''])) : qf.patch)}
+                    className={cn(
+                      'text-xs px-3 py-1.5 rounded-full border transition-colors font-medium',
+                      active
+                        ? 'bg-[#F97316] border-[#F97316] text-white'
+                        : 'bg-white border-[#E2E8F0] text-[#4A5568] hover:border-[#F97316] hover:text-[#F97316]'
+                    )}
+                  >
+                    {qf.label}
+                  </button>
+                );
+              })}
+            </div>
+
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm text-[#4A5568]">
                 {loading
@@ -403,6 +495,7 @@ function ScreenerPageInner() {
                       { key: 'profit_growth_1y', label: 'Pft Gr 1Y' },
                       { key: 'debt_to_equity', label: 'D/E' },
                       { key: 'dividend_yield', label: 'Div Yield' },
+                      { key: 'finovo_score', label: 'Score' },
                     ].map(col => (
                       <th
                         key={col.key}
@@ -420,14 +513,14 @@ function ScreenerPageInner() {
                   {loading ? (
                     Array(8).fill(0).map((_, i) => (
                       <tr key={i}>
-                        {Array(10).fill(0).map((_, j) => (
+                        {Array(11).fill(0).map((_, j) => (
                           <td key={j}><div className="h-4 bg-[#EEF1F7] rounded animate-pulse" /></td>
                         ))}
                       </tr>
                     ))
                   ) : results.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="text-center py-12 text-[#8A96A8] font-sans">
+                      <td colSpan={11} className="text-center py-12 text-[#8A96A8] font-sans">
                         No stocks match your filters. Try relaxing the criteria.
                       </td>
                     </tr>
@@ -455,6 +548,13 @@ function ScreenerPageInner() {
                       <td className={s.profit_growth_1y == null ? '' : s.profit_growth_1y >= 0 ? 'text-positive' : 'text-negative'}>{s.profit_growth_1y != null ? `${s.profit_growth_1y >= 0 ? '+' : ''}${s.profit_growth_1y.toFixed(1)}%` : '—'}</td>
                       <td className={!s.debt_to_equity ? '' : s.debt_to_equity < 0.5 ? 'text-positive' : s.debt_to_equity > 2 ? 'text-negative' : ''}>{s.debt_to_equity != null ? `${s.debt_to_equity.toFixed(2)}x` : '—'}</td>
                       <td>{s.dividend_yield != null ? `${s.dividend_yield.toFixed(2)}%` : '—'}</td>
+                      <td className={s.finovo_score != null ? cn('font-semibold', SCORE_BAND_COLOR(s.finovo_score)) : ''}>
+                        {s.finovo_score != null ? (
+                          <Link href={`/stocks/${s.symbol}`} className="inline-flex items-center gap-1 hover:underline">
+                            <Gauge size={11} /> {s.finovo_score}
+                          </Link>
+                        ) : '—'}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
