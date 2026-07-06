@@ -234,3 +234,29 @@ left join lateral (
   select * from shareholding where symbol = c.symbol order by created_at desc limit 1
 ) s on true
 where c.is_active = true;
+
+-- ─────────────────────────────────────────────────────────────
+-- 9. LOGIN EVENTS (app-level audit log for signup/login/logout)
+-- ─────────────────────────────────────────────────────────────
+-- Supabase Auth already persists sessions server-side (auth.sessions,
+-- auth.refresh_tokens) once this project is connected to a real Supabase
+-- instance — that's what actually keeps a user logged in. This table is
+-- purely for our own visibility into account activity; it is not what
+-- makes sessions "work".
+create table if not exists login_events (
+  id         bigserial primary key,
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  event_type text not null check (event_type in ('sign_up', 'sign_in', 'sign_out')),
+  user_agent text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_login_events_user on login_events(user_id, created_at desc);
+
+alter table login_events enable row level security;
+
+-- Each user can only see and log their own events.
+create policy "Users read own login events" on login_events
+  for select using (auth.uid() = user_id);
+create policy "Users insert own login events" on login_events
+  for insert with check (auth.uid() = user_id);
