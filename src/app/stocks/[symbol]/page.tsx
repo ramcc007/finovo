@@ -8,6 +8,7 @@ import { cn, formatPrice, formatCrores, formatTradeDate } from '@/lib/utils';
 import PriceChart from '@/components/charts/PriceChart';
 import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
 import FinancialTrendChart from '@/components/charts/FinancialTrendChart';
+import AiSummaryCard from '@/components/stock/AiSummaryCard';
 import { useWatchlist } from '@/lib/useWatchlist';
 import type { PEERS } from '@/lib/mock-data';
 
@@ -255,6 +256,8 @@ export default function StockPage() {
         {/* OVERVIEW */}
         {activeTab === 'Overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            {!loading && <AiSummaryCard symbol={symbol} />}
+
             <div className="lg:col-span-2">
               {loading
                 ? <div className="card p-5"><Skeleton className="h-72 w-full" /></div>

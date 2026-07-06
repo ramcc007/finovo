@@ -172,6 +172,16 @@ create index if not exists idx_corporate_actions_symbol on corporate_actions(sym
 create index if not exists idx_corporate_actions_ex_date on corporate_actions(ex_date);
 
 -- ─────────────────────────────────────────────────────────────
+-- 6d. AI SUMMARIES (cached plain-English reading of a stock's fundamentals)
+-- ─────────────────────────────────────────────────────────────
+create table if not exists ai_summaries (
+  symbol       text primary key references companies(symbol) on delete cascade,
+  summary      text not null,
+  model        text not null,
+  generated_at timestamptz not null default now()
+);
+
+-- ─────────────────────────────────────────────────────────────
 -- 7. ROW LEVEL SECURITY (enable public read, restrict writes)
 -- ─────────────────────────────────────────────────────────────
 alter table companies   enable row level security;
@@ -182,6 +192,7 @@ alter table shareholding enable row level security;
 alter table quotes      enable row level security;
 alter table indices     enable row level security;
 alter table corporate_actions enable row level security;
+alter table ai_summaries enable row level security;
 
 -- Public read access for all tables
 create policy "Public read companies"    on companies    for select using (true);
@@ -192,6 +203,7 @@ create policy "Public read shareholding" on shareholding for select using (true)
 create policy "Public read quotes"       on quotes       for select using (true);
 create policy "Public read indices"      on indices      for select using (true);
 create policy "Public read corporate_actions" on corporate_actions for select using (true);
+create policy "Public read ai_summaries" on ai_summaries for select using (true);
 
 -- ─────────────────────────────────────────────────────────────
 -- 8. SCREENER VIEW (latest ratios joined with company info)

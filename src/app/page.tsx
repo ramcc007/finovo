@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Search, ArrowRight, ArrowUpRight, Loader2,
-  SlidersHorizontal, LineChart, ShieldCheck, Zap, Check,
+  SlidersHorizontal, LineChart, Sparkles, Zap, Check,
 } from 'lucide-react';
 import TickerBar from '@/components/layout/TickerBar';
 import Reveal from '@/components/ui/Reveal';
@@ -118,15 +118,15 @@ export default function Home() {
               </div>
 
               <h1 className="h-display text-[#131A24] mb-5">
-                Indian equity research,{' '}
+                Indian equities,{' '}
                 <br className="hidden sm:block" />
-                backed by <span className="text-[#F97316]">real data.</span>
+                evaluated by <span className="text-[#F97316]">AI.</span>
               </h1>
 
               <p className="text-[#56616F] text-base md:text-lg leading-relaxed max-w-xl mb-8">
-                Filter 5,000+ NSE &amp; BSE companies by valuation, growth, and profitability.
-                Ten years of financial statements, ratios, and shareholding data —
-                everything you need to shortlist and evaluate ideas.
+                Filter 5,000+ NSE &amp; BSE companies by valuation, growth, and profitability,
+                then get an AI-generated plain-English read on any company&apos;s fundamentals
+                — backed by ten years of financial statements and ratios.
               </p>
 
               {/* Search */}
@@ -462,9 +462,9 @@ export default function Home() {
               desc: '10 years of P&L, balance sheet, cash flow, ratios, and shareholding — presented cleanly, the way analysts read them.',
             },
             {
-              icon: ShieldCheck,
-              title: 'Free & transparent',
-              desc: 'Sourced from public NSE & BSE data. No premium lock, no card required — an account is optional, only for syncing your watchlist.',
+              icon: Sparkles,
+              title: 'AI-evaluated',
+              desc: 'Every company gets a plain-English AI reading of its valuation, profitability, and growth — grounded in the same data, not speculation.',
             },
           ].map((f, i) => (
             <Reveal key={f.title} delay={i * 70}>
