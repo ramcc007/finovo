@@ -14,6 +14,14 @@ function num(raw: string | null, max = 1e9): number | null {
 export async function GET(req: NextRequest) {
   const p = req.nextUrl.searchParams;
 
+  // Optional explicit symbol list (used by Watchlist/Compare) — bypasses
+  // pagination and other filters, just resolves these exact symbols.
+  const symbolsParam = (p.get('symbols') ?? '')
+    .split(',')
+    .map(s => s.trim().toUpperCase())
+    .filter(s => /^[A-Z0-9&-]{1,20}$/.test(s))
+    .slice(0, 20);
+
   const filters = {
     sector: (p.get('sector') ?? '').slice(0, 50),
     mcap_min: num(p.get('mcap_min')),
@@ -50,6 +58,7 @@ export async function GET(req: NextRequest) {
       .from('screener_view')
       .select('*', { count: 'exact' });
 
+    if (symbolsParam.length) query = query.in('symbol', symbolsParam);
     if (filters.sector) query = query.eq('sector', filters.sector);
     if (filters.mcap_min) query = query.gte('market_cap', filters.mcap_min);
     if (filters.mcap_max) query = query.lte('market_cap', filters.mcap_max);
@@ -101,6 +110,7 @@ export async function GET(req: NextRequest) {
   } catch {
     // Fallback: filter mock data
     let results = [...SCREENER_STOCKS];
+    if (symbolsParam.length) results = results.filter(s => symbolsParam.includes(s.symbol));
     if (filters.sector) results = results.filter(s => s.sector === filters.sector);
     if (filters.pe_min) results = results.filter(s => s.pe >= filters.pe_min!);
     if (filters.pe_max) results = results.filter(s => s.pe <= filters.pe_max!);

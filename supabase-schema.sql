@@ -153,6 +153,25 @@ create table if not exists indices (
 );
 
 -- ─────────────────────────────────────────────────────────────
+-- 6c. CORPORATE ACTIONS (dividends, bonus, splits, board meetings, AGM/EGM)
+-- ─────────────────────────────────────────────────────────────
+create table if not exists corporate_actions (
+  id                 bigint generated always as identity primary key,
+  symbol             text not null references companies(symbol) on delete cascade,
+  action_type        text not null,  -- 'Dividend' | 'Bonus' | 'Split' | 'Rights' | 'Buyback' | 'Board Meeting' | 'AGM' | 'EGM'
+  ex_date            date,
+  record_date        date,
+  bc_start_date      date,           -- book-closure start
+  bc_end_date        date,           -- book-closure end
+  purpose            text,           -- raw NSE "purpose" free-text, e.g. "Dividend - Rs 5 Per Share"
+  created_at         timestamptz default now(),
+  unique (symbol, action_type, ex_date, purpose)
+);
+
+create index if not exists idx_corporate_actions_symbol on corporate_actions(symbol);
+create index if not exists idx_corporate_actions_ex_date on corporate_actions(ex_date);
+
+-- ─────────────────────────────────────────────────────────────
 -- 7. ROW LEVEL SECURITY (enable public read, restrict writes)
 -- ─────────────────────────────────────────────────────────────
 alter table companies   enable row level security;
@@ -162,6 +181,7 @@ alter table ratios      enable row level security;
 alter table shareholding enable row level security;
 alter table quotes      enable row level security;
 alter table indices     enable row level security;
+alter table corporate_actions enable row level security;
 
 -- Public read access for all tables
 create policy "Public read companies"    on companies    for select using (true);
@@ -171,6 +191,7 @@ create policy "Public read ratios"       on ratios       for select using (true)
 create policy "Public read shareholding" on shareholding for select using (true);
 create policy "Public read quotes"       on quotes       for select using (true);
 create policy "Public read indices"      on indices      for select using (true);
+create policy "Public read corporate_actions" on corporate_actions for select using (true);
 
 -- ─────────────────────────────────────────────────────────────
 -- 8. SCREENER VIEW (latest ratios joined with company info)

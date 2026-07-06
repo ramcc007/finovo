@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Plus, Check, ExternalLink, RefreshCw } from 'lucide-react';
-import { cn, formatPrice, formatCrores } from '@/lib/utils';
+import { cn, formatPrice, formatCrores, formatTradeDate } from '@/lib/utils';
 import PriceChart from '@/components/charts/PriceChart';
 import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
+import FinancialTrendChart from '@/components/charts/FinancialTrendChart';
+import { useWatchlist } from '@/lib/useWatchlist';
 import type { PEERS } from '@/lib/mock-data';
 
 const TABS = ['Overview', 'Financials', 'Ratios', 'Shareholding', 'Peers'] as const;
@@ -35,6 +37,10 @@ interface StockData {
   shareholding: Array<{
     quarter: string; promoter_pct: number; fii_pct: number; dii_pct: number;
     public_pct: number; pledge_pct: number;
+  }>;
+  corporateActions?: Array<{
+    id: number; action_type: string; ex_date: string | null;
+    record_date: string | null; purpose: string | null;
   }>;
   peers?: typeof PEERS;
 }
@@ -73,7 +79,7 @@ export default function StockPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('Overview');
-  const [watchlisted, setWatchlisted] = useState(false);
+  const { isWatched, toggle } = useWatchlist();
   const [finPeriod, setFinPeriod] = useState<'annual' | 'quarterly'>('annual');
   const [finTab, setFinTab] = useState<'pl' | 'bs' | 'cf'>('pl');
 
@@ -192,16 +198,16 @@ export default function StockPage() {
                   <span>At last market close · NSE</span>
                 </div>
                 <button
-                  onClick={() => setWatchlisted(w => !w)}
+                  onClick={() => toggle(symbol)}
                   className={cn(
                     'flex items-center gap-1.5 text-sm font-medium px-4 py-1.5 rounded-[6px] transition-all',
-                    watchlisted
+                    isWatched(symbol)
                       ? 'bg-[#FFF7ED] text-[#F97316] border border-[#F97316]'
                       : 'border border-[#E2E8F0] text-[#4A5568] hover:border-[#F97316] hover:text-[#F97316]'
                   )}
                 >
-                  {watchlisted ? <Check size={14} /> : <Plus size={14} />}
-                  {watchlisted ? 'Watchlisted' : 'Add to Watchlist'}
+                  {isWatched(symbol) ? <Check size={14} /> : <Plus size={14} />}
+                  {isWatched(symbol) ? 'Watchlisted' : 'Add to Watchlist'}
                 </button>
               </div>
             </div>
@@ -328,6 +334,43 @@ export default function StockPage() {
                   ))
               }
             </div>
+
+            {/* Corporate Actions */}
+            <div className="lg:col-span-3 card-plain p-5">
+              <h3 className="font-semibold text-[#0D1117] text-sm mb-3">Corporate Actions</h3>
+              {loading ? (
+                <div className="space-y-2">{Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-5 w-full" />)}</div>
+              ) : !data?.corporateActions?.length ? (
+                <p className="text-sm text-[#8A96A8]">No recent or upcoming corporate actions on record.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="data-table min-w-[480px]">
+                    <thead>
+                      <tr>
+                        <th className="text-left">Type</th>
+                        <th className="text-left">Details</th>
+                        <th>Ex-Date</th>
+                        <th>Record Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.corporateActions.slice(0, 10).map(a => (
+                        <tr key={a.id}>
+                          <td>
+                            <span className="text-[11px] font-medium bg-[#F4F6FA] text-[#4A5568] px-2 py-0.5 rounded">
+                              {a.action_type}
+                            </span>
+                          </td>
+                          <td className="text-[#4A5568] font-sans text-xs max-w-[320px] truncate">{a.purpose ?? '—'}</td>
+                          <td>{a.ex_date ? formatTradeDate(a.ex_date) : '—'}</td>
+                          <td>{a.record_date ? formatTradeDate(a.record_date) : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -358,7 +401,11 @@ export default function StockPage() {
             ) : finData.length === 0 ? (
               <div className="card p-12 text-center text-[#8A96A8]">No financial data available yet</div>
             ) : (
-              <div className="card p-0 overflow-auto">
+              <>
+                {finTab === 'pl' && (
+                  <FinancialTrendChart data={finData} periodKey={periodKey || 'period'} revKey={revKey} npKey={npKey} />
+                )}
+                <div className="card p-0 overflow-auto">
                 <table className="data-table">
                   <thead>
                     <tr>
@@ -424,7 +471,8 @@ export default function StockPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+                </div>
+              </>
             )}
           </div>
         )}

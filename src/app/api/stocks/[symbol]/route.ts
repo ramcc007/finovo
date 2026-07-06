@@ -23,6 +23,7 @@ export async function GET(
       { data: annualFin },
       { data: quarterlyFin },
       { data: shareholding },
+      { data: corporateActions },
     ] = await Promise.all([
       supabase.from('companies').select('*').eq('symbol', sym).single(),
       supabase.from('ratios').select('*').eq('symbol', sym)
@@ -34,6 +35,8 @@ export async function GET(
         .eq('period_type', 'quarterly').order('period', { ascending: false }).limit(8),
       supabase.from('shareholding').select('*').eq('symbol', sym)
         .order('quarter', { ascending: false }).limit(4),
+      supabase.from('corporate_actions').select('*').eq('symbol', sym)
+        .order('ex_date', { ascending: false, nullsFirst: false }).limit(20),
     ]);
     if (compErr) throw compErr;
 
@@ -77,6 +80,7 @@ export async function GET(
       ratios,
       financials: { annual: annualFin ?? [], quarterly: quarterlyFin ?? [] },
       shareholding: shareholding ?? [],
+      corporateActions: corporateActions ?? [],
       peers,
     });
   } catch {

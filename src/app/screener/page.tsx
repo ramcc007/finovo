@@ -3,9 +3,10 @@
 import { Suspense, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { SlidersHorizontal, Download, RotateCcw, ChevronUp, ChevronDown, X } from 'lucide-react';
+import { SlidersHorizontal, Download, RotateCcw, ChevronUp, ChevronDown, X, Bookmark, Trash2 } from 'lucide-react';
 import { cn, formatCrores, formatPrice } from '@/lib/utils';
 import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
+import { useSavedScreens } from '@/lib/useSavedScreens';
 
 type SortKey = 'market_cap' | 'price' | 'pe' | 'pb' | 'roe' | 'revenue_growth_1y' | 'profit_growth_1y' | 'debt_to_equity' | 'dividend_yield';
 
@@ -210,6 +211,27 @@ function ScreenerPageInner() {
 
   const activeFilterCount = Object.values(filters).filter(v => v !== '').length;
 
+  const { screens: savedScreens, save: saveScreen, remove: removeScreen } = useSavedScreens();
+  const [showSavePanel, setShowSavePanel] = useState(false);
+  const [showSavedList, setShowSavedList] = useState(false);
+  const [saveName, setSaveName] = useState('');
+
+  const applySavedScreen = (s: (typeof savedScreens)[number]) => {
+    setFilters({ ...defaultFilters, ...s.filters });
+    setSortKey(s.sortKey as SortKey);
+    setSortDir(s.sortDir);
+    setPage(1);
+    setShowSavedList(false);
+  };
+
+  const handleSaveScreen = () => {
+    const name = saveName.trim();
+    if (!name) return;
+    saveScreen(name, { ...filters }, sortKey, sortDir);
+    setSaveName('');
+    setShowSavePanel(false);
+  };
+
   return (
     <div className="min-h-screen bg-[#F4F6FA]">
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-10 md:py-14">
@@ -223,6 +245,52 @@ function ScreenerPageInner() {
             {activeFilterCount > 0 && (
               <span className="hidden sm:inline text-xs bg-[#FFF7ED] text-[#F97316] border border-[#FFEDD5] px-2.5 py-1 rounded-full font-semibold tnum">{activeFilterCount} active</span>
             )}
+            <div className="relative">
+              <button
+                onClick={() => { setShowSavedList(v => !v); setShowSavePanel(false); }}
+                className="btn btn-secondary !px-3 !py-2 !text-[13px]"
+              >
+                <Bookmark size={13} /> <span className="hidden sm:inline">Saved{savedScreens.length > 0 ? ` (${savedScreens.length})` : ''}</span>
+              </button>
+              {showSavedList && (
+                <div className="absolute top-full right-0 mt-2 w-72 bg-white border border-[#E2E8F0] rounded-xl shadow-[0_12px_32px_rgba(16,24,40,0.14)] z-20 overflow-hidden">
+                  {savedScreens.length === 0 ? (
+                    <p className="text-xs text-[#8A96A8] px-4 py-4">No saved screens yet. Set some filters and click &quot;Save this screen&quot;.</p>
+                  ) : savedScreens.map(s => (
+                    <div key={s.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-[#FAFBFD] border-b border-[#F0F3F8] last:border-0">
+                      <button onClick={() => applySavedScreen(s)} className="text-sm text-left text-[#0D1117] font-medium flex-1 truncate">
+                        {s.name}
+                      </button>
+                      <button onClick={() => removeScreen(s.id)} className="text-[#8A96A8] hover:text-[#DC2626] p-1 shrink-0" aria-label={`Delete ${s.name}`}>
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="relative">
+              <button
+                onClick={() => { setShowSavePanel(v => !v); setShowSavedList(false); }}
+                className="btn btn-secondary !px-3 !py-2 !text-[13px]"
+              >
+                <SlidersHorizontal size={13} /> <span className="hidden sm:inline">Save this screen</span>
+              </button>
+              {showSavePanel && (
+                <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-[#E2E8F0] rounded-xl shadow-[0_12px_32px_rgba(16,24,40,0.14)] z-20 p-3">
+                  <label className="block text-xs text-[#8A96A8] mb-1.5">Name this screen</label>
+                  <input
+                    autoFocus
+                    value={saveName}
+                    onChange={e => setSaveName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleSaveScreen(); }}
+                    placeholder="e.g. My high-ROE picks"
+                    className="w-full text-sm bg-[#F4F6FA] border border-[#E2E8F0] rounded-[6px] px-2.5 py-2 outline-none focus:border-[#F97316] mb-2.5"
+                  />
+                  <button onClick={handleSaveScreen} className="btn btn-primary w-full !text-xs !py-1.5">Save</button>
+                </div>
+              )}
+            </div>
             <button onClick={() => {}} className="btn btn-secondary !px-3 !py-2 !text-[13px]">
               <Download size={13} /> <span className="hidden sm:inline">Export CSV</span>
             </button>

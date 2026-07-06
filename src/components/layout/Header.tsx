@@ -10,6 +10,9 @@ const NAV = [
   { href: '/screener', label: 'Explorer' },
   { href: '/markets', label: 'Markets' },
   { href: '/screens', label: 'Screens' },
+  { href: '/compare', label: 'Compare' },
+  { href: '/calendar', label: 'Calendar' },
+  { href: '/watchlist', label: 'Watchlist' },
 ];
 
 interface SearchHit { symbol: string; name: string; sector: string }
