@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, Loader2, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import Turnstile from '@/components/auth/Turnstile';
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 export default function SignupPage() {
   const router = useRouter();
@@ -14,6 +17,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,9 +31,16 @@ export default function SignupPage() {
       setError('Passwords do not match.');
       return;
     }
+    if (TURNSTILE_SITE_KEY && !captchaToken) {
+      setError('Please complete the verification below.');
+      return;
+    }
 
     setLoading(true);
-    const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email, password,
+      options: captchaToken ? { captchaToken } : undefined,
+    });
     setLoading(false);
 
     if (signUpError) {
@@ -119,6 +130,14 @@ export default function SignupPage() {
               />
             </div>
           </div>
+
+          {TURNSTILE_SITE_KEY && (
+            <Turnstile
+              siteKey={TURNSTILE_SITE_KEY}
+              onVerify={setCaptchaToken}
+              onExpire={() => setCaptchaToken(null)}
+            />
+          )}
 
           {error && <p className="text-sm text-[#DC2626]">{error}</p>}
 
