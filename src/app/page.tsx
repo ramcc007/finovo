@@ -125,7 +125,8 @@ export default function Home() {
 
               <p className="text-[#56616F] text-base md:text-lg leading-relaxed max-w-xl mb-8">
                 Screen 5,000+ NSE &amp; BSE companies with a decade of financial statements,
-                valuation ratios, and shareholding data — free access, no account required.
+                valuation ratios, and shareholding data — free to use, with an optional
+                account to sync your watchlist and screens across devices.
               </p>
 
               {/* Search */}
@@ -463,7 +464,7 @@ export default function Home() {
             {
               icon: ShieldCheck,
               title: 'Free & transparent',
-              desc: 'Sourced from public NSE & BSE data. No login wall, no premium lock, no card required. Ever.',
+              desc: 'Sourced from public NSE & BSE data. No premium lock, no card required — an account is optional, only for syncing your watchlist.',
             },
           ].map((f, i) => (
             <Reveal key={f.title} delay={i * 70}>
@@ -499,7 +500,7 @@ export default function Home() {
                 </Link>
               </div>
               <div className="flex items-center justify-center gap-5 mt-7 text-xs text-white/40">
-                {['No login required', 'No credit card', '100% free'].map(t => (
+                {['Login optional', 'No credit card', '100% free'].map(t => (
                   <span key={t} className="inline-flex items-center gap-1.5">
                     <Check size={13} className="text-[#16A34A]" /> {t}
                   </span>

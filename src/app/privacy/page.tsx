@@ -21,11 +21,16 @@ export default function PrivacyPage() {
 
         <section>
           <h2 className="text-lg font-semibold text-[#0D1117] mb-3">Information We Collect</h2>
-          <p className="text-sm mb-2">Finovo is a free, no-login-required tool. We collect minimal data:</p>
+          <p className="text-sm mb-2">
+            Screening and research on Finovo are free and do not require an account. Creating an
+            account is optional and only needed to sync your watchlist and saved screens across
+            devices. We collect:
+          </p>
           <ul className="text-sm space-y-1.5 list-disc list-inside">
-            <li><strong>Usage data:</strong> Anonymous page views, search queries (not linked to you personally), and feature usage via analytics.</li>
+            <li><strong>Account data (only if you sign up):</strong> Your email address and a securely hashed password, managed by our authentication provider (Supabase Auth). We never see or store your password in plain text.</li>
+            <li><strong>Usage data:</strong> Anonymous page views, search queries (not linked to you personally unless you&apos;re logged in), and feature usage via analytics.</li>
             <li><strong>Technical data:</strong> Browser type, device type, and IP address (anonymised) via hosting infrastructure logs.</li>
-            <li>We do <strong>not</strong> collect your name, email, phone number, or any personally identifiable information unless you voluntarily contact us.</li>
+            <li>We do <strong>not</strong> collect your name, phone number, or any other personally identifiable information beyond your account email.</li>
           </ul>
         </section>
 
@@ -48,14 +53,18 @@ export default function PrivacyPage() {
         <section>
           <h2 className="text-lg font-semibold text-[#0D1117] mb-3">Data Storage</h2>
           <p className="text-sm">
-            Market data is stored in a Supabase (PostgreSQL) database. No personal user data is stored in our databases. Hosting is provided by Vercel with servers in global edge locations.
+            Market data and account records are stored in a Supabase (PostgreSQL) database. Account
+            passwords are handled entirely by Supabase Auth and are never stored or visible to us in
+            plain text. Hosting is provided by Vercel with servers in global edge locations.
           </p>
         </section>
 
         <section>
           <h2 className="text-lg font-semibold text-[#0D1117] mb-3">Your Rights</h2>
           <p className="text-sm">
-            Since we do not collect personal data, there is nothing to request deletion of. If you believe we have inadvertently collected your data, contact us and we will address it promptly.
+            If you created an account, you can request deletion of your account and all associated
+            data (email, watchlist, saved screens) at any time by contacting us. Browsing and
+            screening without an account leaves no personal data for us to hold.
           </p>
         </section>
 

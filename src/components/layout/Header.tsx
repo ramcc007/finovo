@@ -3,8 +3,9 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { Search, X, Menu, TrendingUp, Loader2, ArrowRight } from 'lucide-react';
+import { Search, X, Menu, TrendingUp, Loader2, ArrowRight, User, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/lib/AuthProvider';
 
 const NAV = [
   { href: '/screener', label: 'Explorer' },
@@ -23,9 +24,12 @@ export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [results, setResults] = useState<SearchHit[]>([]);
   const [loading, setLoading] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const ref = useRef<HTMLDivElement>(null);
+  const accountRef = useRef<HTMLDivElement>(null);
+  const { user, loading: authLoading, signOut } = useAuth();
 
   // Debounced live search against the API (DB-backed, mock fallback)
   useEffect(() => {
@@ -57,10 +61,17 @@ export default function Header() {
   useEffect(() => {
     function handler(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (accountRef.current && !accountRef.current.contains(e.target as Node)) setAccountOpen(false);
     }
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  const handleSignOut = async () => {
+    await signOut();
+    setAccountOpen(false);
+    router.push('/');
+  };
 
   useEffect(() => { setMobileOpen(false); }, [pathname]);
 
@@ -140,9 +151,43 @@ export default function Header() {
               </Link>
             );
           })}
+          {!authLoading && (
+            user ? (
+              <div ref={accountRef} className="relative ml-1">
+                <button
+                  onClick={() => setAccountOpen(v => !v)}
+                  className="w-8 h-8 rounded-full bg-[#FFF3E8] text-[#EA580C] flex items-center justify-center font-semibold text-sm hover:bg-[#FFE8D4] transition-colors"
+                  aria-label="Account menu"
+                >
+                  {user.email?.[0].toUpperCase() ?? <User size={14} />}
+                </button>
+                {accountOpen && (
+                  <div className="absolute top-full right-0 mt-2 w-56 bg-white border border-[#E9EDF4] rounded-2xl shadow-[0_12px_40px_rgba(16,24,40,0.14)] overflow-hidden z-50">
+                    <div className="px-4 py-3 border-b border-[#F0F3F8]">
+                      <div className="text-xs text-[#8A94A4]">Signed in as</div>
+                      <div className="text-sm font-semibold text-[#131A24] truncate">{user.email}</div>
+                    </div>
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full flex items-center gap-2 px-4 py-3 text-sm text-[#56616F] hover:bg-[#F2F4F9] hover:text-[#131A24] transition-colors"
+                    >
+                      <LogOut size={14} /> Log out
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="ml-1 text-sm font-medium px-3.5 py-2 rounded-lg text-[#56616F] hover:text-[#131A24] hover:bg-[#F2F4F9] transition-colors"
+              >
+                Log in
+              </Link>
+            )
+          )}
           <Link
             href="/screener"
-            className="ml-2 inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-[#F97316] hover:bg-[#EA580C] px-4 py-2 rounded-lg shadow-[0_1px_2px_rgba(234,88,12,0.25)] hover:shadow-[0_6px_16px_rgba(249,115,22,0.28)] transition-all"
+            className="ml-1 inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-[#F97316] hover:bg-[#EA580C] px-4 py-2 rounded-lg shadow-[0_1px_2px_rgba(234,88,12,0.25)] hover:shadow-[0_6px_16px_rgba(249,115,22,0.28)] transition-all"
           >
             Start screening <ArrowRight size={14} />
           </Link>
@@ -178,6 +223,23 @@ export default function Header() {
               </Link>
             );
           })}
+          {!authLoading && (
+            user ? (
+              <button
+                onClick={handleSignOut}
+                className="w-full flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium text-[#56616F] hover:bg-[#F2F4F9] hover:text-[#131A24] mb-1"
+              >
+                <LogOut size={14} /> Log out ({user.email})
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                className="flex items-center px-4 py-3 rounded-xl text-sm font-medium text-[#56616F] hover:bg-[#F2F4F9] hover:text-[#131A24] mb-1"
+              >
+                Log in
+              </Link>
+            )
+          )}
           <Link
             href="/screener"
             className="flex items-center justify-center gap-1.5 mt-2 px-4 py-3 rounded-xl text-sm font-semibold text-white bg-[#F97316]"
