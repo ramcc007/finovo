@@ -124,9 +124,9 @@ export default function Home() {
               </h1>
 
               <p className="text-[#56616F] text-base md:text-lg leading-relaxed max-w-xl mb-8">
-                Screen 5,000+ NSE &amp; BSE companies with a decade of financial statements,
-                valuation ratios, and shareholding data. Free to use, with an account for
-                those who want it.
+                Filter 5,000+ NSE &amp; BSE companies by valuation, growth, and profitability.
+                Ten years of financial statements, ratios, and shareholding data —
+                everything you need to shortlist and evaluate ideas.
               </p>
 
               {/* Search */}
