@@ -21,6 +21,33 @@ const STATUS_ICON: Record<MetricStatus, React.ReactNode> = {
   na: <Minus size={13} className="text-[#8A96A8]" />,
 };
 
+interface HistoryPoint { date: string; score: number }
+
+function ScoreHistoryChart({ points }: { points: HistoryPoint[] }) {
+  if (points.length < 2) return null;
+  const barColor = (score: number) => score >= 75 ? '#16A34A' : score >= 58 ? '#65A30D' : score >= 40 ? '#D97706' : '#DC2626';
+  return (
+    <div className="mt-5 pt-4 border-t border-[#EDF0F7]">
+      <h4 className="text-[11px] font-semibold text-[#8A96A8] uppercase tracking-wide mb-3">Score History</h4>
+      <div className="flex items-end gap-2.5 h-20 px-0.5">
+        {points.map(p => (
+          <div key={p.date} className="flex-1 flex flex-col items-center justify-end h-full min-w-0 group">
+            <span className="text-[10px] font-semibold text-[#0D1117] mb-1 opacity-0 group-hover:opacity-100 transition-opacity num">{p.score}</span>
+            <div
+              className="w-full max-w-[22px] rounded-t-sm transition-all"
+              style={{ height: `${Math.max(4, p.score)}%`, background: barColor(p.score) }}
+              title={`${p.date}: ${p.score}`}
+            />
+            <span className="text-[9px] text-[#8A96A8] mt-1.5 whitespace-nowrap">
+              {new Date(p.date).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 interface Props {
   symbol: string;
 }
@@ -29,6 +56,7 @@ export default function FinovoScoreCard({ symbol }: Props) {
   const [data, setData] = useState<ScoreResult | null>(null);
   const [available, setAvailable] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [history, setHistory] = useState<HistoryPoint[]>([]);
 
   useEffect(() => {
     let alive = true;
@@ -42,6 +70,12 @@ export default function FinovoScoreCard({ symbol }: Props) {
       })
       .catch(() => { if (alive) setAvailable(false); })
       .finally(() => { if (alive) setLoading(false); });
+
+    fetch(`/api/stocks/${symbol}/score/history`)
+      .then(r => r.json())
+      .then(d => { if (alive && d.available) setHistory(d.points); })
+      .catch(() => {});
+
     return () => { alive = false; };
   }, [symbol]);
 
@@ -97,6 +131,8 @@ export default function FinovoScoreCard({ symbol }: Props) {
               </div>
             ))}
           </div>
+
+          <ScoreHistoryChart points={history} />
 
           <p className="text-[11px] text-[#8A96A8] mt-4">
             Not investment advice — see <Link href="/disclaimer" className="underline hover:text-[#F97316]">disclaimer</Link>.
