@@ -118,14 +118,14 @@ export default function Home() {
               </div>
 
               <h1 className="h-display text-[#131A24] mb-5">
-                Research Indian stocks{' '}
+                Indian equity research,{' '}
                 <br className="hidden sm:block" />
-                like a <span className="text-[#F97316]">professional.</span>
+                backed by <span className="text-[#F97316]">real data.</span>
               </h1>
 
               <p className="text-[#56616F] text-base md:text-lg leading-relaxed max-w-xl mb-8">
-                Screen 5,000+ NSE &amp; BSE companies with a decade of fundamentals,
-                financial ratios, and clean financial statements. No login. No paywall.
+                Screen 5,000+ NSE &amp; BSE companies with a decade of financial statements,
+                valuation ratios, and shareholding data — free access, no account required.
               </p>
 
               {/* Search */}
@@ -444,7 +444,7 @@ export default function Home() {
         <Reveal>
           <div className="text-center max-w-2xl mx-auto mb-12">
             <h2 className="h-section text-[#0D1117]">Everything you need to analyse a stock</h2>
-            <p className="text-sm text-[#4A5568] mt-2">Built for clarity. No noise, no upsell, no hidden tiers.</p>
+            <p className="text-sm text-[#4A5568] mt-2">Built for clarity. No noise. No upsell. No hidden tiers.</p>
           </div>
         </Reveal>
 
