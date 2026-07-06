@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Search, ArrowRight, ArrowUpRight, Loader2,
-  SlidersHorizontal, LineChart, Sparkles, Zap, Check,
+  SlidersHorizontal, LineChart, Gauge, Zap, Check,
 } from 'lucide-react';
 import TickerBar from '@/components/layout/TickerBar';
 import Reveal from '@/components/ui/Reveal';
@@ -120,13 +120,13 @@ export default function Home() {
               <h1 className="h-display text-[#131A24] mb-5">
                 Indian equities,{' '}
                 <br className="hidden sm:block" />
-                evaluated by <span className="text-[#F97316]">AI.</span>
+                scored on the <span className="text-[#F97316]">fundamentals.</span>
               </h1>
 
               <p className="text-[#56616F] text-base md:text-lg leading-relaxed max-w-xl mb-8">
                 Filter 5,000+ NSE &amp; BSE companies by valuation, growth, and profitability,
-                then get an AI-generated plain-English read on any company&apos;s fundamentals
-                — backed by ten years of financial statements and ratios.
+                then see an instant Finovo Score — a transparent 0–100 read on how a company
+                stacks up, backed by ten years of financial statements and ratios.
               </p>
 
               {/* Search */}
@@ -462,9 +462,9 @@ export default function Home() {
               desc: '10 years of P&L, balance sheet, cash flow, ratios, and shareholding — presented cleanly, the way analysts read them.',
             },
             {
-              icon: Sparkles,
-              title: 'AI-evaluated',
-              desc: 'Every company gets a plain-English AI reading of its valuation, profitability, and growth — grounded in the same data, not speculation.',
+              icon: Gauge,
+              title: 'Finovo Score',
+              desc: 'Every company gets a transparent 0–100 score across profitability, growth, valuation, and financial health — every point traceable to a reported number.',
             },
           ].map((f, i) => (
             <Reveal key={f.title} delay={i * 70}>
