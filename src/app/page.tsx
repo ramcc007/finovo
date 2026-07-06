@@ -124,9 +124,8 @@ export default function Home() {
               </h1>
 
               <p className="text-[#56616F] text-base md:text-lg leading-relaxed max-w-xl mb-8">
-                Filter 5,000+ NSE &amp; BSE companies by valuation, growth, and profitability,
-                then see an instant Finovo Score — a transparent 0–100 read on how a company
-                stacks up, backed by ten years of financial statements and ratios.
+                Filter 5,000+ NSE &amp; BSE companies by valuation, growth and profitability,
+                see an instant Finovo Score, backed by financial statements and ratios.
               </p>
 
               {/* Search */}
