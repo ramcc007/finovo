@@ -2,54 +2,90 @@ name: Probe Production URL
 
 # Temporary diagnostic: the dev sandbox cannot reach vercel.app, so this
 # workflow acts as an HTTP + real-browser probe against production.
+# Default run sweeps every route in the app; pass `url` to check just one.
 on:
   workflow_dispatch:
     inputs:
       url:
-        description: 'URL to probe'
+        description: 'Single URL to probe (leave blank to sweep every route)'
         required: false
-        default: 'https://finovo-rcc.vercel.app/stocks/ICICIBANK'
+        default: ''
 
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     steps:
-      - name: Fetch URL (headers + body preview)
-        run: |
-          URL="${{ inputs.url || 'https://finovo-rcc.vercel.app/stocks/ICICIBANK' }}"
-          curl -s -o /tmp/body.html -D /tmp/headers.txt -w 'status=%{http_code} time=%{time_total}s size=%{size_download}\n' "$URL" || echo "curl exit: $?"
-          cat /tmp/headers.txt
-
-      - name: Headless Chrome navigation (real browser fidelity)
+      - name: Sweep every route with headless Chrome (real browser fidelity)
         env:
-          URL: ${{ inputs.url || 'https://finovo-rcc.vercel.app/stocks/ICICIBANK' }}
+          SINGLE_URL: ${{ inputs.url }}
         run: |
           npm init -y > /dev/null
           npm i --no-audit --no-fund playwright > /dev/null 2>&1
           node - <<'EOF'
           const { chromium } = require('playwright');
+
+          const BASE = 'https://finovo-rcc.vercel.app';
+          const single = process.env.SINGLE_URL;
+          const routes = single ? [single] : [
+            BASE + '/',
+            BASE + '/markets',
+            BASE + '/screener',
+            BASE + '/screens',
+            BASE + '/disclaimer',
+            BASE + '/privacy',
+            BASE + '/terms',
+            BASE + '/stocks/ICICIBANK',
+            BASE + '/stocks/HDFCBANK',
+            BASE + '/stocks/RELIANCE',
+            BASE + '/stocks/TCS',
+            BASE + '/stocks/INFY',
+            BASE + '/stocks/SBIN',
+            BASE + '/stocks/TATASTEEL',
+            BASE + '/stocks/ZOMATO',
+            BASE + '/stocks/NOTAREALSTOCK',
+            BASE + '/nonexistent-page-xyz',
+          ];
+
           (async () => {
-            // Use the runner's preinstalled Google Chrome — same engine the user runs.
             const b = await chromium.launch({ channel: 'chrome' });
-            const p = await b.newPage();
-            const events = [];
-            p.on('console', m => { if (m.type() === 'error') events.push('console-error: ' + m.text()); });
-            p.on('pageerror', e => events.push('pageerror: ' + e.message));
-            p.on('requestfailed', r => events.push('requestfailed: ' + r.url() + ' -> ' + (r.failure() || {}).errorText));
-            p.on('response', r => { if (r.status() >= 400) events.push('http ' + r.status() + ': ' + r.url()); });
-            try {
-              const resp = await p.goto(process.env.URL, { waitUntil: 'load', timeout: 30000 });
-              console.log('NAV OK — document status:', resp && resp.status());
-              await p.waitForTimeout(8000);
-              console.log('title:', await p.title());
-              const text = await p.evaluate(() => document.body.innerText);
-              console.log('rendered text (first 400 chars):', JSON.stringify(text.slice(0, 400)));
-            } catch (e) {
-              console.log('NAVIGATION FAILED:', e.message);
+            const results = [];
+
+            for (const url of routes) {
+              const p = await b.newPage();
+              const events = [];
+              p.on('console', m => { if (m.type() === 'error') events.push('console-error: ' + m.text().slice(0, 300)); });
+              p.on('pageerror', e => events.push('pageerror: ' + e.message.slice(0, 300)));
+              p.on('requestfailed', r => events.push('requestfailed: ' + r.url() + ' -> ' + (r.failure() || {}).errorText));
+              p.on('response', r => { if (r.status() >= 400 && r.url().startsWith(BASE)) events.push('http ' + r.status() + ': ' + r.url()); });
+
+              let status = null, title = '', bodyText = '', navError = null;
+              try {
+                const resp = await p.goto(url, { waitUntil: 'load', timeout: 25000 });
+                status = resp && resp.status();
+                await p.waitForTimeout(4000);
+                title = await p.title();
+                bodyText = (await p.evaluate(() => document.body.innerText)).slice(0, 200).replace(/\n/g, ' ');
+              } catch (e) {
+                navError = e.message;
+              }
+              results.push({ url, status, navError, title, bodyText, events });
+              await p.close();
             }
-            console.log('--- events ---');
-            for (const ev of events) console.log(ev);
+
+            console.log('=== PROBE RESULTS ===');
+            for (const r of results) {
+              const broken = r.navError || r.events.some(e => e.startsWith('pageerror')) || /couldn.t load|application error/i.test(r.bodyText);
+              console.log(`\n${broken ? '❌ FAIL' : '✅ OK'} ${r.url}`);
+              console.log(`  status=${r.status} navError=${r.navError || 'none'}`);
+              console.log(`  title="${r.title}"`);
+              console.log(`  body="${r.bodyText}"`);
+              for (const ev of r.events) console.log('  ' + ev);
+            }
+
+            const failCount = results.filter(r => r.navError || r.events.some(e => e.startsWith('pageerror'))).length;
+            console.log(`\n=== SUMMARY: ${results.length - failCount}/${results.length} OK ===`);
+
             await b.close();
           })();
           EOF
