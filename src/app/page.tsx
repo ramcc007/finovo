@@ -108,7 +108,7 @@ export default function Home() {
       {/* ───────────────── HERO ───────────────── */}
       <section className="hero-light">
         <div className="hero-grid-light" />
-        <div className="relative max-w-7xl mx-auto px-4 md:px-6 pt-16 md:pt-24 pb-20 md:pb-28">
+        <div className="relative max-w-7xl mx-auto px-4 md:px-6 pt-6 md:pt-8 pb-20 md:pb-28">
           <AdviceDisclaimer />
 
           <div className="grid lg:grid-cols-[1.05fr_0.95fr] gap-12 lg:gap-16 items-center">
