@@ -1,5 +1,5 @@
 /**
- * Finovo Score — a transparent, rule-based 0–100 read on a company's
+ * Scripwise Score — a transparent, rule-based 0–100 read on a company's
  * fundamentals. Every point is traceable to a specific reported metric;
  * there is no model, no external call, and nothing here is inferred beyond
  * simple thresholds and a same-sector comparison. Not investment advice.
@@ -45,7 +45,7 @@ function tier(value: number | null, thresholds: [number, number, number], points
   return ['bad', points[3]];
 }
 
-export function computeFinovoScore(input: ScoreInput): ScoreResult {
+export function computeScripwiseScore(input: ScoreInput): ScoreResult {
   const breakdown: ScoreLine[] = [];
 
   // ── Profitability (30) ──────────────────────────────────────

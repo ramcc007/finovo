@@ -8,7 +8,7 @@ import { cn, formatPrice, formatCrores, formatTradeDate } from '@/lib/utils';
 import PriceChart from '@/components/charts/PriceChart';
 import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
 import FinancialTrendChart from '@/components/charts/FinancialTrendChart';
-import FinovoScoreCard from '@/components/stock/FinovoScoreCard';
+import ScripwiseScoreCard from '@/components/stock/ScripwiseScoreCard';
 import { useWatchlist } from '@/lib/useWatchlist';
 import type { PEERS } from '@/lib/mock-data';
 
@@ -256,7 +256,7 @@ export default function StockPage() {
         {/* OVERVIEW */}
         {activeTab === 'Overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            {!loading && <FinovoScoreCard symbol={symbol} />}
+            {!loading && <ScripwiseScoreCard symbol={symbol} />}
 
             <div className="lg:col-span-2">
               {loading

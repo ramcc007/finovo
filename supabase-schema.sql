@@ -1,4 +1,4 @@
--- Finovo Database Schema
+-- Scripwise Database Schema
 -- Run this in Supabase SQL editor: https://app.supabase.com → SQL Editor
 
 -- ─────────────────────────────────────────────────────────────

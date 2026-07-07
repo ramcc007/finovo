@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
-  description: 'Privacy policy for Finovo — how we handle your data.',
+  description: 'Privacy policy for Scripwise — how we handle your data.',
 };
 
 export default function PrivacyPage() {
@@ -15,14 +15,14 @@ export default function PrivacyPage() {
         <section>
           <h2 className="text-lg font-semibold text-[#0D1117] mb-3">Overview</h2>
           <p className="text-sm">
-            Finovo (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) is committed to protecting your privacy. This policy explains what information we collect, how we use it, and your rights regarding your data.
+            Scripwise (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) is committed to protecting your privacy. This policy explains what information we collect, how we use it, and your rights regarding your data.
           </p>
         </section>
 
         <section>
           <h2 className="text-lg font-semibold text-[#0D1117] mb-3">Information We Collect</h2>
           <p className="text-sm mb-2">
-            Screening and research on Finovo are free and do not require an account. Creating an
+            Screening and research on Scripwise are free and do not require an account. Creating an
             account is optional and only needed to sync your watchlist and saved screens across
             devices. We collect:
           </p>

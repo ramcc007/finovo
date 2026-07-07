@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = 'https://finovo.vercel.app';
+  const base = 'https://scripwise.in';
   return [
     { url: base, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
     { url: `${base}/screener`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },

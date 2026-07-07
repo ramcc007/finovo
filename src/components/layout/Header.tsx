@@ -3,9 +3,10 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { Search, X, Menu, TrendingUp, Loader2, ArrowRight, User, LogOut } from 'lucide-react';
+import { Search, X, Menu, Loader2, ArrowRight, User, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/AuthProvider';
+import Logo from './Logo';
 
 const NAV = [
   { href: '/screener', label: 'Explorer' },
@@ -80,10 +81,8 @@ export default function Header() {
       <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-[#E9EDF4] h-16 flex items-center px-4 md:px-6 gap-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 shrink-0">
-          <div className="w-8 h-8 bg-[#F97316] rounded-[9px] flex items-center justify-center shadow-[0_2px_8px_rgba(249,115,22,0.30)]">
-            <TrendingUp size={16} className="text-white" strokeWidth={2.75} />
-          </div>
-          <span className="font-bold text-[#131A24] text-[18px] tracking-tight">Finovo</span>
+          <Logo className="w-8 h-8 rounded-[9px] shadow-[0_2px_8px_rgba(249,115,22,0.30)]" />
+          <span className="font-bold text-[#131A24] text-[18px] tracking-tight">Scripwise</span>
         </Link>
 
         {/* Search */}

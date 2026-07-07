@@ -132,7 +132,7 @@ function ComparePageInner() {
                   { key: 'name', label: 'Name' },
                   ...METRICS.map(m => ({ key: m.key as string, label: m.label })),
                 ]);
-                downloadTextFile(`finovo-compare-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+                downloadTextFile(`scripwise-compare-${new Date().toISOString().slice(0, 10)}.csv`, csv);
               }}
               className="btn btn-secondary !px-3 !py-2 !text-[13px] shrink-0"
             >

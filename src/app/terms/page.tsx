@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Terms of Use',
-  description: 'Terms and conditions for using Finovo stock research platform.',
+  description: 'Terms and conditions for using Scripwise stock research platform.',
 };
 
 export default function TermsPage() {
@@ -15,14 +15,14 @@ export default function TermsPage() {
         <section>
           <h2 className="text-lg font-semibold text-[#0D1117] mb-3">Acceptance of Terms</h2>
           <p className="text-sm">
-            By accessing or using Finovo (&quot;the Platform&quot;), you agree to be bound by these Terms of Use. If you do not agree with any part of these terms, please discontinue use of the platform immediately.
+            By accessing or using Scripwise (&quot;the Platform&quot;), you agree to be bound by these Terms of Use. If you do not agree with any part of these terms, please discontinue use of the platform immediately.
           </p>
         </section>
 
         <section>
           <h2 className="text-lg font-semibold text-[#0D1117] mb-3">Use of the Platform</h2>
           <ul className="text-sm space-y-1.5 list-disc list-inside">
-            <li>Finovo is provided free of charge for personal, non-commercial informational use only.</li>
+            <li>Scripwise is provided free of charge for personal, non-commercial informational use only.</li>
             <li>You may not scrape, crawl, or mass-download data from this platform via automated means.</li>
             <li>You may not use this platform for any unlawful purpose or in violation of applicable Indian laws.</li>
             <li>You may not redistribute, resell, or commercially exploit any data from this platform.</li>
@@ -32,21 +32,21 @@ export default function TermsPage() {
         <section>
           <h2 className="text-lg font-semibold text-[#0D1117] mb-3">Not a Financial Service</h2>
           <p className="text-sm">
-            Finovo is not a SEBI-registered investment advisor, stockbroker, portfolio manager, or research analyst. The platform does not provide personalised investment advice. All data and tools are for informational and educational purposes only. See our <a href="/disclaimer" className="text-[#F97316] hover:underline">Disclaimer</a> for full details.
+            Scripwise is not a SEBI-registered investment advisor, stockbroker, portfolio manager, or research analyst. The platform does not provide personalised investment advice. All data and tools are for informational and educational purposes only. See our <a href="/disclaimer" className="text-[#F97316] hover:underline">Disclaimer</a> for full details.
           </p>
         </section>
 
         <section>
           <h2 className="text-lg font-semibold text-[#0D1117] mb-3">Intellectual Property</h2>
           <p className="text-sm">
-            The Finovo brand, logo, design, and original content are the property of their respective creators. Market data displayed is sourced from publicly available feeds and remains the property of the respective exchanges and data providers. NSE and BSE are registered trademarks of their respective organisations.
+            The Scripwise brand, logo, design, and original content are the property of their respective creators. Market data displayed is sourced from publicly available feeds and remains the property of the respective exchanges and data providers. NSE and BSE are registered trademarks of their respective organisations.
           </p>
         </section>
 
         <section>
           <h2 className="text-lg font-semibold text-[#0D1117] mb-3">Limitation of Liability</h2>
           <p className="text-sm">
-            To the maximum extent permitted by applicable law, Finovo and its creators shall not be liable for any loss or damage of any kind arising from your use of the platform, including financial losses, data inaccuracies, or service interruptions. The platform is provided &quot;as is&quot; without any warranties, express or implied.
+            To the maximum extent permitted by applicable law, Scripwise and its creators shall not be liable for any loss or damage of any kind arising from your use of the platform, including financial losses, data inaccuracies, or service interruptions. The platform is provided &quot;as is&quot; without any warranties, express or implied.
           </p>
         </section>
 

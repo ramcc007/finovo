@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { SCREENER_STOCKS } from '@/lib/mock-data';
-import { computeFinovoScore } from '@/lib/finovoScore';
+import { computeScripwiseScore } from '@/lib/scripwiseScore';
 
 // Parses a numeric query param, clamping to a sane finite range so that
 // garbage/huge input (Infinity, NaN, absurd magnitudes) can't reach the DB query.
@@ -30,7 +30,7 @@ interface ScreenerRow {
 
 // Same-sector P/E & P/B averages, computed from the full (unfiltered by
 // screener criteria) universe — mirrors /api/stocks/[symbol]/score so a
-// company's Finovo Score means the same thing everywhere it's shown.
+// company's Scripwise Score means the same thing everywhere it's shown.
 async function getSectorAverages(sectors: string[]): Promise<Map<string, { pe: number | null; pb: number | null }>> {
   const out = new Map<string, { pe: number | null; pb: number | null }>();
   if (!sectors.length) return out;
@@ -58,7 +58,7 @@ async function getSectorAverages(sectors: string[]): Promise<Map<string, { pe: n
 
 function scoreRow(r: ScreenerRow, sectorAverages: Map<string, { pe: number | null; pb: number | null }>): number {
   const avg = (r.sector && sectorAverages.get(r.sector)) || { pe: null, pb: null };
-  return computeFinovoScore({
+  return computeScripwiseScore({
     pe: r.pe, pb: r.pb, roe: r.roe, roce: r.roce,
     debtToEquity: r.debt_to_equity, currentRatio: r.current_ratio,
     revenueGrowth1Y: r.revenue_growth_1y, profitGrowth1Y: r.profit_growth_1y,
@@ -106,13 +106,13 @@ export async function GET(req: NextRequest) {
     'market_cap', 'mcap', 'pe', 'pb', 'roe', 'roce', 'price',
     'revenue_growth_1y', 'profit_growth_1y', 'dividend_yield',
     'debt_to_equity', 'promoter_pct', 'pledge_pct', 'name', 'symbol',
-    'finovo_score',
+    'scripwise_score',
   ]);
   if (!ALLOWED_SORT_COLS.has(filters.sort_by)) {
     filters.sort_by = 'market_cap';
   }
 
-  const needsScoring = filters.sort_by === 'finovo_score' || filters.score_min != null || filters.score_max != null;
+  const needsScoring = filters.sort_by === 'scripwise_score' || filters.score_min != null || filters.score_max != null;
 
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -151,14 +151,14 @@ export async function GET(req: NextRequest) {
 
       const sectors = Array.from(new Set(rows.map(r => r.sector).filter((s): s is string => !!s)));
       const sectorAverages = await getSectorAverages(sectors);
-      rows = rows.map(r => ({ ...r, finovo_score: scoreRow(r, sectorAverages) }));
+      rows = rows.map(r => ({ ...r, scripwise_score: scoreRow(r, sectorAverages) }));
 
-      if (filters.score_min != null) rows = rows.filter(r => (r.finovo_score as number) >= filters.score_min!);
-      if (filters.score_max != null) rows = rows.filter(r => (r.finovo_score as number) <= filters.score_max!);
+      if (filters.score_min != null) rows = rows.filter(r => (r.scripwise_score as number) >= filters.score_min!);
+      if (filters.score_max != null) rows = rows.filter(r => (r.scripwise_score as number) <= filters.score_max!);
 
       rows.sort((a, b) => {
-        const av = filters.sort_by === 'finovo_score' ? (a.finovo_score as number) : (a[filters.sort_by === 'mcap' ? 'market_cap' : filters.sort_by] as number ?? 0);
-        const bv = filters.sort_by === 'finovo_score' ? (b.finovo_score as number) : (b[filters.sort_by === 'mcap' ? 'market_cap' : filters.sort_by] as number ?? 0);
+        const av = filters.sort_by === 'scripwise_score' ? (a.scripwise_score as number) : (a[filters.sort_by === 'mcap' ? 'market_cap' : filters.sort_by] as number ?? 0);
+        const bv = filters.sort_by === 'scripwise_score' ? (b.scripwise_score as number) : (b[filters.sort_by === 'mcap' ? 'market_cap' : filters.sort_by] as number ?? 0);
         return filters.sort_dir === 'asc' ? av - bv : bv - av;
       });
 
@@ -179,12 +179,12 @@ export async function GET(req: NextRequest) {
       rows = (data ?? []) as ScreenerRow[];
       total = count ?? 0;
 
-      // Attach Finovo Score for display using this page's sectors only —
+      // Attach Scripwise Score for display using this page's sectors only —
       // cheap, and identical math to the full-scan path above.
       if (rows.length) {
         const sectors = Array.from(new Set(rows.map(r => r.sector).filter((s): s is string => !!s)));
         const sectorAverages = await getSectorAverages(sectors);
-        rows = rows.map(r => ({ ...r, finovo_score: scoreRow(r, sectorAverages) }));
+        rows = rows.map(r => ({ ...r, scripwise_score: scoreRow(r, sectorAverages) }));
       }
     }
 

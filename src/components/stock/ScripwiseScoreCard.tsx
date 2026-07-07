@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Gauge, Check, TriangleAlert, X, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { ScoreResult, MetricStatus } from '@/lib/finovoScore';
+import type { ScoreResult, MetricStatus } from '@/lib/scripwiseScore';
 
 const BAND_COLOR: Record<ScoreResult['band'], string> = {
   Excellent: '#16A34A',
@@ -52,7 +52,7 @@ interface Props {
   symbol: string;
 }
 
-export default function FinovoScoreCard({ symbol }: Props) {
+export default function ScripwiseScoreCard({ symbol }: Props) {
   const [data, setData] = useState<ScoreResult | null>(null);
   const [available, setAvailable] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -85,7 +85,7 @@ export default function FinovoScoreCard({ symbol }: Props) {
     <div className="lg:col-span-3 card-plain p-5 border-l-2 border-l-[#F97316]">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-[#0D1117] text-sm flex items-center gap-1.5">
-          <Gauge size={14} className="text-[#F97316]" /> Finovo Score
+          <Gauge size={14} className="text-[#F97316]" /> Scripwise Score
         </h3>
       </div>
 

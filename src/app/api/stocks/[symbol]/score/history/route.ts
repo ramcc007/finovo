@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { computeFinovoScore } from '@/lib/finovoScore';
+import { computeScripwiseScore } from '@/lib/scripwiseScore';
 
 export async function GET(
   _req: NextRequest,
@@ -46,7 +46,7 @@ export async function GET(
 
     const points = [...history].reverse().map(r => ({
       date: r.date as string,
-      score: computeFinovoScore({
+      score: computeScripwiseScore({
         pe: r.pe, pb: r.pb, roe: r.roe, roce: r.roce,
         debtToEquity: r.debt_to_equity, currentRatio: r.current_ratio,
         revenueGrowth1Y: r.revenue_growth_1y, profitGrowth1Y: r.profit_growth_1y,

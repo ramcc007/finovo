@@ -141,7 +141,7 @@ export default function Home() {
 
               <p className="text-[#56616F] text-base md:text-lg leading-relaxed max-w-xl mb-8">
                 Filter 5,000+ NSE &amp; BSE companies by valuation, growth and profitability,
-                see an instant Finovo Score, backed by financial statements and ratios.
+                see an instant Scripwise Score, backed by financial statements and ratios.
               </p>
 
               {/* Search */}
@@ -478,7 +478,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ───────────────── WHY FINOVO ───────────────── */}
+      {/* ───────────────── WHY SCRIPWISE ───────────────── */}
       <section className="max-w-7xl mx-auto px-4 md:px-6 py-14 md:py-20">
         <Reveal>
           <div className="text-center max-w-2xl mx-auto mb-12">
@@ -501,7 +501,7 @@ export default function Home() {
             },
             {
               icon: Gauge,
-              title: 'Finovo Score',
+              title: 'Scripwise Score',
               desc: 'Every company gets a transparent 0–100 score across profitability, growth, valuation, and financial health — every point traceable to a reported number.',
             },
           ].map((f, i) => (

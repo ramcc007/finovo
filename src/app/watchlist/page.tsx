@@ -52,7 +52,7 @@ export default function WatchlistPage() {
                   { key: 'pe', label: 'P/E' },
                   { key: 'roe', label: 'ROE %' },
                 ]);
-                downloadTextFile(`finovo-watchlist-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+                downloadTextFile(`scripwise-watchlist-${new Date().toISOString().slice(0, 10)}.csv`, csv);
               }}
               className="btn btn-secondary !px-3 !py-2 !text-[13px] shrink-0"
             >

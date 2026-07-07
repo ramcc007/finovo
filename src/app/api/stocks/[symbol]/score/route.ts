@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { computeFinovoScore } from '@/lib/finovoScore';
+import { computeScripwiseScore } from '@/lib/scripwiseScore';
 
 export async function GET(
   _req: NextRequest,
@@ -39,7 +39,7 @@ export async function GET(
       if (pbs.length >= 3) sectorAvgPb = pbs.reduce((a, b) => a + b, 0) / pbs.length;
     }
 
-    const result = computeFinovoScore({
+    const result = computeScripwiseScore({
       pe: ratios.pe,
       pb: ratios.pb,
       roe: ratios.roe,

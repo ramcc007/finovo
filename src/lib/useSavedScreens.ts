@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-const STORAGE_KEY = 'finovo-saved-screens';
+const STORAGE_KEY = 'scripwise-saved-screens';
 
 export interface SavedScreen {
   id: string;
@@ -26,7 +26,7 @@ function read(): SavedScreen[] {
 
 function write(screens: SavedScreen[]) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(screens));
-  window.dispatchEvent(new CustomEvent('finovo-saved-screens-change'));
+  window.dispatchEvent(new CustomEvent('scripwise-saved-screens-change'));
 }
 
 /** User-defined saved filter combinations for the Explorer — device-scoped,
@@ -37,10 +37,10 @@ export function useSavedScreens() {
   useEffect(() => {
     setScreens(read());
     const sync = () => setScreens(read());
-    window.addEventListener('finovo-saved-screens-change', sync);
+    window.addEventListener('scripwise-saved-screens-change', sync);
     window.addEventListener('storage', sync);
     return () => {
-      window.removeEventListener('finovo-saved-screens-change', sync);
+      window.removeEventListener('scripwise-saved-screens-change', sync);
       window.removeEventListener('storage', sync);
     };
   }, []);

@@ -8,7 +8,7 @@ import { cn, formatCrores, formatPrice, toCSV, downloadTextFile } from '@/lib/ut
 import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
 import { useSavedScreens } from '@/lib/useSavedScreens';
 
-type SortKey = 'market_cap' | 'price' | 'pe' | 'pb' | 'roe' | 'revenue_growth_1y' | 'profit_growth_1y' | 'debt_to_equity' | 'dividend_yield' | 'finovo_score';
+type SortKey = 'market_cap' | 'price' | 'pe' | 'pb' | 'roe' | 'revenue_growth_1y' | 'profit_growth_1y' | 'debt_to_equity' | 'dividend_yield' | 'scripwise_score';
 
 interface Filters {
   sector: string;
@@ -39,7 +39,7 @@ const QUICK_FILTERS: { label: string; patch: Partial<Filters> }[] = [
   { label: 'Low P/E', patch: { peMax: '15' } },
   { label: 'High ROE', patch: { roeMin: '20' } },
   { label: 'Zero debt', patch: { debtEquityMax: '0.1' } },
-  { label: 'Strong Finovo Score', patch: { scoreMin: '75' } },
+  { label: 'Strong Scripwise Score', patch: { scoreMin: '75' } },
 ];
 
 // Must match the canonical sector labels written by scripts/ingest_companies.py
@@ -120,7 +120,7 @@ interface ScreenerRow {
   pe: number; pb: number; roe: number; roce: number; market_cap: number;
   debt_to_equity: number; revenue_growth_1y: number; profit_growth_1y: number;
   dividend_yield: number; promoter_pct: number; pledge_pct: number;
-  finovo_score?: number;
+  scripwise_score?: number;
 }
 
 // Maps the /api/screener query-param names (used by pre-built screen links)
@@ -260,9 +260,9 @@ function ScreenerPageInner() {
         { key: 'profit_growth_1y', label: 'Profit Growth 1Y %' },
         { key: 'debt_to_equity', label: 'Debt/Equity' },
         { key: 'dividend_yield', label: 'Dividend Yield %' },
-        { key: 'finovo_score', label: 'Finovo Score' },
+        { key: 'scripwise_score', label: 'Scripwise Score' },
       ]);
-      downloadTextFile(`finovo-screener-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+      downloadTextFile(`scripwise-screener-${new Date().toISOString().slice(0, 10)}.csv`, csv);
     } finally {
       setExporting(false);
     }
@@ -495,7 +495,7 @@ function ScreenerPageInner() {
                       { key: 'profit_growth_1y', label: 'Pft Gr 1Y' },
                       { key: 'debt_to_equity', label: 'D/E' },
                       { key: 'dividend_yield', label: 'Div Yield' },
-                      { key: 'finovo_score', label: 'Score' },
+                      { key: 'scripwise_score', label: 'Score' },
                     ].map(col => (
                       <th
                         key={col.key}
@@ -548,10 +548,10 @@ function ScreenerPageInner() {
                       <td className={s.profit_growth_1y == null ? '' : s.profit_growth_1y >= 0 ? 'text-positive' : 'text-negative'}>{s.profit_growth_1y != null ? `${s.profit_growth_1y >= 0 ? '+' : ''}${s.profit_growth_1y.toFixed(1)}%` : '—'}</td>
                       <td className={!s.debt_to_equity ? '' : s.debt_to_equity < 0.5 ? 'text-positive' : s.debt_to_equity > 2 ? 'text-negative' : ''}>{s.debt_to_equity != null ? `${s.debt_to_equity.toFixed(2)}x` : '—'}</td>
                       <td>{s.dividend_yield != null ? `${s.dividend_yield.toFixed(2)}%` : '—'}</td>
-                      <td className={s.finovo_score != null ? cn('font-semibold', SCORE_BAND_COLOR(s.finovo_score)) : ''}>
-                        {s.finovo_score != null ? (
+                      <td className={s.scripwise_score != null ? cn('font-semibold', SCORE_BAND_COLOR(s.scripwise_score)) : ''}>
+                        {s.scripwise_score != null ? (
                           <Link href={`/stocks/${s.symbol}`} className="inline-flex items-center gap-1 hover:underline">
-                            <Gauge size={11} /> {s.finovo_score}
+                            <Gauge size={11} /> {s.scripwise_score}
                           </Link>
                         ) : '—'}
                       </td>

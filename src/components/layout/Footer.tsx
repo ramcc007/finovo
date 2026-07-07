@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { TrendingUp } from 'lucide-react';
+import Logo from './Logo';
 
 export default function Footer() {
   return (
@@ -9,10 +9,8 @@ export default function Footer() {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <div className="w-7 h-7 bg-[#F97316] rounded-[6px] flex items-center justify-center shrink-0">
-                <TrendingUp size={15} className="text-white" strokeWidth={2.5} />
-              </div>
-              <span className="font-bold text-white text-[17px] tracking-tight">Finovo</span>
+              <Logo className="w-7 h-7 rounded-[6px] shrink-0" />
+              <span className="font-bold text-white text-[17px] tracking-tight">Scripwise</span>
             </div>
             <p className="text-sm text-white/50 leading-relaxed max-w-xs">
               Free stock research and screening platform for Indian equity markets. NSE &amp; BSE data.
@@ -58,7 +56,7 @@ export default function Footer() {
 
         <div className="border-t border-white/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
           <p className="text-xs text-white/30">
-            © {new Date().getFullYear()} Finovo. Data for informational purposes only. Not investment advice.
+            © {new Date().getFullYear()} Scripwise. Data for informational purposes only. Not investment advice.
           </p>
           <p className="text-xs text-white/30">
             Created by <span className="text-[#F97316] font-semibold">RCC</span>
