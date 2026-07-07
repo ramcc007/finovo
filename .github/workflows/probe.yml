@@ -10,6 +10,10 @@ on:
         description: 'Single URL to probe (leave blank to sweep every route)'
         required: false
         default: ''
+      find:
+        description: 'Comma-separated text markers to search for in the full rendered page (diagnoses "feature not showing" reports)'
+        required: false
+        default: ''
 
 jobs:
   probe:
@@ -19,6 +23,7 @@ jobs:
       - name: Sweep every route with headless Chrome (real browser fidelity)
         env:
           SINGLE_URL: ${{ inputs.url }}
+          FIND_MARKERS: ${{ inputs.find }}
         run: |
           npm init -y > /dev/null
           npm i --no-audit --no-fund playwright > /dev/null 2>&1
@@ -27,6 +32,7 @@ jobs:
 
           const BASE = 'https://finovo-rcc.vercel.app';
           const single = process.env.SINGLE_URL;
+          const markers = (process.env.FIND_MARKERS || '').split(',').map(s => s.trim()).filter(Boolean);
           const routes = single ? [single] : [
             BASE + '/',
             BASE + '/markets',
@@ -62,17 +68,19 @@ jobs:
               p.on('requestfailed', r => events.push('requestfailed: ' + r.url() + ' -> ' + (r.failure() || {}).errorText));
               p.on('response', r => { if (r.status() >= 400 && r.url().startsWith(BASE)) events.push('http ' + r.status() + ': ' + r.url()); });
 
-              let status = null, title = '', bodyText = '', navError = null;
+              let status = null, title = '', bodyText = '', fullText = '', foundMarkers = {}, navError = null;
               try {
                 const resp = await p.goto(url, { waitUntil: 'load', timeout: 25000 });
                 status = resp && resp.status();
                 await p.waitForTimeout(4000);
                 title = await p.title();
-                bodyText = (await p.evaluate(() => document.body.innerText)).slice(0, 200).replace(/\n/g, ' ');
+                fullText = await p.evaluate(() => document.body.innerText);
+                bodyText = fullText.slice(0, 200).replace(/\n/g, ' ');
+                for (const m of markers) foundMarkers[m] = fullText.includes(m);
               } catch (e) {
                 navError = e.message;
               }
-              results.push({ url, status, navError, title, bodyText, events });
+              results.push({ url, status, navError, title, bodyText, foundMarkers, events });
               await p.close();
             }
 
@@ -83,6 +91,7 @@ jobs:
               console.log(`  status=${r.status} navError=${r.navError || 'none'}`);
               console.log(`  title="${r.title}"`);
               console.log(`  body="${r.bodyText}"`);
+              for (const [m, found] of Object.entries(r.foundMarkers)) console.log(`  marker "${m}": ${found ? '✅ found' : '❌ NOT found'}`);
               for (const ev of r.events) console.log('  ' + ev);
             }
 
