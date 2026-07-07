@@ -14,6 +14,10 @@ on:
         description: 'Comma-separated text markers to search for in the full rendered page (diagnoses "feature not showing" reports)'
         required: false
         default: ''
+      raw:
+        description: 'Print up to 5000 chars of raw page/response text verbatim (for inspecting JSON API routes)'
+        required: false
+        default: 'false'
 
 jobs:
   probe:
@@ -24,6 +28,7 @@ jobs:
         env:
           SINGLE_URL: ${{ inputs.url }}
           FIND_MARKERS: ${{ inputs.find }}
+          RAW: ${{ inputs.raw }}
         run: |
           npm init -y > /dev/null
           npm i --no-audit --no-fund playwright > /dev/null 2>&1
@@ -33,6 +38,7 @@ jobs:
           const BASE = 'https://finovo-rcc.vercel.app';
           const single = process.env.SINGLE_URL;
           const markers = (process.env.FIND_MARKERS || '').split(',').map(s => s.trim()).filter(Boolean);
+          const raw = process.env.RAW === 'true';
           const routes = single ? [single] : [
             BASE + '/',
             BASE + '/markets',
@@ -80,7 +86,7 @@ jobs:
               } catch (e) {
                 navError = e.message;
               }
-              results.push({ url, status, navError, title, bodyText, foundMarkers, events });
+              results.push({ url, status, navError, title, bodyText, fullText, foundMarkers, events });
               await p.close();
             }
 
@@ -93,6 +99,7 @@ jobs:
               console.log(`  body="${r.bodyText}"`);
               for (const [m, found] of Object.entries(r.foundMarkers)) console.log(`  marker "${m}": ${found ? '✅ found' : '❌ NOT found'}`);
               for (const ev of r.events) console.log('  ' + ev);
+              if (raw) console.log(`  raw="${r.fullText ? r.fullText.slice(0, 5000) : ''}"`);
             }
 
             const failCount = results.filter(r => r.navError || r.events.some(e => e.startsWith('pageerror'))).length;
