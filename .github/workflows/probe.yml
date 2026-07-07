@@ -74,7 +74,7 @@ jobs:
               p.on('requestfailed', r => events.push('requestfailed: ' + r.url() + ' -> ' + (r.failure() || {}).errorText));
               p.on('response', r => { if (r.status() >= 400 && r.url().startsWith(BASE)) events.push('http ' + r.status() + ': ' + r.url()); });
 
-              let status = null, title = '', bodyText = '', fullText = '', foundMarkers = {}, navError = null;
+              let status = null, title = '', bodyText = '', fullText = '', foundMarkers = {}, foundInHtml = {}, navError = null;
               try {
                 const resp = await p.goto(url, { waitUntil: 'load', timeout: 25000 });
                 status = resp && resp.status();
@@ -82,11 +82,12 @@ jobs:
                 title = await p.title();
                 fullText = await p.evaluate(() => document.body.innerText);
                 bodyText = fullText.slice(0, 200).replace(/\n/g, ' ');
-                for (const m of markers) foundMarkers[m] = fullText.includes(m);
+                const html = await p.content();
+                for (const m of markers) { foundMarkers[m] = fullText.includes(m); foundInHtml[m] = html.includes(m); }
               } catch (e) {
                 navError = e.message;
               }
-              results.push({ url, status, navError, title, bodyText, fullText, foundMarkers, events });
+              results.push({ url, status, navError, title, bodyText, fullText, foundMarkers, foundInHtml, events });
               await p.close();
             }
 
@@ -97,7 +98,8 @@ jobs:
               console.log(`  status=${r.status} navError=${r.navError || 'none'}`);
               console.log(`  title="${r.title}"`);
               console.log(`  body="${r.bodyText}"`);
-              for (const [m, found] of Object.entries(r.foundMarkers)) console.log(`  marker "${m}": ${found ? '✅ found' : '❌ NOT found'}`);
+              for (const [m, found] of Object.entries(r.foundMarkers)) console.log(`  marker "${m}" in visible text: ${found ? '✅ found' : '❌ NOT found'}`);
+              for (const [m, found] of Object.entries(r.foundInHtml || {})) console.log(`  marker "${m}" in HTML source: ${found ? '✅ found' : '❌ NOT found'}`);
               for (const ev of r.events) console.log('  ' + ev);
               if (raw) console.log(`  raw="${r.fullText ? r.fullText.slice(0, 5000) : ''}"`);
             }
