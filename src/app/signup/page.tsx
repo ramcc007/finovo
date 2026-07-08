@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { User, Mail, Lock, MapPin, Loader2, CheckCircle2 } from 'lucide-react';
@@ -46,8 +46,37 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [resendCooldown, setResendCooldown] = useState(30);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendError, setResendError] = useState<string | null>(null);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   const strength = password ? passwordStrength(password) : null;
+
+  useEffect(() => {
+    if (!submitted || resendCooldown <= 0) return;
+    const t = setInterval(() => setResendCooldown(s => s - 1), 1000);
+    return () => clearInterval(t);
+  }, [submitted, resendCooldown]);
+
+  const handleResend = async () => {
+    setResendError(null);
+    setResendSuccess(false);
+    setResendLoading(true);
+    const { error: resendErr } = await supabase.auth.resend({ type: 'signup', email });
+    setResendLoading(false);
+
+    if (resendErr) {
+      setResendError(
+        /rate limit/i.test(resendErr.message)
+          ? "We're sending too many emails right now — please try again in a few minutes."
+          : resendErr.message
+      );
+      return;
+    }
+    setResendSuccess(true);
+    setResendCooldown(30);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,6 +159,28 @@ export default function SignupPage() {
             We sent a confirmation link to <span className="font-semibold">{email}</span>.
             Click it to activate your account, then log in.
           </p>
+
+          <div className="mt-5">
+            {resendSuccess && (
+              <p className="text-sm text-[#16A34A] mb-2">Confirmation email resent — check your inbox.</p>
+            )}
+            {resendError && (
+              <p className="text-sm text-[#DC2626] mb-2">{resendError}</p>
+            )}
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={resendLoading || resendCooldown > 0}
+              className="text-sm font-semibold text-[#F97316] hover:underline disabled:text-[#8A96A8] disabled:no-underline disabled:cursor-not-allowed"
+            >
+              {resendLoading
+                ? 'Resending…'
+                : resendCooldown > 0
+                  ? `Resend email in ${resendCooldown}s`
+                  : "Didn't get it? Resend email"}
+            </button>
+          </div>
+
           <Link href="/login" className="btn btn-primary w-full mt-6 justify-center">
             Go to login
           </Link>
