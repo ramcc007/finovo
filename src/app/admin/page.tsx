@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, ShieldAlert, Users, BarChart3, Ban, Trash2, ShieldCheck, Search } from 'lucide-react';
+import { Loader2, ShieldAlert, Users, BarChart3, Ban, Trash2, ShieldCheck, Search, KeyRound } from 'lucide-react';
 import { useAuth } from '@/lib/AuthProvider';
 import { adminFetch } from '@/lib/adminFetch';
 import { cn } from '@/lib/utils';
@@ -121,6 +121,26 @@ export default function AdminPage() {
       setUsers(prev => prev?.filter(x => x.id !== u.id) ?? null);
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Delete failed');
+    } finally {
+      setActingId(null);
+    }
+  };
+
+  const handleSetPassword = async (u: AdminUserRow) => {
+    const password = window.prompt(`Set a new password for ${u.email} (min 8 characters):`);
+    if (!password) return;
+    if (password.length < 8) { alert('Password must be at least 8 characters.'); return; }
+    setActingId(u.id);
+    try {
+      const r = await adminFetch(`/api/admin/users/${u.id}/password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      if (!r.ok) throw new Error((await r.json()).error ?? 'Failed to set password');
+      alert(`Password updated for ${u.email}.`);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Failed to set password');
     } finally {
       setActingId(null);
     }
@@ -293,6 +313,7 @@ export default function AdminPage() {
                 ) : filteredUsers.map(u => {
                   const banned = isBanned(u);
                   const name = [u.first_name, u.last_name].filter(Boolean).join(' ');
+                  const isSelf = !!user?.email && u.email?.toLowerCase() === user.email.toLowerCase();
                   return (
                     <tr key={u.id}>
                       <td>
@@ -319,27 +340,41 @@ export default function AdminPage() {
                         </div>
                       </td>
                       <td>
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            onClick={() => handleSuspend(u)}
-                            disabled={actingId === u.id}
-                            title={banned ? 'Unsuspend' : 'Suspend'}
-                            className={cn(
-                              'p-1.5 rounded-md transition-colors disabled:opacity-40',
-                              banned ? 'text-[#16A34A] hover:bg-[#DCFCE7]' : 'text-[#D97706] hover:bg-[#FEF3C7]'
-                            )}
-                          >
-                            {banned ? <ShieldCheck size={14} /> : <Ban size={14} />}
-                          </button>
-                          <button
-                            onClick={() => handleDelete(u)}
-                            disabled={actingId === u.id}
-                            title="Delete"
-                            className="p-1.5 rounded-md text-[#DC2626] hover:bg-[#FEE2E2] transition-colors disabled:opacity-40"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
+                        {isSelf ? (
+                          <div className="text-center">
+                            <span className="text-[10px] text-[#8A96A8] italic">Your account</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={() => handleSetPassword(u)}
+                              disabled={actingId === u.id}
+                              title="Set new password"
+                              className="p-2 rounded-md text-[#4A5568] hover:bg-[#F4F6FA] transition-colors disabled:opacity-40"
+                            >
+                              <KeyRound size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleSuspend(u)}
+                              disabled={actingId === u.id}
+                              title={banned ? 'Unsuspend' : 'Suspend'}
+                              className={cn(
+                                'p-2 rounded-md transition-colors disabled:opacity-40',
+                                banned ? 'text-[#16A34A] hover:bg-[#DCFCE7]' : 'text-[#D97706] hover:bg-[#FEF3C7]'
+                              )}
+                            >
+                              {banned ? <ShieldCheck size={14} /> : <Ban size={14} />}
+                            </button>
+                            <button
+                              onClick={() => handleDelete(u)}
+                              disabled={actingId === u.id}
+                              title="Delete"
+                              className="p-2 rounded-md text-[#DC2626] hover:bg-[#FEE2E2] transition-colors disabled:opacity-40"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );
