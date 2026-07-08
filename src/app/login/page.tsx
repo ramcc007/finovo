@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Mail, Lock, Loader2, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { adminFetch } from '@/lib/adminFetch';
 import Turnstile from '@/components/auth/Turnstile';
 import AuthTabs from '@/components/auth/AuthTabs';
 
@@ -46,7 +47,14 @@ export default function LoginPage() {
       );
       return;
     }
-    router.push('/watchlist');
+
+    try {
+      const check = await adminFetch('/api/admin/check');
+      const { isAdmin } = await check.json();
+      router.push(isAdmin ? '/admin' : '/markets');
+    } catch {
+      router.push('/markets');
+    }
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {

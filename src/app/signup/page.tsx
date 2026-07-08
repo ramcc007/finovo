@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { User, Mail, Lock, MapPin, Loader2, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { logLoginEvent } from '@/lib/AuthProvider';
+import { adminFetch } from '@/lib/adminFetch';
 import { validateEmail } from '@/lib/emailValidation';
 import Turnstile from '@/components/auth/Turnstile';
 import AuthTabs from '@/components/auth/AuthTabs';
@@ -158,7 +159,13 @@ export default function SignupPage() {
     // need to confirm via the email link first.
     if (data.session && data.user) {
       logLoginEvent(data.user.id, 'sign_up');
-      router.push('/watchlist');
+      try {
+        const check = await adminFetch('/api/admin/check');
+        const { isAdmin } = await check.json();
+        router.push(isAdmin ? '/admin' : '/markets');
+      } catch {
+        router.push('/markets');
+      }
     } else {
       if (data.user) logLoginEvent(data.user.id, 'sign_up');
       setSubmitted(true);
