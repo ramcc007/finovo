@@ -39,7 +39,11 @@ export default function LoginPage() {
     setLoading(false);
 
     if (signInError) {
-      setError(signInError.message);
+      setError(
+        /banned|suspended/i.test(signInError.message)
+          ? 'Your account has been suspended. Contact support if you believe this is a mistake.'
+          : signInError.message
+      );
       return;
     }
     router.push('/watchlist');

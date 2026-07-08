@@ -3,9 +3,10 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { Search, X, Menu, Loader2, ArrowRight, User, LogOut } from 'lucide-react';
+import { Search, X, Menu, Loader2, ArrowRight, User, LogOut, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/AuthProvider';
+import { adminFetch } from '@/lib/adminFetch';
 import Logo from './Logo';
 
 const NAV = [
@@ -31,6 +32,17 @@ export default function Header() {
   const ref = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
   const { user, loading: authLoading, signOut } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    let alive = true;
+    adminFetch('/api/admin/check')
+      .then(r => r.json())
+      .then(d => { if (alive) setIsAdmin(!!d.isAdmin); })
+      .catch(() => { if (alive) setIsAdmin(false); });
+    return () => { alive = false; };
+  }, [user]);
 
   // Debounced live search against the API (DB-backed, mock fallback)
   useEffect(() => {
@@ -166,6 +178,15 @@ export default function Header() {
                       <div className="text-xs text-[#8A94A4]">Signed in as</div>
                       <div className="text-sm font-semibold text-[#131A24] truncate">{user.email}</div>
                     </div>
+                    {isAdmin && (
+                      <Link
+                        href="/admin"
+                        onClick={() => setAccountOpen(false)}
+                        className="w-full flex items-center gap-2 px-4 py-3 text-sm text-[#56616F] hover:bg-[#F2F4F9] hover:text-[#131A24] transition-colors border-b border-[#F0F3F8]"
+                      >
+                        <ShieldCheck size={14} /> Admin dashboard
+                      </Link>
+                    )}
                     <button
                       onClick={handleSignOut}
                       className="w-full flex items-center gap-2 px-4 py-3 text-sm text-[#56616F] hover:bg-[#F2F4F9] hover:text-[#131A24] transition-colors"
@@ -216,6 +237,14 @@ export default function Header() {
               </Link>
             );
           })}
+          {!authLoading && user && isAdmin && (
+            <Link
+              href="/admin"
+              className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium text-[#56616F] hover:bg-[#F2F4F9] hover:text-[#131A24] mb-1"
+            >
+              <ShieldCheck size={14} /> Admin dashboard
+            </Link>
+          )}
           {!authLoading && user && (
             <button
               onClick={handleSignOut}
