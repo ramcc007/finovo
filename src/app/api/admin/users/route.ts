@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   const users: Array<Record<string, unknown>> = [];
   for (let page = 1; page <= 25; page++) {
     const { data, error } = await client.auth.admin.listUsers({ page, perPage: 200 });
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ error: 'Failed to load users.' }, { status: 500 });
     users.push(...(data.users as unknown as Record<string, unknown>[]));
     if (data.users.length < 200) break;
   }

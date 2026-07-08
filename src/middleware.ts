@@ -66,6 +66,13 @@ export function middleware(request: NextRequest) {
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
+    // No plugins/embeds anywhere in the app — block them outright rather than
+    // relying on the default-src fallback (CSP evaluators flag a missing
+    // object-src, and older engines don't always fall back).
+    "object-src 'none'",
+    // Belt-and-suspenders with HSTS: auto-upgrade any stray http:// subresource
+    // so a single mixed-content reference can't open a downgrade/MITM window.
+    "upgrade-insecure-requests",
   ].join('; ');
 
   const requestHeaders = new Headers(request.headers);

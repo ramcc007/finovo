@@ -68,7 +68,9 @@ export async function GET(req: NextRequest) {
         users: Number(r.metricValues?.[0]?.value ?? 0),
       })),
     });
-  } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'GA4 query failed' }, { status: 500 });
+  } catch {
+    // Don't surface raw GA/Google API errors (may include project IDs, quota
+    // details, or credential hints) — log server-side, return a generic message.
+    return NextResponse.json({ error: 'Analytics query failed.' }, { status: 500 });
   }
 }
