@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { unstable_cache } from 'next/cache';
 import { supabase } from '@/lib/supabase';
 import { SCREENER_STOCKS } from '@/lib/mock-data';
 import { computeScripwiseScore } from '@/lib/scripwiseScore';
@@ -31,27 +32,42 @@ interface ScreenerRow {
 // Same-sector P/E & P/B averages, computed from the full (unfiltered by
 // screener criteria) universe — mirrors /api/stocks/[symbol]/score so a
 // company's Scripwise Score means the same thing everywhere it's shown.
+// Cached for an hour: sector averages barely move day-to-day, and computing
+// them was previously a second full-universe scan on every scored screener
+// request — an easy target for DB-load abuse on an unauthenticated route.
+const getAllSectorAverages = unstable_cache(
+  async (): Promise<Record<string, { pe: number | null; pb: number | null }>> => {
+    const { data: peers } = await supabase
+      .from('screener_view')
+      .select('sector, pe, pb')
+      .limit(5000);
+    const bySector = new Map<string, { pes: number[]; pbs: number[] }>();
+    for (const p of peers ?? []) {
+      if (!p.sector) continue;
+      const bucket = bySector.get(p.sector) ?? { pes: [], pbs: [] };
+      if (p.pe != null && p.pe > 0) bucket.pes.push(p.pe);
+      if (p.pb != null && p.pb > 0) bucket.pbs.push(p.pb);
+      bySector.set(p.sector, bucket);
+    }
+    const out: Record<string, { pe: number | null; pb: number | null }> = {};
+    for (const [sector, { pes, pbs }] of bySector) {
+      out[sector] = {
+        pe: pes.length >= 3 ? pes.reduce((a, b) => a + b, 0) / pes.length : null,
+        pb: pbs.length >= 3 ? pbs.reduce((a, b) => a + b, 0) / pbs.length : null,
+      };
+    }
+    return out;
+  },
+  ['screener-sector-averages'],
+  { revalidate: 3600 }
+);
+
 async function getSectorAverages(sectors: string[]): Promise<Map<string, { pe: number | null; pb: number | null }>> {
   const out = new Map<string, { pe: number | null; pb: number | null }>();
   if (!sectors.length) return out;
-  const { data: peers } = await supabase
-    .from('screener_view')
-    .select('sector, pe, pb')
-    .in('sector', sectors)
-    .limit(5000);
-  const bySector = new Map<string, { pes: number[]; pbs: number[] }>();
-  for (const p of peers ?? []) {
-    if (!p.sector) continue;
-    const bucket = bySector.get(p.sector) ?? { pes: [], pbs: [] };
-    if (p.pe != null && p.pe > 0) bucket.pes.push(p.pe);
-    if (p.pb != null && p.pb > 0) bucket.pbs.push(p.pb);
-    bySector.set(p.sector, bucket);
-  }
-  for (const [sector, { pes, pbs }] of bySector) {
-    out.set(sector, {
-      pe: pes.length >= 3 ? pes.reduce((a, b) => a + b, 0) / pes.length : null,
-      pb: pbs.length >= 3 ? pbs.reduce((a, b) => a + b, 0) / pbs.length : null,
-    });
+  const all = await getAllSectorAverages();
+  for (const s of sectors) {
+    if (all[s]) out.set(s, all[s]);
   }
   return out;
 }

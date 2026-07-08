@@ -1,27 +1,16 @@
 import type { NextConfig } from "next";
 
+// Content-Security-Policy is set per-request in src/middleware.ts instead of
+// here, since it needs a fresh nonce on every response — Next.js's App
+// Router streams RSC hydration data via genuinely inline <script> tags, so
+// a static CSP can only ever choose 'unsafe-inline' (no protection against
+// injected scripts) or a nonce (requires per-request generation).
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
-  {
-    key: "Content-Security-Policy",
-    value: [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://www.googletagmanager.com",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://www.google-analytics.com",
-      "font-src 'self' data:",
-      "connect-src 'self' https://*.supabase.co https://challenges.cloudflare.com https://www.google-analytics.com https://www.googletagmanager.com https://region1.google-analytics.com",
-      "frame-src https://challenges.cloudflare.com",
-      "worker-src 'self' blob:",
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-    ].join("; "),
-  },
 ];
 
 const nextConfig: NextConfig = {

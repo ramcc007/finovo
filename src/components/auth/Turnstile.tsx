@@ -7,6 +7,7 @@ interface Props {
   siteKey: string;
   onVerify: (token: string) => void;
   onExpire?: () => void;
+  nonce?: string;
 }
 
 declare global {
@@ -22,7 +23,7 @@ declare global {
 }
 
 /** Cloudflare Turnstile widget — free anti-spam CAPTCHA, no npm dependency. */
-export default function Turnstile({ siteKey, onVerify, onExpire }: Props) {
+export default function Turnstile({ siteKey, onVerify, onExpire, nonce }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendered = useRef(false);
 
@@ -47,6 +48,7 @@ export default function Turnstile({ siteKey, onVerify, onExpire }: Props) {
         src="https://challenges.cloudflare.com/turnstile/v0/api.js"
         strategy="afterInteractive"
         onLoad={render}
+        nonce={nonce}
       />
       <div ref={containerRef} />
     </>

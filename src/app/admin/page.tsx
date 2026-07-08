@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2, ShieldAlert, Users, BarChart3, Ban, Trash2, ShieldCheck, Search, KeyRound } from 'lucide-react';
 import { useAuth } from '@/lib/AuthProvider';
 import { adminFetch } from '@/lib/adminFetch';
+import { validatePassword, MIN_PASSWORD_LENGTH } from '@/lib/passwordPolicy';
 import { cn } from '@/lib/utils';
 
 interface AdminUserRow {
@@ -127,9 +128,10 @@ export default function AdminPage() {
   };
 
   const handleSetPassword = async (u: AdminUserRow) => {
-    const password = window.prompt(`Set a new password for ${u.email} (min 8 characters):`);
+    const password = window.prompt(`Set a new password for ${u.email} (min ${MIN_PASSWORD_LENGTH} chars, letters & numbers):`);
     if (!password) return;
-    if (password.length < 8) { alert('Password must be at least 8 characters.'); return; }
+    const passwordError = validatePassword(password);
+    if (passwordError) { alert(passwordError); return; }
     setActingId(u.id);
     try {
       const r = await adminFetch(`/api/admin/users/${u.id}/password`, {
