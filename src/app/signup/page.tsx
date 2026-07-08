@@ -50,6 +50,8 @@ export default function SignupPage() {
   const [resendLoading, setResendLoading] = useState(false);
   const [resendError, setResendError] = useState<string | null>(null);
   const [resendSuccess, setResendSuccess] = useState(false);
+  const [resendCaptchaToken, setResendCaptchaToken] = useState<string | null>(null);
+  const [resendWidgetKey, setResendWidgetKey] = useState(0);
 
   const strength = password ? passwordStrength(password) : null;
 
@@ -62,9 +64,23 @@ export default function SignupPage() {
   const handleResend = async () => {
     setResendError(null);
     setResendSuccess(false);
+
+    if (TURNSTILE_SITE_KEY && !resendCaptchaToken) {
+      setResendError('Please complete the verification below.');
+      return;
+    }
+
     setResendLoading(true);
-    const { error: resendErr } = await supabase.auth.resend({ type: 'signup', email });
+    const { error: resendErr } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: resendCaptchaToken ? { captchaToken: resendCaptchaToken } : undefined,
+    });
     setResendLoading(false);
+
+    // Turnstile tokens are single-use — force a fresh widget for next time.
+    setResendCaptchaToken(null);
+    setResendWidgetKey(k => k + 1);
 
     if (resendErr) {
       setResendError(
@@ -167,10 +183,22 @@ export default function SignupPage() {
             {resendError && (
               <p className="text-sm text-[#DC2626] mb-2">{resendError}</p>
             )}
+
+            {TURNSTILE_SITE_KEY && resendCooldown === 0 && (
+              <div className="flex justify-center mb-3">
+                <Turnstile
+                  key={resendWidgetKey}
+                  siteKey={TURNSTILE_SITE_KEY}
+                  onVerify={setResendCaptchaToken}
+                  onExpire={() => setResendCaptchaToken(null)}
+                />
+              </div>
+            )}
+
             <button
               type="button"
               onClick={handleResend}
-              disabled={resendLoading || resendCooldown > 0}
+              disabled={resendLoading || resendCooldown > 0 || (!!TURNSTILE_SITE_KEY && !resendCaptchaToken)}
               className="text-sm font-semibold text-[#F97316] hover:underline disabled:text-[#8A96A8] disabled:no-underline disabled:cursor-not-allowed"
             >
               {resendLoading
