@@ -35,7 +35,7 @@ jobs:
           node - <<'EOF'
           const { chromium } = require('playwright');
 
-          const BASE = 'https://finovo-rcc.vercel.app';
+          const BASE = 'https://www.scripwise.co.in';
           const single = process.env.SINGLE_URL;
           const markers = (process.env.FIND_MARKERS || '').split(',').map(s => s.trim()).filter(Boolean);
           const raw = process.env.RAW === 'true';
