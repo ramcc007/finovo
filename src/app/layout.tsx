@@ -18,7 +18,7 @@ const jetbrainsMono = JetBrains_Mono({
   display: 'swap',
 });
 
-const BASE_URL = 'https://scripwise.co.in';
+const BASE_URL = 'https://www.scripwise.co.in';
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),

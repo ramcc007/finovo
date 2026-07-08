@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = 'https://scripwise.co.in';
+  const base = 'https://www.scripwise.co.in';
   return [
     { url: base, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
     { url: `${base}/screener`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
