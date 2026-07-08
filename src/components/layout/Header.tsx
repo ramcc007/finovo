@@ -176,20 +176,12 @@ export default function Header() {
                 )}
               </div>
             ) : (
-              <>
-                <Link
-                  href="/login"
-                  className="ml-1 text-sm font-medium px-3.5 py-2 rounded-lg text-[#56616F] hover:text-[#131A24] hover:bg-[#F2F4F9] transition-colors"
-                >
-                  Log in
-                </Link>
-                <Link
-                  href="/signup"
-                  className="ml-1 inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-[#F97316] hover:bg-[#EA580C] px-4 py-2 rounded-lg shadow-[0_1px_2px_rgba(234,88,12,0.25)] hover:shadow-[0_6px_16px_rgba(249,115,22,0.28)] transition-all"
-                >
-                  Sign up free <ArrowRight size={14} />
-                </Link>
-              </>
+              <Link
+                href="/signup"
+                className="ml-1 inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-[#F97316] hover:bg-[#EA580C] px-4 py-2 rounded-lg shadow-[0_1px_2px_rgba(234,88,12,0.25)] hover:shadow-[0_6px_16px_rgba(249,115,22,0.28)] transition-all"
+              >
+                Sign up free <ArrowRight size={14} />
+              </Link>
             )
           )}
         </nav>
@@ -224,22 +216,13 @@ export default function Header() {
               </Link>
             );
           })}
-          {!authLoading && (
-            user ? (
-              <button
-                onClick={handleSignOut}
-                className="w-full flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium text-[#56616F] hover:bg-[#F2F4F9] hover:text-[#131A24] mb-1"
-              >
-                <LogOut size={14} /> Log out ({user.email})
-              </button>
-            ) : (
-              <Link
-                href="/login"
-                className="flex items-center px-4 py-3 rounded-xl text-sm font-medium text-[#56616F] hover:bg-[#F2F4F9] hover:text-[#131A24] mb-1"
-              >
-                Log in
-              </Link>
-            )
+          {!authLoading && user && (
+            <button
+              onClick={handleSignOut}
+              className="w-full flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium text-[#56616F] hover:bg-[#F2F4F9] hover:text-[#131A24] mb-1"
+            >
+              <LogOut size={14} /> Log out ({user.email})
+            </button>
           )}
           <Link
             href={user ? '/screener' : '/signup'}

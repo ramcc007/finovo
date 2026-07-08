@@ -9,7 +9,6 @@ import { logLoginEvent } from '@/lib/AuthProvider';
 import { validateEmail } from '@/lib/emailValidation';
 import Turnstile from '@/components/auth/Turnstile';
 import AuthTabs from '@/components/auth/AuthTabs';
-import { cn } from '@/lib/utils';
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
@@ -254,30 +253,18 @@ export default function SignupPage() {
           </div>
 
           <div>
-            <label className="block text-xs text-[#8A96A8] mb-2">Investor profile</label>
-            <div className="grid grid-cols-1 gap-1.5">
+            <label className="block text-xs text-[#8A96A8] mb-1.5">Investor profile</label>
+            <select
+              required
+              value={investorProfile ?? ''}
+              onChange={e => setInvestorProfile(e.target.value || null)}
+              className="bg-[#F4F6FA] border border-[#E2E8F0] rounded-[8px] px-3.5 py-2.5 focus:outline-none focus:border-[#F97316] transition-colors text-sm w-full text-[#0D1117]"
+            >
+              <option value="" disabled>Select your investor profile</option>
               {INVESTOR_PROFILES.map(p => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => setInvestorProfile(p.id)}
-                  className={cn(
-                    'text-left px-3.5 py-2.5 rounded-[8px] border transition-colors',
-                    investorProfile === p.id
-                      ? 'border-[#F97316] bg-[#FFF7ED]'
-                      : 'border-[#E2E8F0] bg-[#F4F6FA] hover:border-[#CBD5E1]'
-                  )}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className={cn('text-sm font-semibold', investorProfile === p.id ? 'text-[#EA580C]' : 'text-[#0D1117]')}>
-                      {p.label}
-                    </span>
-                    {investorProfile === p.id && <CheckCircle2 size={15} className="text-[#EA580C]" />}
-                  </div>
-                  <span className="text-xs text-[#4A5568]">{p.desc}</span>
-                </button>
+                <option key={p.id} value={p.id}>{p.label} — {p.desc}</option>
               ))}
-            </div>
+            </select>
           </div>
 
           <label className="flex items-start gap-2.5 text-xs text-[#4A5568] leading-relaxed cursor-pointer">
