@@ -27,6 +27,7 @@ export default function ProfileForm({ nonce }: { nonce?: string }) {
   const [nameSaved, setNameSaved] = useState(false);
 
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [widgetKey, setWidgetKey] = useState(0);
   const [requestSending, setRequestSending] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [requestSent, setRequestSent] = useState(false);
@@ -103,6 +104,11 @@ export default function ProfileForm({ nonce }: { nonce?: string }) {
       captchaToken: captchaToken ?? undefined,
     });
     setRequestSending(false);
+
+    // Turnstile tokens are single-use — force a fresh widget for a retry.
+    setCaptchaToken(null);
+    setWidgetKey(k => k + 1);
+
     if (error) {
       setRequestError(
         /rate limit/i.test(error.message)
@@ -296,7 +302,7 @@ export default function ProfileForm({ nonce }: { nonce?: string }) {
             <>
               {TURNSTILE_SITE_KEY && (
                 <div className="mb-3">
-                  <Turnstile siteKey={TURNSTILE_SITE_KEY} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken(null)} nonce={nonce} />
+                  <Turnstile key={widgetKey} siteKey={TURNSTILE_SITE_KEY} onVerify={setCaptchaToken} onExpire={() => setCaptchaToken(null)} nonce={nonce} />
                 </div>
               )}
               {requestError && <p className="text-sm text-[#DC2626] mb-3">{requestError}</p>}

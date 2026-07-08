@@ -18,10 +18,12 @@ export default function LoginForm({ nonce }: { nonce?: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [widgetKey, setWidgetKey] = useState(0);
   const [forgotMode, setForgotMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [forgotCaptchaToken, setForgotCaptchaToken] = useState<string | null>(null);
+  const [forgotWidgetKey, setForgotWidgetKey] = useState(0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +41,10 @@ export default function LoginForm({ nonce }: { nonce?: string }) {
       options: captchaToken ? { captchaToken } : undefined,
     });
     setLoading(false);
+
+    // Turnstile tokens are single-use — force a fresh widget for a retry.
+    setCaptchaToken(null);
+    setWidgetKey(k => k + 1);
 
     if (signInError) {
       setError(
@@ -71,6 +77,11 @@ export default function LoginForm({ nonce }: { nonce?: string }) {
       captchaToken: forgotCaptchaToken ?? undefined,
     });
     setResetLoading(false);
+
+    // Turnstile tokens are single-use — force a fresh widget for a retry.
+    setForgotCaptchaToken(null);
+    setForgotWidgetKey(k => k + 1);
+
     if (resetError) {
       setError(
         /rate limit/i.test(resetError.message)
@@ -121,6 +132,7 @@ export default function LoginForm({ nonce }: { nonce?: string }) {
                 </div>
                 {TURNSTILE_SITE_KEY && (
                   <Turnstile
+                    key={forgotWidgetKey}
                     siteKey={TURNSTILE_SITE_KEY}
                     onVerify={setForgotCaptchaToken}
                     onExpire={() => setForgotCaptchaToken(null)}
@@ -196,6 +208,7 @@ export default function LoginForm({ nonce }: { nonce?: string }) {
 
           {TURNSTILE_SITE_KEY && (
             <Turnstile
+              key={widgetKey}
               siteKey={TURNSTILE_SITE_KEY}
               onVerify={setCaptchaToken}
               onExpire={() => setCaptchaToken(null)}

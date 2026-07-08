@@ -48,6 +48,7 @@ export default function SignupForm({ nonce }: { nonce?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [widgetKey, setWidgetKey] = useState(0);
   const [resendCooldown, setResendCooldown] = useState(30);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendError, setResendError] = useState<string | null>(null);
@@ -146,6 +147,10 @@ export default function SignupForm({ nonce }: { nonce?: string }) {
       },
     });
     setLoading(false);
+
+    // Turnstile tokens are single-use — force a fresh widget for a retry.
+    setCaptchaToken(null);
+    setWidgetKey(k => k + 1);
 
     if (signUpError) {
       setError(
@@ -370,6 +375,7 @@ export default function SignupForm({ nonce }: { nonce?: string }) {
 
           {TURNSTILE_SITE_KEY && (
             <Turnstile
+              key={widgetKey}
               siteKey={TURNSTILE_SITE_KEY}
               onVerify={setCaptchaToken}
               onExpire={() => setCaptchaToken(null)}
