@@ -51,7 +51,7 @@ export async function GET() {
       .order('symbol');
 
     if (data && data.length > 0) {
-      const lines = data.map(c => `- [${c.symbol} — ${c.name}](${base}/stocks/${c.symbol})`);
+      const lines = data.map(c => `- [${c.symbol} — ${c.name}](${base}/stocks/${encodeURIComponent(c.symbol)})`);
       body += '\n' + lines.join('\n') + '\n';
     }
   } catch {

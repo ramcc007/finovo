@@ -26,7 +26,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .order('symbol');
 
     const stockRoutes: MetadataRoute.Sitemap = (data ?? []).map(c => ({
-      url: `${base}/stocks/${c.symbol}`,
+      // NSE symbols can contain characters like "&" (e.g. M&M) that are
+      // invalid unescaped in XML — encode the path segment.
+      url: `${base}/stocks/${encodeURIComponent(c.symbol)}`,
       lastModified: new Date(),
       changeFrequency: 'daily',
       priority: 0.6,
