@@ -21,6 +21,7 @@ export default function LoginForm({ nonce }: { nonce?: string }) {
   const [forgotMode, setForgotMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  const [forgotCaptchaToken, setForgotCaptchaToken] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,9 +61,14 @@ export default function LoginForm({ nonce }: { nonce?: string }) {
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (TURNSTILE_SITE_KEY && !forgotCaptchaToken) {
+      setError('Please complete the verification below.');
+      return;
+    }
     setResetLoading(true);
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/login` : undefined,
+      captchaToken: forgotCaptchaToken ?? undefined,
     });
     setResetLoading(false);
     if (resetError) {
@@ -113,6 +119,14 @@ export default function LoginForm({ nonce }: { nonce?: string }) {
                     />
                   </div>
                 </div>
+                {TURNSTILE_SITE_KEY && (
+                  <Turnstile
+                    siteKey={TURNSTILE_SITE_KEY}
+                    onVerify={setForgotCaptchaToken}
+                    onExpire={() => setForgotCaptchaToken(null)}
+                    nonce={nonce}
+                  />
+                )}
                 {error && <p className="text-sm text-[#DC2626]">{error}</p>}
                 <button type="submit" disabled={resetLoading} className="btn btn-primary w-full justify-center disabled:opacity-60">
                   {resetLoading ? <Loader2 size={16} className="animate-spin" /> : 'Send reset link'}

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { Search, X, Menu, Loader2, ArrowRight, User, LogOut, ShieldCheck } from 'lucide-react';
+import { Search, X, Menu, Loader2, ArrowRight, User, LogOut, ShieldCheck, UserCog } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/AuthProvider';
 import { adminFetch } from '@/lib/adminFetch';
@@ -178,6 +178,13 @@ export default function Header() {
                       <div className="text-xs text-[#8A94A4]">Signed in as</div>
                       <div className="text-sm font-semibold text-[#131A24] truncate">{user.email}</div>
                     </div>
+                    <Link
+                      href="/profile"
+                      onClick={() => setAccountOpen(false)}
+                      className="w-full flex items-center gap-2 px-4 py-3 text-sm text-[#56616F] hover:bg-[#F2F4F9] hover:text-[#131A24] transition-colors border-b border-[#F0F3F8]"
+                    >
+                      <UserCog size={14} /> My profile
+                    </Link>
                     {isAdmin && (
                       <Link
                         href="/admin"
@@ -237,6 +244,14 @@ export default function Header() {
               </Link>
             );
           })}
+          {!authLoading && user && (
+            <Link
+              href="/profile"
+              className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium text-[#56616F] hover:bg-[#F2F4F9] hover:text-[#131A24] mb-1"
+            >
+              <UserCog size={14} /> My profile
+            </Link>
+          )}
           {!authLoading && user && isAdmin && (
             <Link
               href="/admin"
