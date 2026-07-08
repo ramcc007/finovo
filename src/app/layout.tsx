@@ -4,6 +4,7 @@ import './globals.css';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import CookieConsent from '@/components/layout/CookieConsent';
+import GoogleAnalytics from '@/components/layout/GoogleAnalytics';
 import { AuthProvider } from '@/lib/AuthProvider';
 
 const inter = Inter({
@@ -54,6 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body>
+        <GoogleAnalytics />
         <AuthProvider>
           <Header />
           <main className="min-h-screen">{children}</main>

@@ -27,17 +27,17 @@ export default function PrivacyPage() {
             devices. We collect:
           </p>
           <ul className="text-sm space-y-1.5 list-disc list-inside">
-            <li><strong>Account data (only if you sign up):</strong> Your email address and a securely hashed password, managed by our authentication provider (Supabase Auth). We never see or store your password in plain text.</li>
-            <li><strong>Usage data:</strong> Anonymous page views, search queries (not linked to you personally unless you&apos;re logged in), and feature usage via analytics.</li>
+            <li><strong>Account data (only if you sign up):</strong> Your name, email address, city (optional), investor profile, and a securely hashed password, managed by our authentication provider (Supabase Auth). We never see or store your password in plain text.</li>
+            <li><strong>Usage data:</strong> Anonymous page views, search queries (not linked to you personally unless you&apos;re logged in), and feature usage — via Google Analytics if you accept analytics cookies.</li>
             <li><strong>Technical data:</strong> Browser type, device type, and IP address (anonymised) via hosting infrastructure logs.</li>
-            <li>We do <strong>not</strong> collect your name, phone number, or any other personally identifiable information beyond your account email.</li>
+            <li>We do <strong>not</strong> collect your phone number or any other personally identifiable information beyond what you provide at signup.</li>
           </ul>
         </section>
 
         <section>
           <h2 className="text-lg font-semibold text-[#0D1117] mb-3">Cookies</h2>
           <p className="text-sm">
-            We use essential cookies only — to maintain your session preferences (e.g., selected filters, watchlist). We do not use tracking or advertising cookies. Third-party services we use (Vercel hosting) may set their own cookies governed by their respective privacy policies.
+            We use essential cookies to maintain your session preferences (e.g., selected filters, watchlist). If you accept our cookie banner, we also use Google Analytics to understand anonymous, aggregate usage of the site — you can decline this at any time from the cookie banner. We do not use advertising cookies. Third-party services we use (Vercel hosting, Google Analytics) may set their own cookies governed by their respective privacy policies.
           </p>
         </section>
 

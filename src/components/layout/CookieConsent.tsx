@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { CONSENT_CHANGE_EVENT } from './GoogleAnalytics';
 
 const STORAGE_KEY = 'scripwise-cookie-consent';
 
@@ -15,6 +16,7 @@ export default function CookieConsent() {
 
   const dismiss = (choice: 'accepted' | 'declined') => {
     window.localStorage.setItem(STORAGE_KEY, choice);
+    window.dispatchEvent(new Event(CONSENT_CHANGE_EVENT));
     setVisible(false);
   };
 
@@ -24,8 +26,9 @@ export default function CookieConsent() {
     <div className="fixed bottom-0 inset-x-0 z-50 border-t border-[#E2E8F0] bg-white shadow-[0_-2px_12px_rgba(16,24,40,0.08)]">
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6">
         <p className="text-xs text-[#4A5568] leading-relaxed flex-1">
-          We use essential cookies only, to remember things like your selected filters and
-          watchlist. We don&apos;t use tracking or advertising cookies.{' '}
+          We use essential cookies to remember things like your selected filters and watchlist,
+          and — if you accept — anonymous analytics cookies (Google Analytics) to understand how
+          the site is used. We don&apos;t use advertising cookies.{' '}
           <Link href="/privacy" className="font-semibold text-[#0D1117] underline underline-offset-2">
             Privacy Policy
           </Link>
