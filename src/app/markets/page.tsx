@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import TickerBar from '@/components/layout/TickerBar';
+import AuthGate from '@/components/auth/AuthGate';
 import { cn, formatPrice, formatVolume, formatCrores, formatTradeDate } from '@/lib/utils';
 
 // Maps a sector's average day-change % to a heatmap tile color — green for
@@ -40,7 +41,7 @@ const TABS: { key: MarketTab; label: string }[] = [
   { key: 'low52', label: '52W Low' },
 ];
 
-export default function MarketsPage() {
+function MarketsPageContent() {
   const [tab, setTab] = useState<MarketTab>('gainers');
   const [mkt, setMkt] = useState<MarketsData | null>(null);
   const router = useRouter();
@@ -241,5 +242,13 @@ export default function MarketsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MarketsPage() {
+  return (
+    <AuthGate feature="Market Overview" description="Sign up free to see live gainers, losers, sector performance and the market breadth dashboard.">
+      <MarketsPageContent />
+    </AuthGate>
   );
 }

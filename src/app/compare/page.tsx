@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, X, Loader2, Download } from 'lucide-react';
 import { cn, formatCrores, formatPrice, toCSV, downloadTextFile } from '@/lib/utils';
 import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
+import AuthGate from '@/components/auth/AuthGate';
 
 const MAX_SYMBOLS = 4;
 
@@ -233,8 +234,10 @@ function ComparePageInner() {
 
 export default function ComparePage() {
   return (
-    <Suspense fallback={null}>
-      <ComparePageInner />
-    </Suspense>
+    <AuthGate feature="Compare Stocks" description="Sign up free to compare up to 4 companies side by side across 14 fundamental metrics.">
+      <Suspense fallback={null}>
+        <ComparePageInner />
+      </Suspense>
+    </AuthGate>
   );
 }

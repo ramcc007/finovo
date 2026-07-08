@@ -3,8 +3,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, Loader2 } from 'lucide-react';
+import { Mail, Lock, Loader2, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import Turnstile from '@/components/auth/Turnstile';
+import AuthTabs from '@/components/auth/AuthTabs';
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,12 +16,26 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [forgotMode, setForgotMode] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (TURNSTILE_SITE_KEY && !captchaToken) {
+      setError('Please complete the verification below.');
+      return;
+    }
+
     setLoading(true);
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+      options: captchaToken ? { captchaToken } : undefined,
+    });
     setLoading(false);
 
     if (signInError) {
@@ -27,11 +45,84 @@ export default function LoginPage() {
     router.push('/watchlist');
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setResetLoading(true);
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/login` : undefined,
+    });
+    setResetLoading(false);
+    if (resetError) {
+      setError(resetError.message);
+      return;
+    }
+    setResetSent(true);
+  };
+
+  if (forgotMode) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center bg-[#F4F6FA] px-4 py-12">
+        <div className="max-w-md w-full bg-white border border-[#E2E8F0] rounded-2xl p-8">
+          {resetSent ? (
+            <div className="text-center">
+              <CheckCircle2 className="mx-auto mb-4 text-[#16A34A]" size={40} />
+              <h1 className="text-xl font-bold text-[#0D1117] mb-2">Check your inbox</h1>
+              <p className="text-sm text-[#4A5568] leading-relaxed">
+                If an account exists for <span className="font-semibold">{email}</span>, we&apos;ve sent a password reset link.
+              </p>
+              <button
+                onClick={() => { setForgotMode(false); setResetSent(false); }}
+                className="btn btn-primary w-full mt-6 justify-center"
+              >
+                Back to login
+              </button>
+            </div>
+          ) : (
+            <>
+              <h1 className="text-xl font-bold text-[#0D1117] mb-1">Reset your password</h1>
+              <p className="text-sm text-[#4A5568] mb-6">Enter your email and we&apos;ll send you a reset link.</p>
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div>
+                  <label className="block text-xs text-[#8A96A8] mb-1.5">Email</label>
+                  <div className="flex items-center gap-2.5 bg-[#F4F6FA] border border-[#E2E8F0] rounded-[8px] px-3.5 py-2.5 focus-within:border-[#F97316] transition-colors">
+                    <Mail size={15} className="text-[#8A96A8] shrink-0" />
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="bg-transparent text-sm outline-none w-full placeholder:text-[#8A96A8]"
+                    />
+                  </div>
+                </div>
+                {error && <p className="text-sm text-[#DC2626]">{error}</p>}
+                <button type="submit" disabled={resetLoading} className="btn btn-primary w-full justify-center disabled:opacity-60">
+                  {resetLoading ? <Loader2 size={16} className="animate-spin" /> : 'Send reset link'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForgotMode(false)}
+                  className="w-full text-center text-sm font-medium text-[#4A5568] hover:text-[#0D1117] py-1"
+                >
+                  Back to login
+                </button>
+              </form>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-[70vh] flex items-center justify-center bg-[#F4F6FA] px-4 py-12">
       <div className="max-w-md w-full bg-white border border-[#E2E8F0] rounded-2xl p-8">
-        <h1 className="text-xl font-bold text-[#0D1117] mb-1">Log in</h1>
-        <p className="text-sm text-[#4A5568] mb-6">Access your synced watchlist and saved screens.</p>
+        <AuthTabs active="login" />
+
+        <h1 className="text-xl font-bold text-[#0D1117] mb-1">Welcome back</h1>
+        <p className="text-sm text-[#4A5568] mb-6">Access Markets, Screens, Compare, Calendar and your Watchlist.</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -50,7 +141,16 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-xs text-[#8A96A8] mb-1.5">Password</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs text-[#8A96A8]">Password</label>
+              <button
+                type="button"
+                onClick={() => setForgotMode(true)}
+                className="text-xs text-[#F97316] font-medium hover:underline"
+              >
+                Forgot password?
+              </button>
+            </div>
             <div className="flex items-center gap-2.5 bg-[#F4F6FA] border border-[#E2E8F0] rounded-[8px] px-3.5 py-2.5 focus-within:border-[#F97316] transition-colors">
               <Lock size={15} className="text-[#8A96A8] shrink-0" />
               <input
@@ -64,6 +164,14 @@ export default function LoginPage() {
             </div>
           </div>
 
+          {TURNSTILE_SITE_KEY && (
+            <Turnstile
+              siteKey={TURNSTILE_SITE_KEY}
+              onVerify={setCaptchaToken}
+              onExpire={() => setCaptchaToken(null)}
+            />
+          )}
+
           {error && <p className="text-sm text-[#DC2626]">{error}</p>}
 
           <button type="submit" disabled={loading} className="btn btn-primary w-full justify-center disabled:opacity-60">
@@ -73,7 +181,7 @@ export default function LoginPage() {
 
         <p className="text-sm text-[#4A5568] text-center mt-6">
           Don&apos;t have an account?{' '}
-          <Link href="/signup" className="text-[#F97316] font-semibold hover:underline">Sign up</Link>
+          <Link href="/signup" className="text-[#F97316] font-semibold hover:underline">Sign up free</Link>
         </p>
       </div>
     </div>

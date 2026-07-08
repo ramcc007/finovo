@@ -19,7 +19,7 @@ const AuthContext = createContext<AuthContextValue>({
 // Best-effort app-level audit log — Supabase Auth already persists the
 // actual session server-side; this just gives us visibility into it.
 // Never allowed to block or fail the auth flow.
-async function logLoginEvent(userId: string, eventType: 'sign_in' | 'sign_out') {
+export async function logLoginEvent(userId: string, eventType: 'sign_up' | 'sign_in' | 'sign_out') {
   try {
     await supabase.from('login_events').insert({
       user_id: userId,

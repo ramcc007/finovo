@@ -6,13 +6,14 @@ import { Trash2, Star, Download } from 'lucide-react';
 import { cn, formatCrores, formatPrice, toCSV, downloadTextFile } from '@/lib/utils';
 import { useWatchlist } from '@/lib/useWatchlist';
 import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
+import AuthGate from '@/components/auth/AuthGate';
 
 interface Row {
   symbol: string; name: string; sector: string | null; price: number | null;
   change_pct: number | null; market_cap: number | null; pe: number | null; roe: number | null;
 }
 
-export default function WatchlistPage() {
+function WatchlistPageContent() {
   const { symbols, remove } = useWatchlist();
   const [rows, setRows] = useState<Row[] | null>(null);
 
@@ -36,7 +37,7 @@ export default function WatchlistPage() {
           <div>
             <h1 className="h-section text-[#0D1117]">Watchlist</h1>
             <p className="text-sm text-[#4A5568] mt-1.5">
-              Stocks you&apos;re tracking — saved on this device, no account needed.
+              Stocks you&apos;re tracking, saved on this device.
             </p>
           </div>
           {ordered && ordered.length > 0 && (
@@ -126,5 +127,13 @@ export default function WatchlistPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function WatchlistPage() {
+  return (
+    <AuthGate feature="Watchlist" description="Sign up free to track stocks and access them from any device.">
+      <WatchlistPageContent />
+    </AuthGate>
   );
 }

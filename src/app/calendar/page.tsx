@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { CalendarDays } from 'lucide-react';
 import { cn, formatTradeDate } from '@/lib/utils';
 import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
+import AuthGate from '@/components/auth/AuthGate';
 
 interface EventRow {
   id: number; symbol: string; name: string; sector: string | null;
@@ -25,7 +26,7 @@ const TYPE_COLORS: Record<string, string> = {
   Other: 'bg-[#F4F6FA] text-[#4A5568]',
 };
 
-export default function CalendarPage() {
+function CalendarPageContent() {
   const [rows, setRows] = useState<EventRow[] | null>(null);
   const [type, setType] = useState('All');
 
@@ -120,5 +121,13 @@ export default function CalendarPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function CalendarPage() {
+  return (
+    <AuthGate feature="Corporate Actions Calendar" description="Sign up free to track upcoming dividends, bonuses, splits and board meetings across NSE-listed companies.">
+      <CalendarPageContent />
+    </AuthGate>
   );
 }

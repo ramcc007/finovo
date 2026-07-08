@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ArrowRight, Clock } from 'lucide-react';
 import { PRE_BUILT_SCREENS } from '@/lib/mock-data';
+import AuthGate from '@/components/auth/AuthGate';
 import { cn, formatPrice, formatCrores } from '@/lib/utils';
 
 interface SampleRow {
@@ -12,7 +13,7 @@ interface SampleRow {
   pe: number; roe: number; revenue_growth_1y: number; debt_to_equity: number; market_cap: number;
 }
 
-export default function ScreensPage() {
+function ScreensPageContent() {
   const router = useRouter();
   const [sample, setSample] = useState<SampleRow[] | null>(null);
 
@@ -154,5 +155,13 @@ export default function ScreensPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ScreensPage() {
+  return (
+    <AuthGate feature="Pre-built Screens" description="Sign up free to access ready-made screens for quality, value, income, momentum and turnaround investing.">
+      <ScreensPageContent />
+    </AuthGate>
   );
 }

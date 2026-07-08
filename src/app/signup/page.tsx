@@ -3,32 +3,84 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, Loader2, CheckCircle2 } from 'lucide-react';
+import { User, Mail, Lock, MapPin, Loader2, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { logLoginEvent } from '@/lib/AuthProvider';
+import { validateEmail } from '@/lib/emailValidation';
 import Turnstile from '@/components/auth/Turnstile';
+import AuthTabs from '@/components/auth/AuthTabs';
+import { cn } from '@/lib/utils';
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
+const INVESTOR_PROFILES = [
+  { id: 'beginner', label: 'Beginner', desc: 'New to investing, still learning the basics' },
+  { id: 'intermediate', label: 'Intermediate', desc: 'Comfortable with fundamentals, building a portfolio' },
+  { id: 'experienced', label: 'Experienced', desc: 'Several years of hands-on investing experience' },
+  { id: 'professional', label: 'Professional', desc: 'Investing as part of my profession — advisor, analyst, trader' },
+  { id: 'institutional', label: 'Institutional', desc: 'Investing on behalf of a fund, family office, or institution' },
+] as const;
+
+function passwordStrength(pw: string): { label: string; color: string; score: number } {
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (pw.length >= 12) score++;
+  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
+  if (/\d/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  if (score <= 1) return { label: 'Weak', color: '#DC2626', score };
+  if (score <= 3) return { label: 'Okay', color: '#D97706', score };
+  return { label: 'Strong', color: '#16A34A', score };
+}
+
 export default function SignupPage() {
   const router = useRouter();
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [city, setCity] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [investorProfile, setInvestorProfile] = useState<string | null>(null);
+  const [agreedTerms, setAgreedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
+  const strength = password ? passwordStrength(password) : null;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
+    if (!firstName.trim() || !lastName.trim()) {
+      setError('Enter your first and last name.');
+      return;
+    }
+    const emailError = validateEmail(email);
+    if (emailError) {
+      setError(emailError);
+      return;
+    }
+    if (!city.trim()) {
+      setError('Enter your city.');
+      return;
+    }
     if (password.length < 8) {
       setError('Password must be at least 8 characters.');
       return;
     }
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
+      return;
+    }
+    if (!investorProfile) {
+      setError('Select your investor profile.');
+      return;
+    }
+    if (!agreedTerms) {
+      setError('You must agree to the Terms of Use and Privacy Policy.');
       return;
     }
     if (TURNSTILE_SITE_KEY && !captchaToken) {
@@ -38,8 +90,17 @@ export default function SignupPage() {
 
     setLoading(true);
     const { data, error: signUpError } = await supabase.auth.signUp({
-      email, password,
-      options: captchaToken ? { captchaToken } : undefined,
+      email: email.trim().toLowerCase(),
+      password,
+      options: {
+        ...(captchaToken ? { captchaToken } : {}),
+        data: {
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          city: city.trim(),
+          investor_profile: investorProfile,
+        },
+      },
     });
     setLoading(false);
 
@@ -51,9 +112,11 @@ export default function SignupPage() {
     // If email confirmation is disabled in the Supabase project, a session
     // comes back immediately — send the user straight in. Otherwise, they
     // need to confirm via the email link first.
-    if (data.session) {
+    if (data.session && data.user) {
+      logLoginEvent(data.user.id, 'sign_up');
       router.push('/watchlist');
     } else {
+      if (data.user) logLoginEvent(data.user.id, 'sign_up');
       setSubmitted(true);
     }
   };
@@ -78,13 +141,45 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center bg-[#F4F6FA] px-4 py-12">
-      <div className="max-w-md w-full bg-white border border-[#E2E8F0] rounded-2xl p-8">
-        <h1 className="text-xl font-bold text-[#0D1117] mb-1">Create your account</h1>
+      <div className="max-w-lg w-full bg-white border border-[#E2E8F0] rounded-2xl p-8">
+        <AuthTabs active="signup" />
+
+        <h1 className="text-xl font-bold text-[#0D1117] mb-1">Create your free account</h1>
         <p className="text-sm text-[#4A5568] mb-6">
-          Sync your watchlist and saved screens across devices. Screening and research remain free without an account.
+          Unlock Markets, Screens, Compare, Calendar and Watchlist — synced across devices.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-[#8A96A8] mb-1.5">First name</label>
+              <div className="flex items-center gap-2.5 bg-[#F4F6FA] border border-[#E2E8F0] rounded-[8px] px-3.5 py-2.5 focus-within:border-[#F97316] transition-colors">
+                <User size={15} className="text-[#8A96A8] shrink-0" />
+                <input
+                  type="text"
+                  required
+                  value={firstName}
+                  onChange={e => setFirstName(e.target.value)}
+                  placeholder="Aditya"
+                  className="bg-transparent text-sm outline-none w-full placeholder:text-[#8A96A8]"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-[#8A96A8] mb-1.5">Last name</label>
+              <div className="flex items-center gap-2.5 bg-[#F4F6FA] border border-[#E2E8F0] rounded-[8px] px-3.5 py-2.5 focus-within:border-[#F97316] transition-colors">
+                <input
+                  type="text"
+                  required
+                  value={lastName}
+                  onChange={e => setLastName(e.target.value)}
+                  placeholder="Sharma"
+                  className="bg-transparent text-sm outline-none w-full placeholder:text-[#8A96A8]"
+                />
+              </div>
+            </div>
+          </div>
+
           <div>
             <label className="block text-xs text-[#8A96A8] mb-1.5">Email</label>
             <div className="flex items-center gap-2.5 bg-[#F4F6FA] border border-[#E2E8F0] rounded-[8px] px-3.5 py-2.5 focus-within:border-[#F97316] transition-colors">
@@ -101,35 +196,102 @@ export default function SignupPage() {
           </div>
 
           <div>
-            <label className="block text-xs text-[#8A96A8] mb-1.5">Password</label>
+            <label className="block text-xs text-[#8A96A8] mb-1.5">City</label>
             <div className="flex items-center gap-2.5 bg-[#F4F6FA] border border-[#E2E8F0] rounded-[8px] px-3.5 py-2.5 focus-within:border-[#F97316] transition-colors">
-              <Lock size={15} className="text-[#8A96A8] shrink-0" />
+              <MapPin size={15} className="text-[#8A96A8] shrink-0" />
               <input
-                type="password"
+                type="text"
                 required
-                minLength={8}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="At least 8 characters"
+                value={city}
+                onChange={e => setCity(e.target.value)}
+                placeholder="Mumbai"
                 className="bg-transparent text-sm outline-none w-full placeholder:text-[#8A96A8]"
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs text-[#8A96A8] mb-1.5">Confirm password</label>
-            <div className="flex items-center gap-2.5 bg-[#F4F6FA] border border-[#E2E8F0] rounded-[8px] px-3.5 py-2.5 focus-within:border-[#F97316] transition-colors">
-              <Lock size={15} className="text-[#8A96A8] shrink-0" />
-              <input
-                type="password"
-                required
-                value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)}
-                placeholder="Re-enter password"
-                className="bg-transparent text-sm outline-none w-full placeholder:text-[#8A96A8]"
-              />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-[#8A96A8] mb-1.5">Password</label>
+              <div className="flex items-center gap-2.5 bg-[#F4F6FA] border border-[#E2E8F0] rounded-[8px] px-3.5 py-2.5 focus-within:border-[#F97316] transition-colors">
+                <Lock size={15} className="text-[#8A96A8] shrink-0" />
+                <input
+                  type="password"
+                  required
+                  minLength={8}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="8+ characters"
+                  className="bg-transparent text-sm outline-none w-full placeholder:text-[#8A96A8]"
+                />
+              </div>
+              {strength && (
+                <div className="flex items-center gap-1.5 mt-1.5">
+                  <div className="flex-1 h-1 rounded-full bg-[#E2E8F0] overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{ width: `${(strength.score / 5) * 100}%`, backgroundColor: strength.color }}
+                    />
+                  </div>
+                  <span className="text-[11px] font-medium" style={{ color: strength.color }}>{strength.label}</span>
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="block text-xs text-[#8A96A8] mb-1.5">Confirm password</label>
+              <div className="flex items-center gap-2.5 bg-[#F4F6FA] border border-[#E2E8F0] rounded-[8px] px-3.5 py-2.5 focus-within:border-[#F97316] transition-colors">
+                <Lock size={15} className="text-[#8A96A8] shrink-0" />
+                <input
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter password"
+                  className="bg-transparent text-sm outline-none w-full placeholder:text-[#8A96A8]"
+                />
+              </div>
             </div>
           </div>
+
+          <div>
+            <label className="block text-xs text-[#8A96A8] mb-2">Investor profile</label>
+            <div className="grid grid-cols-1 gap-1.5">
+              {INVESTOR_PROFILES.map(p => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setInvestorProfile(p.id)}
+                  className={cn(
+                    'text-left px-3.5 py-2.5 rounded-[8px] border transition-colors',
+                    investorProfile === p.id
+                      ? 'border-[#F97316] bg-[#FFF7ED]'
+                      : 'border-[#E2E8F0] bg-[#F4F6FA] hover:border-[#CBD5E1]'
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className={cn('text-sm font-semibold', investorProfile === p.id ? 'text-[#EA580C]' : 'text-[#0D1117]')}>
+                      {p.label}
+                    </span>
+                    {investorProfile === p.id && <CheckCircle2 size={15} className="text-[#EA580C]" />}
+                  </div>
+                  <span className="text-xs text-[#4A5568]">{p.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <label className="flex items-start gap-2.5 text-xs text-[#4A5568] leading-relaxed cursor-pointer">
+            <input
+              type="checkbox"
+              checked={agreedTerms}
+              onChange={e => setAgreedTerms(e.target.checked)}
+              className="mt-0.5 accent-[#F97316]"
+            />
+            <span>
+              I agree to the <Link href="/terms" className="text-[#F97316] font-medium hover:underline">Terms of Use</Link> and{' '}
+              <Link href="/privacy" className="text-[#F97316] font-medium hover:underline">Privacy Policy</Link>.
+            </span>
+          </label>
 
           {TURNSTILE_SITE_KEY && (
             <Turnstile

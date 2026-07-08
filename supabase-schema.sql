@@ -260,3 +260,48 @@ create policy "Users read own login events" on login_events
   for select using (auth.uid() = user_id);
 create policy "Users insert own login events" on login_events
   for insert with check (auth.uid() = user_id);
+
+-- ─────────────────────────────────────────────────────────────
+-- 10. PROFILES (extended signup fields — name, city, investor profile)
+-- ─────────────────────────────────────────────────────────────
+create table if not exists profiles (
+  id               uuid primary key references auth.users(id) on delete cascade,
+  first_name       text,
+  last_name        text,
+  city             text,
+  investor_profile text check (investor_profile in ('beginner','intermediate','experienced','professional','institutional')),
+  created_at       timestamptz not null default now()
+);
+
+alter table profiles enable row level security;
+
+create policy "Users read own profile" on profiles
+  for select using (auth.uid() = id);
+create policy "Users update own profile" on profiles
+  for update using (auth.uid() = id);
+create policy "Users insert own profile" on profiles
+  for insert with check (auth.uid() = id);
+
+-- Auto-create the profile row from the signup form's metadata the moment
+-- Supabase Auth creates the user — works even when email confirmation is
+-- pending, since it fires on auth.users insert, not on first login.
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, first_name, last_name, city, investor_profile)
+  values (
+    new.id,
+    new.raw_user_meta_data->>'first_name',
+    new.raw_user_meta_data->>'last_name',
+    new.raw_user_meta_data->>'city',
+    new.raw_user_meta_data->>'investor_profile'
+  )
+  on conflict (id) do nothing;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();

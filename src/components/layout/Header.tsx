@@ -176,20 +176,22 @@ export default function Header() {
                 )}
               </div>
             ) : (
-              <Link
-                href="/login"
-                className="ml-1 text-sm font-medium px-3.5 py-2 rounded-lg text-[#56616F] hover:text-[#131A24] hover:bg-[#F2F4F9] transition-colors"
-              >
-                Log in
-              </Link>
+              <>
+                <Link
+                  href="/login"
+                  className="ml-1 text-sm font-medium px-3.5 py-2 rounded-lg text-[#56616F] hover:text-[#131A24] hover:bg-[#F2F4F9] transition-colors"
+                >
+                  Log in
+                </Link>
+                <Link
+                  href="/signup"
+                  className="ml-1 inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-[#F97316] hover:bg-[#EA580C] px-4 py-2 rounded-lg shadow-[0_1px_2px_rgba(234,88,12,0.25)] hover:shadow-[0_6px_16px_rgba(249,115,22,0.28)] transition-all"
+                >
+                  Sign up free <ArrowRight size={14} />
+                </Link>
+              </>
             )
           )}
-          <Link
-            href="/screener"
-            className="ml-1 inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-[#F97316] hover:bg-[#EA580C] px-4 py-2 rounded-lg shadow-[0_1px_2px_rgba(234,88,12,0.25)] hover:shadow-[0_6px_16px_rgba(249,115,22,0.28)] transition-all"
-          >
-            Start screening <ArrowRight size={14} />
-          </Link>
         </nav>
 
         {/* Mobile hamburger */}
@@ -240,10 +242,10 @@ export default function Header() {
             )
           )}
           <Link
-            href="/screener"
+            href={user ? '/screener' : '/signup'}
             className="flex items-center justify-center gap-1.5 mt-2 px-4 py-3 rounded-xl text-sm font-semibold text-white bg-[#F97316]"
           >
-            Start screening <ArrowRight size={14} />
+            {user ? 'Start screening' : 'Sign up free'} <ArrowRight size={14} />
           </Link>
         </div>
       )}
