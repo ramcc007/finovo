@@ -58,13 +58,13 @@ function Sparkline({ id, positive }: { id: string; positive: boolean }) {
   );
 }
 
-/* Illustrative examples for the hero preview slider — not live prices */
-const HERO_PREVIEWS = [
-  { symbol: 'TCS', name: 'Tata Consultancy Services', sector: 'IT Services', price: '₹3,842.50', changePct: 1.11, pe: '28.4', roe: '52.3%', de: '0.02' },
-  { symbol: 'RELIANCE', name: 'Reliance Industries', sector: 'Energy', price: '₹2,945.20', changePct: 0.68, pe: '24.1', roe: '9.8%', de: '0.35' },
-  { symbol: 'HDFCBANK', name: 'HDFC Bank', sector: 'Banking', price: '₹1,687.40', changePct: 0.42, pe: '19.6', roe: '17.2%', de: '6.80' },
-  { symbol: 'INFY', name: 'Infosys', sector: 'IT Services', price: '₹1,842.75', changePct: -0.25, pe: '26.8', roe: '31.4%', de: '0.09' },
-];
+const HERO_PREVIEW_SYMBOLS = ['TCS', 'RELIANCE', 'HDFCBANK', 'INFY'];
+
+interface HeroPreview {
+  symbol: string; name: string; sector: string | null;
+  price: number | null; changePct: number | null;
+  pe: number | null; roe: number | null; de: number | null;
+}
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'gainers' | 'losers'>('gainers');
@@ -83,11 +83,39 @@ export default function Home() {
     return () => { alive = false; };
   }, []);
 
+  const [heroPreviews, setHeroPreviews] = useState<HeroPreview[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetch(`/api/screener?symbols=${HERO_PREVIEW_SYMBOLS.join(',')}&per_page=${HERO_PREVIEW_SYMBOLS.length}`)
+      .then(r => r.json())
+      .then(d => {
+        if (!alive) return;
+        const bySymbol = new Map((d.data ?? []).map((r: Record<string, unknown>) => [r.symbol, r]));
+        const ordered = HERO_PREVIEW_SYMBOLS
+          .map(sym => bySymbol.get(sym) as Record<string, unknown> | undefined)
+          .filter((r): r is Record<string, unknown> => !!r)
+          .map(r => ({
+            symbol: r.symbol as string,
+            name: r.name as string,
+            sector: r.sector as string | null,
+            price: r.price as number | null,
+            changePct: r.change_pct as number | null,
+            pe: r.pe as number | null,
+            roe: r.roe as number | null,
+            de: r.debt_to_equity as number | null,
+          }));
+        setHeroPreviews(ordered.length > 0 ? ordered : null);
+      })
+      .catch(() => { if (alive) setHeroPreviews(null); });
+    return () => { alive = false; };
+  }, []);
+
   const [previewIdx, setPreviewIdx] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setPreviewIdx(i => (i + 1) % HERO_PREVIEWS.length), 4000);
+    if (!heroPreviews || heroPreviews.length === 0) return;
+    const t = setInterval(() => setPreviewIdx(i => (i + 1) % heroPreviews.length), 4000);
     return () => clearInterval(t);
-  }, []);
+  }, [heroPreviews]);
 
   useEffect(() => {
     const q = query.trim();
@@ -128,11 +156,6 @@ export default function Home() {
 
             {/* Left: copy */}
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-[#E6EAF1] bg-white px-3 py-1.5 mb-7 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#15A05B]" />
-                <span className="eyebrow text-[#56616F]">Free forever · NSE &amp; BSE</span>
-              </div>
-
               <h1 className="h-display text-[#131A24] mb-5">
                 Indian equities,{' '}
                 <br className="hidden sm:block" />
@@ -219,9 +242,9 @@ export default function Home() {
 
             {/* Right: product preview */}
             <Reveal delay={120} className="hidden lg:block">
-              {(() => {
-                const pv = HERO_PREVIEWS[previewIdx];
-                const up = pv.changePct >= 0;
+              {heroPreviews && heroPreviews.length > 0 ? (() => {
+                const pv = heroPreviews[previewIdx] ?? heroPreviews[0];
+                const up = (pv.changePct ?? 0) >= 0;
                 return (
                   <div className="relative">
                     <div className="absolute -inset-5 bg-gradient-to-br from-[#F97316]/15 via-[#F97316]/5 to-transparent rounded-3xl blur-2xl" />
@@ -231,15 +254,17 @@ export default function Home() {
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="text-base font-bold text-[#0D1117]">{pv.symbol}</span>
-                            <span className="text-[10px] bg-[#FFF7ED] text-[#F97316] px-2 py-0.5 rounded font-semibold">{pv.sector}</span>
+                            {pv.sector && <span className="text-[10px] bg-[#FFF7ED] text-[#F97316] px-2 py-0.5 rounded font-semibold">{pv.sector}</span>}
                           </div>
                           <div className="text-xs text-[#8A96A8]">{pv.name}</div>
                         </div>
                         <div className="text-right">
-                          <div className="tnum text-base font-bold text-[#0D1117]">{pv.price}</div>
-                          <div className={cn('tnum text-xs font-semibold', up ? 'text-[#16A34A]' : 'text-[#DC2626]')}>
-                            {up ? '▲' : '▼'} {Math.abs(pv.changePct).toFixed(2)}%
-                          </div>
+                          <div className="tnum text-base font-bold text-[#0D1117]">{pv.price != null ? `₹${formatPrice(pv.price)}` : '—'}</div>
+                          {pv.changePct != null && (
+                            <div className={cn('tnum text-xs font-semibold', up ? 'text-[#16A34A]' : 'text-[#DC2626]')}>
+                              {up ? '▲' : '▼'} {Math.abs(pv.changePct).toFixed(2)}%
+                            </div>
+                          )}
                         </div>
                       </div>
                       {/* sparkline */}
@@ -249,9 +274,9 @@ export default function Home() {
                       {/* metrics grid */}
                       <div className="grid grid-cols-3 divide-x divide-[#EDF0F7] border-t border-[#EDF0F7] mt-3">
                         {[
-                          { k: 'P/E', v: pv.pe },
-                          { k: 'ROE', v: pv.roe },
-                          { k: 'D/E', v: pv.de },
+                          { k: 'P/E', v: pv.pe != null ? pv.pe.toFixed(1) : '—' },
+                          { k: 'ROE', v: pv.roe != null ? `${pv.roe.toFixed(1)}%` : '—' },
+                          { k: 'D/E', v: pv.de != null ? pv.de.toFixed(2) : '—' },
                         ].map(m => (
                           <div key={m.k} className="px-4 py-3 text-center">
                             <div className="text-[10px] uppercase tracking-wide text-[#8A96A8] mb-0.5">{m.k}</div>
@@ -267,7 +292,7 @@ export default function Home() {
 
                     {/* slider dots */}
                     <div className="flex items-center justify-center gap-1.5 mt-4">
-                      {HERO_PREVIEWS.map((p, i) => (
+                      {heroPreviews.map((p, i) => (
                         <button
                           key={p.symbol}
                           onClick={() => setPreviewIdx(i)}
@@ -281,27 +306,13 @@ export default function Home() {
                     </div>
                   </div>
                 );
-              })()}
+              })() : (
+                <div className="h-[340px] rounded-2xl border border-[#E9EDF4] bg-white/60 animate-pulse" />
+              )}
             </Reveal>
           </div>
         </div>
 
-        {/* Trust strip */}
-        <div className="relative border-t border-[#E9EDF4] bg-white/40">
-          <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 grid grid-cols-2 md:grid-cols-4 gap-6">
-            {[
-              { v: '5,000+', l: 'Listed companies' },
-              { v: '47+', l: 'Financial metrics' },
-              { v: '10Y', l: 'Historical data' },
-              { v: '₹0', l: 'Cost, forever' },
-            ].map(s => (
-              <div key={s.l} className="text-center md:text-left">
-                <div className="tnum text-2xl font-bold text-[#131A24]">{s.v}</div>
-                <div className="text-xs text-[#8A94A4] mt-0.5">{s.l}</div>
-              </div>
-            ))}
-          </div>
-        </div>
       </section>
 
       {/* ───────────────── LATEST MARKET ───────────────── */}
