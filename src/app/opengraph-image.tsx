@@ -51,7 +51,7 @@ export default async function OGImage() {
           <div style={{ display: 'flex', color: '#fff', fontSize: 56, fontWeight: 700 }}>Scripwise</div>
         </div>
         <div style={{ display: 'flex', color: '#fff', fontSize: 44, fontWeight: 700, maxWidth: 920, lineHeight: 1.25 }}>
-          Free Indian Stock Screener &amp; Research
+          Free Indian Stocks Screener &amp; Research Tool
         </div>
         <div style={{ display: 'flex', color: 'rgba(255,255,255,0.55)', fontSize: 26, marginTop: 24, maxWidth: 860 }}>
           5,000+ NSE &amp; BSE companies · financial ratios · Scripwise Score · 100% free

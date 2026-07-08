@@ -23,7 +23,7 @@ const BASE_URL = 'https://www.scripwise.co.in';
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: 'Scripwise — Free Indian Stock Screener & Research',
+    default: 'Scripwise | Free Indian Stocks Screener & Research Tool',
     template: '%s | Scripwise',
   },
   description: 'Screen, analyse and research 5000+ NSE & BSE listed Indian stocks for free. Financial ratios, P&L statements, shareholding patterns, and custom screener.',
@@ -40,12 +40,12 @@ export const metadata: Metadata = {
     locale: 'en_IN',
     url: BASE_URL,
     siteName: 'Scripwise',
-    title: 'Scripwise — Free Indian Stock Screener & Research',
+    title: 'Scripwise | Free Indian Stocks Screener & Research Tool',
     description: 'Screen, analyse and research 5000+ NSE & BSE listed stocks. Free fundamental data, financial ratios, and custom screener.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Scripwise — Free Indian Stock Screener',
+    title: 'Scripwise | Free Indian Stocks Screener & Research Tool',
     description: 'Screen and research 5000+ Indian stocks for free.',
   },
 };
