@@ -100,7 +100,11 @@ export default function SignupPage() {
     setLoading(false);
 
     if (signUpError) {
-      setError(signUpError.message);
+      setError(
+        /rate limit/i.test(signUpError.message)
+          ? "We're sending too many confirmation emails right now — please try again in a few minutes."
+          : signUpError.message
+      );
       return;
     }
 

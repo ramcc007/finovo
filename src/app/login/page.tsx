@@ -54,7 +54,11 @@ export default function LoginPage() {
     });
     setResetLoading(false);
     if (resetError) {
-      setError(resetError.message);
+      setError(
+        /rate limit/i.test(resetError.message)
+          ? "We're sending too many emails right now — please try again in a few minutes."
+          : resetError.message
+      );
       return;
     }
     setResetSent(true);
