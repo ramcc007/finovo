@@ -62,10 +62,6 @@ export default function SignupPage() {
       setError(emailError);
       return;
     }
-    if (!city.trim()) {
-      setError('Enter your city.');
-      return;
-    }
     if (password.length < 8) {
       setError('Password must be at least 8 characters.');
       return;
@@ -96,7 +92,7 @@ export default function SignupPage() {
         data: {
           first_name: firstName.trim(),
           last_name: lastName.trim(),
-          city: city.trim(),
+          city: city.trim() || null,
           investor_profile: investorProfile,
         },
       },
@@ -195,12 +191,11 @@ export default function SignupPage() {
           </div>
 
           <div>
-            <label className="block text-xs text-[#8A96A8] mb-1.5">City</label>
+            <label className="block text-xs text-[#8A96A8] mb-1.5">City <span className="text-[#8A96A8] font-normal">(optional)</span></label>
             <div className="flex items-center gap-2.5 bg-[#F4F6FA] border border-[#E2E8F0] rounded-[8px] px-3.5 py-2.5 focus-within:border-[#F97316] transition-colors">
               <MapPin size={15} className="text-[#8A96A8] shrink-0" />
               <input
                 type="text"
-                required
                 value={city}
                 onChange={e => setCity(e.target.value)}
                 placeholder="Mumbai"
