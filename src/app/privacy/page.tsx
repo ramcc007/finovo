@@ -37,7 +37,7 @@ export default function PrivacyPage() {
         <section>
           <h2 className="text-lg font-semibold text-[#0D1117] mb-3">Cookies</h2>
           <p className="text-sm">
-            We use essential cookies to maintain your session preferences (e.g., selected filters, watchlist). If you accept our cookie banner, we also use Google Analytics to understand anonymous, aggregate usage of the site — you can decline this at any time from the cookie banner. We do not use advertising cookies. Third-party services we use (Vercel hosting, Google Analytics) may set their own cookies governed by their respective privacy policies.
+            We use essential cookies to maintain your session preferences (e.g., selected filters, watchlist), and Google Analytics cookies to understand anonymous, aggregate usage of the site. We do not use advertising cookies. Third-party services we use (Vercel hosting, Google Analytics) may set their own cookies governed by their respective privacy policies. You can disable cookies in your browser settings at any time, though some features may not work correctly without them.
           </p>
         </section>
 
