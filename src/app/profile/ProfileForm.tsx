@@ -32,6 +32,7 @@ export default function ProfileForm({ nonce }: { nonce?: string }) {
   const [requestSent, setRequestSent] = useState(false);
 
   const [recoveryMode, setRecoveryMode] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [recoverySaving, setRecoverySaving] = useState(false);
@@ -116,6 +117,10 @@ export default function ProfileForm({ nonce }: { nonce?: string }) {
   const handleSetNewPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setRecoveryError(null);
+    if (!currentPassword) {
+      setRecoveryError('Enter your current password.');
+      return;
+    }
     const passwordError = validatePassword(newPassword);
     if (passwordError) {
       setRecoveryError(passwordError);
@@ -125,7 +130,22 @@ export default function ProfileForm({ nonce }: { nonce?: string }) {
       setRecoveryError('Passwords do not match.');
       return;
     }
+    if (!user?.email) return;
     setRecoverySaving(true);
+
+    // Re-verify identity with the current password before honoring the
+    // recovery session — the emailed link alone shouldn't be sufficient
+    // if it's ever intercepted or the session is left open on a shared device.
+    const { error: verifyError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: currentPassword,
+    });
+    if (verifyError) {
+      setRecoverySaving(false);
+      setRecoveryError('Current password is incorrect.');
+      return;
+    }
+
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     setRecoverySaving(false);
     if (error) {
@@ -134,6 +154,7 @@ export default function ProfileForm({ nonce }: { nonce?: string }) {
     }
     setRecoverySaved(true);
     setRecoveryMode(false);
+    setCurrentPassword('');
     setNewPassword('');
     setConfirmNewPassword('');
   };
@@ -160,6 +181,21 @@ export default function ProfileForm({ nonce }: { nonce?: string }) {
             <h2 className="text-sm font-semibold text-[#0D1117] mb-1">Set your new password</h2>
             <p className="text-xs text-[#4A5568] mb-4">You&apos;ve confirmed this change via email — choose a new password below.</p>
             <form onSubmit={handleSetNewPassword} className="space-y-3">
+              <div>
+                <label className="block text-xs text-[#8A96A8] mb-1.5">Current password</label>
+                <div className="flex items-center gap-2.5 bg-[#F4F6FA] border border-[#E2E8F0] rounded-[8px] px-3.5 py-2.5 focus-within:border-[#F97316] transition-colors">
+                  <Lock size={15} className="text-[#8A96A8] shrink-0" />
+                  <input
+                    type="password"
+                    required
+                    autoComplete="current-password"
+                    value={currentPassword}
+                    onChange={e => setCurrentPassword(e.target.value)}
+                    placeholder="Enter your current password"
+                    className="bg-transparent text-sm outline-none w-full placeholder:text-[#8A96A8]"
+                  />
+                </div>
+              </div>
               <div>
                 <label className="block text-xs text-[#8A96A8] mb-1.5">New password</label>
                 <div className="flex items-center gap-2.5 bg-[#F4F6FA] border border-[#E2E8F0] rounded-[8px] px-3.5 py-2.5 focus-within:border-[#F97316] transition-colors">
