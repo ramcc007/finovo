@@ -94,7 +94,7 @@ export default function Header() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 shrink-0">
           <Logo className="w-8 h-8 rounded-[9px] shadow-[0_2px_8px_rgba(249,115,22,0.30)]" />
-          <span className="font-bold text-[#131A24] text-[18px] tracking-tight">Scripwise</span>
+          <span className="hidden sm:inline font-bold text-[#131A24] text-[18px] tracking-tight">Scripwise</span>
         </Link>
 
         {/* Search */}
@@ -209,7 +209,7 @@ export default function Header() {
 
         {/* Mobile hamburger */}
         <button
-          className="md:hidden ml-auto text-[#56616F] hover:text-[#131A24] p-1.5"
+          className="md:hidden ml-auto text-[#56616F] hover:text-[#131A24] p-2"
           onClick={() => setMobileOpen(v => !v)}
           aria-label="Menu"
         >

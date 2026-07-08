@@ -147,7 +147,7 @@ function ComparePageInner() {
           {symbols.map(s => (
             <span key={s} className="inline-flex items-center gap-1.5 bg-white border border-[#E2E8F0] rounded-full pl-3 pr-1.5 py-1 text-sm font-medium text-[#0D1117]">
               {s}
-              <button onClick={() => removeSymbol(s)} className="text-[#8A96A8] hover:text-[#DC2626] p-0.5">
+              <button onClick={() => removeSymbol(s)} className="text-[#8A96A8] hover:text-[#DC2626] p-2 -m-1">
                 <X size={13} />
               </button>
             </span>

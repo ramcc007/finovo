@@ -353,6 +353,7 @@ export default function Home() {
                   ))}
                 </div>
               </div>
+              <div className="overflow-x-auto">
               <table className="data-table">
                 <thead>
                   <tr>
@@ -388,6 +389,7 @@ export default function Home() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           </Reveal>
 

@@ -113,7 +113,7 @@ function WatchlistPageContent() {
                     <td>
                       <button
                         onClick={() => remove(s.symbol)}
-                        className="text-[#8A96A8] hover:text-[#DC2626] transition-colors p-1.5"
+                        className="text-[#8A96A8] hover:text-[#DC2626] transition-colors p-2.5"
                         aria-label={`Remove ${s.symbol} from watchlist`}
                       >
                         <Trash2 size={14} />

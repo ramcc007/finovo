@@ -187,8 +187,8 @@ export default function StockPage() {
               </div>
 
               <div className="flex flex-col items-start md:items-end gap-2">
-                <div className="flex items-center gap-3">
-                  <span className="num text-3xl font-bold text-[#0D1117]">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="num text-2xl sm:text-3xl font-bold text-[#0D1117]">
                     ₹ {formatPrice(q?.price ?? 0)}
                   </span>
                   <ChangeBadge value={q?.change_pct ?? 0} />

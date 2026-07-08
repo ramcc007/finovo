@@ -333,7 +333,7 @@ function ScreenerPageInner() {
                       <button onClick={() => applySavedScreen(s)} className="text-sm text-left text-[#0D1117] font-medium flex-1 truncate">
                         {s.name}
                       </button>
-                      <button onClick={() => removeScreen(s.id)} className="text-[#8A96A8] hover:text-[#DC2626] p-1 shrink-0" aria-label={`Delete ${s.name}`}>
+                      <button onClick={() => removeScreen(s.id)} className="text-[#8A96A8] hover:text-[#DC2626] p-2 -m-1 shrink-0" aria-label={`Delete ${s.name}`}>
                         <Trash2 size={13} />
                       </button>
                     </div>

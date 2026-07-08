@@ -190,10 +190,10 @@ export default function PriceChart({ symbol, currentPrice }: PriceChartProps) {
 
   return (
     <div className="card p-5">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <div className="flex items-center gap-3 flex-wrap">
           {/* Period buttons */}
-          <div className="flex gap-1">
+          <div className="flex gap-1 flex-wrap">
             {PERIODS.map(p => (
               <button
                 key={p}

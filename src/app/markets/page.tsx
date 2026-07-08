@@ -177,7 +177,7 @@ function MarketsPageContent() {
             {/* Market Breadth */}
             <div className="card-plain p-6">
               <h3 className="text-sm font-semibold text-[#0D1117] mb-4">Market Breadth</h3>
-              <div className="grid grid-cols-3 gap-2 text-center mb-4">
+              <div className="grid grid-cols-3 gap-1.5 sm:gap-2 text-center mb-4">
                 {[
                   { label: 'Advancing', value: breadth?.advances, color: '#16A34A' },
                   { label: 'Declining', value: breadth?.declines, color: '#DC2626' },

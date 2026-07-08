@@ -32,9 +32,9 @@ export default function FinancialTrendChart({ data, periodKey, revKey, npKey }: 
         </div>
       </div>
 
-      <div className="flex items-end gap-3 sm:gap-5 h-48 px-1">
+      <div className="flex items-end gap-3 sm:gap-5 h-48 px-1 overflow-x-auto">
         {rows.map(r => (
-          <div key={r.period} className="flex-1 flex flex-col items-center justify-end h-full group min-w-0">
+          <div key={r.period} className="flex-1 flex flex-col items-center justify-end h-full group min-w-[32px]">
             <div className="flex items-end gap-0.5 h-full w-full justify-center">
               <div
                 className="w-1/2 max-w-[18px] bg-[#93C5FD] rounded-t-sm transition-all group-hover:bg-[#60A5FA]"
