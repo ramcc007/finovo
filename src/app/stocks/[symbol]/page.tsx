@@ -24,6 +24,7 @@ interface StockData {
     open: number; high: number; low: number; prev_close: number; volume: number;
   };
   ratios: {
+    date?: string;
     pe: number; pb: number; ev_ebitda: number; dividend_yield: number; peg_ratio: number;
     roe: number; roce: number; net_margin: number; operating_margin: number;
     debt_to_equity: number; current_ratio: number; quick_ratio: number;
@@ -252,6 +253,11 @@ export default function StockPage() {
 
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
         <AdviceDisclaimer />
+        {r?.date && (
+          <p className="text-[11px] text-[#8A96A8] -mt-1 mb-4">
+            Fundamentals &amp; ratios as of latest reported period ({formatTradeDate(r.date)}) · price at last market close
+          </p>
+        )}
 
         {/* OVERVIEW */}
         {activeTab === 'Overview' && (

@@ -35,6 +35,19 @@ export function formatTradeDate(iso: string | null | undefined): string {
   return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+/** Render an ISO timestamp as a relative "Xm ago" / "just now" label — used
+ *  by the live-price indicators (ticker, hero preview) so a stale feed is
+ *  visibly stale rather than silently looking as fresh as a just-loaded one. */
+export function timeAgoLabel(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const secs = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+  if (secs < 60) return 'just now';
+  const mins = Math.round(secs / 60);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.round(mins / 60);
+  return `${hours}h ago`;
+}
+
 export function formatChange(value: number): string {
   const sign = value >= 0 ? '+' : '';
   return `${sign}${value.toFixed(2)}%`;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { cn } from '@/lib/utils';
+import { cn, timeAgoLabel } from '@/lib/utils';
 
 interface Index {
   symbol: string;
@@ -11,16 +11,31 @@ interface Index {
   change_pct: number | null;
 }
 
+// Re-poll often enough to feel live without hammering the DB — the
+// underlying NSE-quotes cron itself only writes new rows every 5 min
+// during market hours, so anything faster than that just re-confirms
+// the same numbers.
+const POLL_MS = 30_000;
+
 export default function TickerBar() {
   const [items, setItems] = useState<Index[]>([]);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
-    fetch('/api/indices')
-      .then(r => r.json())
-      .then(d => { if (alive) setItems(d.indices ?? []); })
-      .catch(() => { if (alive) setItems([]); });
-    return () => { alive = false; };
+    const load = () => {
+      fetch('/api/live/indices')
+        .then(r => r.json())
+        .then(d => {
+          if (!alive) return;
+          setItems(d.indices ?? []);
+          setUpdatedAt(d.updatedAt ?? null);
+        })
+        .catch(() => { if (alive) setItems([]); });
+    };
+    load();
+    const t = setInterval(load, POLL_MS);
+    return () => { alive = false; clearInterval(t); };
   }, []);
 
   // Nothing real to show yet — slim placeholder rather than fake index values.
@@ -32,6 +47,15 @@ export default function TickerBar() {
 
   return (
     <div className="bg-white text-[#131A24] h-9 flex items-center overflow-hidden border-b border-[#E9EDF4]">
+      <span className="hidden md:inline-flex items-center gap-1.5 px-3.5 shrink-0 border-r border-[#EEF1F7]">
+        <span className="relative flex h-1.5 w-1.5">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#15A05B] opacity-75" />
+          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#15A05B]" />
+        </span>
+        <span className="text-[10px] font-semibold text-[#56616F] uppercase tracking-wide whitespace-nowrap">
+          Live · {timeAgoLabel(updatedAt)}
+        </span>
+      </span>
       <div className="flex animate-ticker whitespace-nowrap">
         {loop.map((idx, i) => {
           const pos = (idx.change_pct ?? 0) >= 0;

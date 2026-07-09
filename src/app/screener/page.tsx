@@ -312,6 +312,9 @@ function ScreenerPageInner() {
           <div>
             <h1 className="h-section text-[#0D1117]">Stock Explorer</h1>
             <p className="text-sm text-[#4A5568] mt-1.5">Filter 5,000+ NSE &amp; BSE companies across 47 metrics.</p>
+            <p className="text-[11px] text-[#8A96A8] mt-1">
+              Fundamentals from each company&apos;s latest reported results · price at last market close
+            </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {activeFilterCount > 0 && (

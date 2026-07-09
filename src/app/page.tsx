@@ -11,7 +11,7 @@ import TickerBar from '@/components/layout/TickerBar';
 import Reveal from '@/components/ui/Reveal';
 import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
 import { PRE_BUILT_SCREENS } from '@/lib/mock-data';
-import { cn, formatPrice, formatVolume, formatCrores, formatTradeDate } from '@/lib/utils';
+import { cn, formatPrice, formatVolume, formatCrores, formatTradeDate, timeAgoLabel } from '@/lib/utils';
 
 interface SearchHit { symbol: string; name: string; sector: string }
 
@@ -84,6 +84,9 @@ export default function Home() {
   }, []);
 
   const [heroPreviews, setHeroPreviews] = useState<HeroPreview[] | null>(null);
+  const [heroUpdatedAt, setHeroUpdatedAt] = useState<string | null>(null);
+
+  // Fundamentals (PE/ROE/D-E, name, sector) barely move intraday — fetch once.
   useEffect(() => {
     let alive = true;
     fetch(`/api/screener?symbols=${HERO_PREVIEW_SYMBOLS.join(',')}&per_page=${HERO_PREVIEW_SYMBOLS.length}`)
@@ -108,6 +111,30 @@ export default function Home() {
       })
       .catch(() => { if (alive) setHeroPreviews(null); });
     return () => { alive = false; };
+  }, []);
+
+  // Price + change % move constantly — poll the uncached live-quotes route
+  // separately so these 4 stay current without re-scanning fundamentals.
+  useEffect(() => {
+    let alive = true;
+    const loadLive = () => {
+      fetch(`/api/live/quotes?symbols=${HERO_PREVIEW_SYMBOLS.join(',')}`)
+        .then(r => r.json())
+        .then(d => {
+          if (!alive) return;
+          const bySymbol = new Map((d.quotes ?? []).map((q: Record<string, unknown>) => [q.symbol, q]));
+          setHeroPreviews(prev => prev && prev.map(p => {
+            const q = bySymbol.get(p.symbol) as Record<string, unknown> | undefined;
+            return q ? { ...p, price: (q.price as number) ?? p.price, changePct: (q.change_pct as number) ?? p.changePct } : p;
+          }));
+          setHeroUpdatedAt(d.updatedAt ?? null);
+        })
+        .catch(() => {});
+    };
+    const t = setInterval(loadLive, 30_000);
+    // Give the fundamentals fetch a moment to populate heroPreviews first.
+    const initial = setTimeout(loadLive, 1200);
+    return () => { alive = false; clearInterval(t); clearTimeout(initial); };
   }, []);
 
   const [previewIdx, setPreviewIdx] = useState(0);
@@ -285,7 +312,13 @@ export default function Home() {
                         ))}
                       </div>
                       <div className="px-5 py-3 bg-[#FAFBFD] border-t border-[#EDF0F7] flex items-center justify-between">
-                        <span className="text-xs text-[#4A5568]">10-year financials available</span>
+                        <span className="inline-flex items-center gap-1.5 text-xs text-[#4A5568]">
+                          <span className="relative flex h-1.5 w-1.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#15A05B] opacity-75" />
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#15A05B]" />
+                          </span>
+                          Live price{heroUpdatedAt ? ` · ${timeAgoLabel(heroUpdatedAt)}` : ''}
+                        </span>
                         <ArrowUpRight size={14} className="text-[#F97316]" />
                       </div>
                     </div>
