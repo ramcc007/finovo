@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Loader2, Activity, Info } from 'lucide-react';
+import { useAuth } from '@/lib/AuthProvider';
 import PulseGauge from '@/components/pulse/PulseGauge';
 import { formatTradeDate } from '@/lib/utils';
 import type { PulseResult } from '@/lib/pulse';
@@ -9,16 +11,31 @@ import type { PulseResult } from '@/lib/pulse';
 type PulseData = ({ available: true } & PulseResult) | { available: false };
 
 export default function PulsePage() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [data, setData] = useState<PulseData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!authLoading && !user) router.push('/login');
+  }, [authLoading, user, router]);
+
+  useEffect(() => {
+    if (!user) return;
     fetch('/api/pulse')
       .then(r => r.json())
       .then((d: PulseData) => setData(d))
       .catch(() => setData({ available: false }))
       .finally(() => setLoading(false));
-  }, []);
+  }, [user]);
+
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <Loader2 size={22} className="animate-spin text-[#8A96A8]" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F4F6FA]">
