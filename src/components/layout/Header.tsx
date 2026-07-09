@@ -12,6 +12,7 @@ import Logo from './Logo';
 const NAV = [
   { href: '/screener', label: 'Explorer' },
   { href: '/markets', label: 'Markets' },
+  { href: '/pulse', label: 'Pulse' },
   { href: '/screens', label: 'Screens' },
   { href: '/compare', label: 'Compare' },
   { href: '/calendar', label: 'Calendar' },
