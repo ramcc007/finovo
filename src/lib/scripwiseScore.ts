@@ -7,12 +7,48 @@
 
 export type MetricStatus = 'good' | 'warn' | 'bad' | 'na';
 
+export type ScoreCategory = 'Profitability' | 'Growth' | 'Valuation' | 'Financial Health' | 'Shareholder';
+
 export interface ScoreLine {
   label: string;
+  category: ScoreCategory;
   status: MetricStatus;
   detail: string;
   points: number;
   maxPoints: number;
+}
+
+export interface CategorySummary {
+  category: ScoreCategory;
+  points: number;
+  maxPoints: number;
+  pct: number; // 0..100, of the graded (non-NA) portion
+  graded: boolean; // false when every line in the category is NA
+}
+
+/** Roll the per-metric breakdown up into the five headline categories, each
+ *  with its own 0–100 score — the basis for the Scorecard dials. */
+export function summariseByCategory(breakdown: ScoreLine[]): CategorySummary[] {
+  const order: ScoreCategory[] = ['Profitability', 'Growth', 'Valuation', 'Financial Health', 'Shareholder'];
+  return order.map(category => {
+    const lines = breakdown.filter(l => l.category === category);
+    const graded = lines.filter(l => l.status !== 'na');
+    const points = graded.reduce((s, l) => s + l.points, 0);
+    const maxPoints = graded.reduce((s, l) => s + l.maxPoints, 0);
+    return {
+      category,
+      points,
+      maxPoints,
+      pct: maxPoints > 0 ? Math.round((points / maxPoints) * 100) : 0,
+      graded: graded.length > 0,
+    };
+  });
+}
+
+/** The subset of metrics scoring 'bad' — surfaced as an explicit red-flags
+ *  panel so the risks aren't buried inside a single headline number. */
+export function redFlags(breakdown: ScoreLine[]): ScoreLine[] {
+  return breakdown.filter(l => l.status === 'bad');
 }
 
 export interface ScoreResult {
@@ -53,6 +89,7 @@ export function computeScripwiseScore(input: ScoreInput): ScoreResult {
     const [status, points] = tier(input.roe, [20, 15, 10], [15, 11, 7, 2]);
     breakdown.push({
       label: 'Return on Equity',
+      category: 'Profitability',
       status,
       detail: input.roe != null ? `ROE ${input.roe.toFixed(1)}%` : 'ROE not reported',
       points, maxPoints: 15,
@@ -62,6 +99,7 @@ export function computeScripwiseScore(input: ScoreInput): ScoreResult {
     const [status, points] = tier(input.roce, [20, 15, 10], [15, 11, 7, 2]);
     breakdown.push({
       label: 'Return on Capital Employed',
+      category: 'Profitability',
       status,
       detail: input.roce != null ? `ROCE ${input.roce.toFixed(1)}%` : 'ROCE not reported',
       points, maxPoints: 15,
@@ -73,6 +111,7 @@ export function computeScripwiseScore(input: ScoreInput): ScoreResult {
     const [status, points] = tier(input.revenueGrowth1Y, [15, 8, 0], [12, 8, 4, 0]);
     breakdown.push({
       label: 'Revenue Growth (1Y)',
+      category: 'Growth',
       status,
       detail: input.revenueGrowth1Y != null ? `${input.revenueGrowth1Y >= 0 ? '+' : ''}${input.revenueGrowth1Y.toFixed(1)}% YoY` : 'Not reported',
       points, maxPoints: 12,
@@ -82,6 +121,7 @@ export function computeScripwiseScore(input: ScoreInput): ScoreResult {
     const [status, points] = tier(input.profitGrowth1Y, [15, 8, 0], [13, 9, 4, 0]);
     breakdown.push({
       label: 'Profit Growth (1Y)',
+      category: 'Growth',
       status,
       detail: input.profitGrowth1Y != null ? `${input.profitGrowth1Y >= 0 ? '+' : ''}${input.profitGrowth1Y.toFixed(1)}% YoY` : 'Not reported',
       points, maxPoints: 13,
@@ -91,7 +131,7 @@ export function computeScripwiseScore(input: ScoreInput): ScoreResult {
   // ── Valuation vs. sector (20) ────────────────────────────────
   const valuationLine = (label: string, value: number | null, sectorAvg: number | null, maxPoints: number): ScoreLine => {
     if (value == null || sectorAvg == null || sectorAvg <= 0) {
-      return { label, status: 'na', detail: 'Not enough sector data', points: 0, maxPoints };
+      return { label, category: 'Valuation', status: 'na', detail: 'Not enough sector data', points: 0, maxPoints };
     }
     const ratio = value / sectorAvg;
     let status: MetricStatus, points: number;
@@ -99,7 +139,7 @@ export function computeScripwiseScore(input: ScoreInput): ScoreResult {
     else if (ratio <= 1.0) { status = 'good'; points = Math.round(maxPoints * 0.7); }
     else if (ratio <= 1.3) { status = 'warn'; points = Math.round(maxPoints * 0.4); }
     else { status = 'bad'; points = Math.round(maxPoints * 0.1); }
-    return { label, status, detail: `${value.toFixed(1)}x vs sector avg ${sectorAvg.toFixed(1)}x`, points, maxPoints };
+    return { label, category: 'Valuation', status, detail: `${value.toFixed(1)}x vs sector avg ${sectorAvg.toFixed(1)}x`, points, maxPoints };
   };
   breakdown.push(valuationLine('P/E vs. Sector', input.pe, input.sectorAvgPe, 10));
   breakdown.push(valuationLine('P/B vs. Sector', input.pb, input.sectorAvgPb, 10));
@@ -107,21 +147,22 @@ export function computeScripwiseScore(input: ScoreInput): ScoreResult {
   // ── Financial health (15) ────────────────────────────────────
   {
     if (input.debtToEquity == null) {
-      breakdown.push({ label: 'Debt / Equity', status: 'na', detail: 'Not reported', points: 0, maxPoints: 8 });
+      breakdown.push({ label: 'Debt / Equity', category: 'Financial Health', status: 'na', detail: 'Not reported', points: 0, maxPoints: 8 });
     } else if (input.debtToEquity <= 0.3) {
-      breakdown.push({ label: 'Debt / Equity', status: 'good', detail: `${input.debtToEquity.toFixed(2)}x — low leverage`, points: 8, maxPoints: 8 });
+      breakdown.push({ label: 'Debt / Equity', category: 'Financial Health', status: 'good', detail: `${input.debtToEquity.toFixed(2)}x — low leverage`, points: 8, maxPoints: 8 });
     } else if (input.debtToEquity <= 0.7) {
-      breakdown.push({ label: 'Debt / Equity', status: 'good', detail: `${input.debtToEquity.toFixed(2)}x — moderate`, points: 6, maxPoints: 8 });
+      breakdown.push({ label: 'Debt / Equity', category: 'Financial Health', status: 'good', detail: `${input.debtToEquity.toFixed(2)}x — moderate`, points: 6, maxPoints: 8 });
     } else if (input.debtToEquity <= 1.5) {
-      breakdown.push({ label: 'Debt / Equity', status: 'warn', detail: `${input.debtToEquity.toFixed(2)}x — elevated`, points: 3, maxPoints: 8 });
+      breakdown.push({ label: 'Debt / Equity', category: 'Financial Health', status: 'warn', detail: `${input.debtToEquity.toFixed(2)}x — elevated`, points: 3, maxPoints: 8 });
     } else {
-      breakdown.push({ label: 'Debt / Equity', status: 'bad', detail: `${input.debtToEquity.toFixed(2)}x — high leverage`, points: 0, maxPoints: 8 });
+      breakdown.push({ label: 'Debt / Equity', category: 'Financial Health', status: 'bad', detail: `${input.debtToEquity.toFixed(2)}x — high leverage`, points: 0, maxPoints: 8 });
     }
   }
   {
     const [status, points] = tier(input.currentRatio, [1.5, 1.0, 0.5], [7, 4, 1, 0]);
     breakdown.push({
       label: 'Current Ratio',
+      category: 'Financial Health',
       status,
       detail: input.currentRatio != null ? `${input.currentRatio.toFixed(2)}x` : 'Not reported',
       points, maxPoints: 7,
@@ -133,6 +174,7 @@ export function computeScripwiseScore(input: ScoreInput): ScoreResult {
     const [status, points] = tier(input.dividendYield, [3, 1, 0.01], [5, 3, 1, 0]);
     breakdown.push({
       label: 'Dividend Yield',
+      category: 'Shareholder',
       status,
       detail: input.dividendYield != null ? `${input.dividendYield.toFixed(2)}%` : 'No dividend reported',
       points, maxPoints: 5,
@@ -140,13 +182,13 @@ export function computeScripwiseScore(input: ScoreInput): ScoreResult {
   }
   {
     if (input.pledgePct == null) {
-      breakdown.push({ label: 'Promoter Pledge', status: 'na', detail: 'Not reported', points: 0, maxPoints: 5 });
+      breakdown.push({ label: 'Promoter Pledge', category: 'Shareholder', status: 'na', detail: 'Not reported', points: 0, maxPoints: 5 });
     } else if (input.pledgePct === 0) {
-      breakdown.push({ label: 'Promoter Pledge', status: 'good', detail: 'No shares pledged', points: 5, maxPoints: 5 });
+      breakdown.push({ label: 'Promoter Pledge', category: 'Shareholder', status: 'good', detail: 'No shares pledged', points: 5, maxPoints: 5 });
     } else if (input.pledgePct < 5) {
-      breakdown.push({ label: 'Promoter Pledge', status: 'warn', detail: `${input.pledgePct.toFixed(1)}% pledged`, points: 3, maxPoints: 5 });
+      breakdown.push({ label: 'Promoter Pledge', category: 'Shareholder', status: 'warn', detail: `${input.pledgePct.toFixed(1)}% pledged`, points: 3, maxPoints: 5 });
     } else {
-      breakdown.push({ label: 'Promoter Pledge', status: 'bad', detail: `${input.pledgePct.toFixed(1)}% pledged`, points: 0, maxPoints: 5 });
+      breakdown.push({ label: 'Promoter Pledge', category: 'Shareholder', status: 'bad', detail: `${input.pledgePct.toFixed(1)}% pledged`, points: 0, maxPoints: 5 });
     }
   }
 

@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Gauge, Check, TriangleAlert, X, Minus } from 'lucide-react';
+import { Gauge, Check, TriangleAlert, X, Minus, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { ScoreResult, MetricStatus } from '@/lib/scripwiseScore';
+import { summariseByCategory, redFlags, type ScoreResult, type MetricStatus } from '@/lib/scripwiseScore';
+
+const CATEGORY_COLOR = (pct: number) => (pct >= 70 ? '#16A34A' : pct >= 45 ? '#D97706' : '#DC2626');
 
 const BAND_COLOR: Record<ScoreResult['band'], string> = {
   Excellent: '#16A34A',
@@ -85,7 +87,7 @@ export default function ScripwiseScoreCard({ symbol }: Props) {
     <div className="lg:col-span-3 card-plain p-5 border-l-2 border-l-[#F97316]">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-[#0D1117] text-sm flex items-center gap-1.5">
-          <Gauge size={14} className="text-[#F97316]" /> Scripwise Score
+          <Gauge size={14} className="text-[#F97316]" /> Scripwise Scorecard
         </h3>
       </div>
 
@@ -112,6 +114,45 @@ export default function ScripwiseScoreCard({ symbol }: Props) {
               </p>
             </div>
           </div>
+
+          {/* Category dials */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
+            {summariseByCategory(data.breakdown).map(c => (
+              <div key={c.category} className="rounded-[10px] bg-[#F7F9FC] border border-[#EDF0F7] px-3 py-2.5">
+                <div className="text-[11px] text-[#8A96A8] leading-tight mb-1.5 h-7">{c.category}</div>
+                {c.graded ? (
+                  <>
+                    <div className="text-lg font-bold num" style={{ color: CATEGORY_COLOR(c.pct) }}>{c.pct}</div>
+                    <div className="h-1 rounded-full bg-[#E2E8F0] overflow-hidden mt-1">
+                      <div className="h-full rounded-full" style={{ width: `${c.pct}%`, background: CATEGORY_COLOR(c.pct) }} />
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-sm text-[#8A96A8]">—</div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Red flags */}
+          {redFlags(data.breakdown).length > 0 && (
+            <div className="mb-5 rounded-[10px] bg-[#FEF2F2] border border-[#FECACA] px-4 py-3">
+              <div className="flex items-center gap-1.5 mb-2">
+                <ShieldAlert size={14} className="text-[#DC2626]" />
+                <span className="text-xs font-semibold text-[#991B1B]">
+                  Red flags ({redFlags(data.breakdown).length})
+                </span>
+              </div>
+              <ul className="space-y-1">
+                {redFlags(data.breakdown).map(f => (
+                  <li key={f.label} className="flex items-center justify-between text-xs">
+                    <span className="text-[#7F1D1D]">{f.label}</span>
+                    <span className="num text-[#991B1B] font-medium">{f.detail}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div className="grid sm:grid-cols-2 gap-x-6 gap-y-2">
             {data.breakdown.map(line => (
