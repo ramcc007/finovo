@@ -50,7 +50,10 @@ export default function PulsePage() {
               </div>
               <p className="text-center text-xs text-[#8A96A8] mt-2">
                 Across {data.sampleSize.toLocaleString()} priced stocks
-                {data.asOf ? ` · as of ${formatTradeDate(data.asOf)}` : ''}
+                {data.asOf ? ` · for trading day ${formatTradeDate(data.asOf)}` : ''}
+              </p>
+              <p className="text-center text-[11px] text-[#B0B8C4] mt-0.5">
+                This reading resets each trading day — it reflects that day&apos;s data only.
               </p>
               <div className="mt-4 flex items-start gap-2 rounded-[10px] bg-[#FFF7ED] border border-[#FED7AA] px-3.5 py-2.5">
                 <Info size={15} className="text-[#EA580C] shrink-0 mt-0.5" />

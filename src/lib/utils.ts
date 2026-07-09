@@ -27,10 +27,15 @@ export function formatVolume(value: number | null | undefined): string {
   return String(Math.round(value));
 }
 
-/** Render an ISO date (YYYY-MM-DD) as e.g. "26 Jun 2026". */
+/** Render a plain date (YYYY-MM-DD) or a full ISO timestamp as a date-only
+ *  label, e.g. "26 Jun 2026" — time-of-day is deliberately dropped since it
+ *  isn't meaningful for once-a-day EOD data. */
 export function formatTradeDate(iso: string | null | undefined): string {
   if (!iso) return '';
-  const d = new Date(iso + 'T00:00:00');
+  // A bare date has no 'T' — anchor it to local midnight so it doesn't shift
+  // a day when the browser's timezone is behind UTC. A full timestamp
+  // already carries its own time/offset, so parse it as-is.
+  const d = iso.includes('T') ? new Date(iso) : new Date(iso + 'T00:00:00');
   if (isNaN(d.getTime())) return iso;
   return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
