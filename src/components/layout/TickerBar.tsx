@@ -47,13 +47,13 @@ export default function TickerBar() {
 
   return (
     <div className="bg-white text-[#131A24] h-9 flex items-center overflow-hidden border-b border-[#E9EDF4]">
-      <span className="hidden md:inline-flex items-center gap-1.5 px-3.5 shrink-0 border-r border-[#EEF1F7]">
+      <span
+        className="hidden md:inline-flex items-center px-3 shrink-0 border-r border-[#EEF1F7] h-full cursor-default"
+        title={updatedAt ? `Updated ${timeAgoLabel(updatedAt)}` : 'Live'}
+      >
         <span className="relative flex h-1.5 w-1.5">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#15A05B] opacity-75" />
           <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#15A05B]" />
-        </span>
-        <span className="text-[10px] font-semibold text-[#56616F] uppercase tracking-wide whitespace-nowrap">
-          Live · {timeAgoLabel(updatedAt)}
         </span>
       </span>
       {/* Clip the scrolling strip to its own slot — without this, the
