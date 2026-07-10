@@ -56,21 +56,26 @@ export default function TickerBar() {
           Live · {timeAgoLabel(updatedAt)}
         </span>
       </span>
-      <div className="flex animate-ticker whitespace-nowrap">
-        {loop.map((idx, i) => {
-          const pos = (idx.change_pct ?? 0) >= 0;
-          return (
-            <span key={i} className="inline-flex items-center gap-2 px-5 border-r border-[#EEF1F7]">
-              <span className="text-[11px] text-[#56616F] font-semibold tracking-wide uppercase">{idx.name}</span>
-              <span className="text-[11px] font-mono font-semibold text-[#131A24]">
-                {idx.last != null ? idx.last.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+      {/* Clip the scrolling strip to its own slot — without this, the
+          translateX animation paints over the Live badge as it slides
+          left, since transform doesn't respect sibling boundaries. */}
+      <div className="flex-1 min-w-0 h-full overflow-hidden">
+        <div className="flex animate-ticker whitespace-nowrap">
+          {loop.map((idx, i) => {
+            const pos = (idx.change_pct ?? 0) >= 0;
+            return (
+              <span key={i} className="inline-flex items-center gap-2 px-5 border-r border-[#EEF1F7]">
+                <span className="text-[11px] text-[#56616F] font-semibold tracking-wide uppercase">{idx.name}</span>
+                <span className="text-[11px] font-mono font-semibold text-[#131A24]">
+                  {idx.last != null ? idx.last.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+                </span>
+                <span className={cn('text-[11px] font-mono font-semibold', pos ? 'text-[#15A05B]' : 'text-[#E0392B]')}>
+                  {pos ? '▲' : '▼'} {Math.abs(idx.change_pct ?? 0).toFixed(2)}%
+                </span>
               </span>
-              <span className={cn('text-[11px] font-mono font-semibold', pos ? 'text-[#15A05B]' : 'text-[#E0392B]')}>
-                {pos ? '▲' : '▼'} {Math.abs(idx.change_pct ?? 0).toFixed(2)}%
-              </span>
-            </span>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
       <style jsx>{`
         @keyframes ticker {
