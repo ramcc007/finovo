@@ -52,8 +52,8 @@ export default function TickerBar() {
     >
       {/* Clip the scrolling strip to its own slot — without this, the
           translateX animation can paint outside its intended bounds. */}
-      <div className="flex-1 min-w-0 h-full overflow-hidden">
-        <div className="flex animate-ticker whitespace-nowrap">
+      <div className="flex-1 min-w-0 h-full overflow-hidden flex items-center">
+        <div className="flex items-center animate-ticker whitespace-nowrap">
           {loop.map((idx, i) => {
             const pos = (idx.change_pct ?? 0) >= 0;
             return (
