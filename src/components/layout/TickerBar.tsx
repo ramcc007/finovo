@@ -48,7 +48,7 @@ export default function TickerBar() {
   return (
     <div className="bg-white text-[#131A24] h-9 flex items-center overflow-hidden border-b border-[#E9EDF4]">
       <span
-        className="hidden md:inline-flex items-center px-3 shrink-0 border-r border-[#EEF1F7] h-full cursor-default"
+        className="hidden md:inline-flex items-center justify-center w-6 shrink-0 cursor-default"
         title={updatedAt ? `Updated ${timeAgoLabel(updatedAt)}` : 'Live'}
       >
         <span className="relative flex h-1.5 w-1.5">
