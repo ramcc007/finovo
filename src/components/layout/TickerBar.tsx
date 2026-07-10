@@ -46,19 +46,12 @@ export default function TickerBar() {
   const loop = [...items, ...items];
 
   return (
-    <div className="bg-white text-[#131A24] h-9 flex items-center overflow-hidden border-b border-[#E9EDF4]">
-      <span
-        className="hidden md:inline-flex items-center justify-center w-6 shrink-0 cursor-default"
-        title={updatedAt ? `Updated ${timeAgoLabel(updatedAt)}` : 'Live'}
-      >
-        <span className="relative flex h-1.5 w-1.5">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#15A05B] opacity-75" />
-          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#15A05B]" />
-        </span>
-      </span>
+    <div
+      className="bg-white text-[#131A24] h-9 flex items-center overflow-hidden border-b border-[#E9EDF4]"
+      title={updatedAt ? `Live · updated ${timeAgoLabel(updatedAt)}` : undefined}
+    >
       {/* Clip the scrolling strip to its own slot — without this, the
-          translateX animation paints over the Live badge as it slides
-          left, since transform doesn't respect sibling boundaries. */}
+          translateX animation can paint outside its intended bounds. */}
       <div className="flex-1 min-w-0 h-full overflow-hidden">
         <div className="flex animate-ticker whitespace-nowrap">
           {loop.map((idx, i) => {
