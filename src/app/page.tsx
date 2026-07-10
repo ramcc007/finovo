@@ -245,15 +245,27 @@ export default function Home() {
               {/* Quick chips */}
               <div className="flex items-center gap-2 mb-8 flex-wrap">
                 <span className="text-xs text-[#8A94A4]">Popular:</span>
-                {['TCS', 'RELIANCE', 'HDFCBANK', 'INFY'].map(sym => (
-                  <Link
-                    key={sym}
-                    href={`/stocks/${sym}`}
-                    className="text-xs font-medium text-[#56616F] bg-white border border-[#E6EAF1] px-3 py-1 rounded-full hover:border-[#F97316]/40 hover:text-[#EA580C] hover:bg-[#FFF7ED] transition-colors shadow-[0_1px_2px_rgba(16,24,40,0.03)]"
-                  >
-                    {sym}
-                  </Link>
-                ))}
+                {HERO_PREVIEW_SYMBOLS.map(sym => {
+                  const live = heroPreviews?.find(p => p.symbol === sym);
+                  const up = (live?.changePct ?? 0) >= 0;
+                  return (
+                    <Link
+                      key={sym}
+                      href={`/stocks/${sym}`}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-[#56616F] bg-white border border-[#E6EAF1] px-3 py-1 rounded-full hover:border-[#F97316]/40 hover:text-[#EA580C] hover:bg-[#FFF7ED] transition-colors shadow-[0_1px_2px_rgba(16,24,40,0.03)]"
+                    >
+                      {sym}
+                      {/* Live price/change — shown once loaded, on all screen
+                          sizes, so mobile (which never sees the animated hero
+                          card, hidden lg:block below) still gets live data. */}
+                      {live?.changePct != null && (
+                        <span className={cn('tnum font-semibold', up ? 'text-[#16A34A]' : 'text-[#DC2626]')}>
+                          {up ? '▲' : '▼'} {Math.abs(live.changePct).toFixed(1)}%
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
               </div>
 
               {/* CTAs */}
