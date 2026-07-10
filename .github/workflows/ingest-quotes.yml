@@ -6,10 +6,16 @@ on:
     - cron: '*/5 3-10 * * 1-5'
   workflow_dispatch:
 
+# A late-starting run overlapping the next one would double-hit NSE and
+# race on the same upserts — cancel the older run instead.
+concurrency:
+  group: live-quotes
+  cancel-in-progress: true
+
 jobs:
   quotes:
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    timeout-minutes: 7
 
     steps:
       - uses: actions/checkout@v4
@@ -28,4 +34,7 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          # 4 passes ~60s apart per 5-min cron tick ≈ 60–75s effective freshness.
+          LOOP_COUNT: '4'
+          LOOP_INTERVAL: '60'
         run: python scripts/ingest_quotes.py

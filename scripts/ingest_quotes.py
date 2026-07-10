@@ -1,12 +1,17 @@
 """
 Live quote updater via NSE unofficial API.
-Fetches near-real-time prices (15 min delayed) during market hours.
+Fetches near-real-time prices (15 min delayed by the exchange) during market hours.
 
 Schedule: GitHub Actions, every 5 min on weekdays 09:15–15:35 IST (03:45–10:05 UTC).
+Each run loops LOOP_COUNT times at ~LOOP_INTERVAL seconds, so with the 5-min cron
+and LOOP_COUNT=4 the effective data freshness is ~60–75s at zero infra cost.
 
-NSE public endpoint (no auth needed, just needs proper headers + session cookie):
-https://www.nseindia.com/api/market-status
+Also refreshes intraday index levels (the ticker bar) from /api/allIndices —
+without this the `indices` table only moves once a day via the EOD archive job.
+
+NSE public endpoints (no auth needed, just proper headers + session cookie):
 https://www.nseindia.com/api/equity-stockIndices?index=NIFTY%2050
+https://www.nseindia.com/api/allIndices
 """
 
 import os
@@ -19,6 +24,11 @@ load_dotenv()
 
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_SERVICE_KEY = os.environ["SUPABASE_SERVICE_KEY"]
+
+# How many fetch passes to run and how far apart to space them. Defaults keep
+# the old single-shot behavior for manual/local runs.
+LOOP_COUNT = max(1, int(os.environ.get("LOOP_COUNT", "1")))
+LOOP_INTERVAL = max(10, int(os.environ.get("LOOP_INTERVAL", "60")))
 
 NSE_BASE = "https://www.nseindia.com"
 NSE_INDICES = [
@@ -59,16 +69,7 @@ def fetch_index_quotes(session: requests.Session, index_name: str) -> list[dict]
     return data.get("data", [])
 
 
-def run():
-    print("Fetching live NSE quotes...")
-    client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-
-    try:
-        session = get_nse_session()
-    except Exception as e:
-        print(f"Failed to init NSE session: {e}")
-        return
-
+def update_stock_quotes(client, session) -> None:
     all_records = {}
     for idx_name in NSE_INDICES:
         try:
@@ -102,9 +103,84 @@ def run():
     if all_records:
         records = list(all_records.values())
         client.table("quotes").upsert(records, on_conflict="symbol").execute()
-        print(f"Updated {len(records)} quotes.")
+        print(f"  Updated {len(records)} quotes.")
     else:
-        print("No quotes fetched.")
+        print("  No quotes fetched.")
+
+
+def update_index_levels(client, session) -> None:
+    """Refresh last/change on the rows the daily EOD job created — matched by
+    name so we never invent rows (rank/name/ordering stay owned by that job).
+    Sensex is BSE-only (not in NSE's feed) and keeps its EOD value."""
+    try:
+        resp = session.get(f"{NSE_BASE}/api/allIndices", timeout=15)
+        resp.raise_for_status()
+        live = resp.json().get("data", [])
+    except Exception as e:
+        print(f"  Error fetching allIndices: {e}")
+        return
+
+    live_by_name = {}
+    for r in live:
+        name = (r.get("index") or r.get("indexName") or "").strip().lower()
+        if name:
+            live_by_name[name] = r
+
+    try:
+        existing = client.table("indices").select("symbol, name").execute().data or []
+    except Exception as e:
+        print(f"  Error reading indices table: {e}")
+        return
+
+    updates = []
+    for row in existing:
+        name = (row.get("name") or "").strip().lower()
+        r = live_by_name.get(name)
+        if not r:
+            continue
+        try:
+            last = float(r.get("last") or 0)
+            if not last:
+                continue
+            change = r.get("variation")
+            change_pct = r.get("percentChange")
+            updates.append({
+                "symbol": row["symbol"],
+                "last": last,
+                "change": round(float(change), 2) if change is not None else None,
+                "change_pct": round(float(change_pct), 2) if change_pct is not None else None,
+                "updated_at": "now()",
+            })
+        except (TypeError, ValueError):
+            continue
+
+    if updates:
+        client.table("indices").upsert(updates, on_conflict="symbol").execute()
+        print(f"  Updated {len(updates)} index levels.")
+    else:
+        print("  No index levels matched.")
+
+
+def run_once(client) -> None:
+    session = get_nse_session()
+    update_stock_quotes(client, session)
+    update_index_levels(client, session)
+
+
+def run():
+    client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    for i in range(LOOP_COUNT):
+        started = time.monotonic()
+        print(f"Pass {i + 1}/{LOOP_COUNT}: fetching live NSE data...")
+        try:
+            run_once(client)
+        except Exception as e:
+            # One bad pass (cookie expiry, transient NSE block) shouldn't kill
+            # the remaining passes.
+            print(f"  Pass failed: {e}")
+        if i + 1 < LOOP_COUNT:
+            elapsed = time.monotonic() - started
+            time.sleep(max(0, LOOP_INTERVAL - elapsed))
 
 
 if __name__ == "__main__":
