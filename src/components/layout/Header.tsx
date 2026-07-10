@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { Search, X, Menu, Loader2, ArrowRight, User, LogOut, ShieldCheck, UserCog } from 'lucide-react';
+import { Search, X, Menu, Loader2, ArrowRight, User, LogOut, ShieldCheck, UserCog, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/AuthProvider';
 import { adminFetch } from '@/lib/adminFetch';
@@ -180,6 +180,13 @@ export default function Header() {
                       <div className="text-sm font-semibold text-[#131A24] truncate">{user.email}</div>
                     </div>
                     <Link
+                      href="/pricing"
+                      onClick={() => setAccountOpen(false)}
+                      className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-[#EA580C] hover:bg-[#FFF7ED] transition-colors border-b border-[#F0F3F8]"
+                    >
+                      <Sparkles size={14} /> Upgrade to Pro
+                    </Link>
+                    <Link
                       href="/profile"
                       onClick={() => setAccountOpen(false)}
                       className="w-full flex items-center gap-2 px-4 py-3 text-sm text-[#56616F] hover:bg-[#F2F4F9] hover:text-[#131A24] transition-colors border-b border-[#F0F3F8]"
@@ -205,12 +212,25 @@ export default function Header() {
                 )}
               </div>
             ) : (
-              <Link
-                href="/signup"
-                className="ml-1 inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-[#F97316] hover:bg-[#EA580C] px-4 py-2 rounded-lg shadow-[0_1px_2px_rgba(234,88,12,0.25)] hover:shadow-[0_6px_16px_rgba(249,115,22,0.28)] transition-all"
-              >
-                Sign up free <ArrowRight size={14} />
-              </Link>
+              <>
+                <Link
+                  href="/pricing"
+                  className={cn(
+                    'text-sm font-medium px-3.5 py-2 rounded-lg transition-colors',
+                    pathname === '/pricing'
+                      ? 'text-[#EA580C] bg-[#FFF3E8]'
+                      : 'text-[#56616F] hover:text-[#131A24] hover:bg-[#F2F4F9]'
+                  )}
+                >
+                  Pricing
+                </Link>
+                <Link
+                  href="/signup"
+                  className="ml-1 inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-[#F97316] hover:bg-[#EA580C] px-4 py-2 rounded-lg shadow-[0_1px_2px_rgba(234,88,12,0.25)] hover:shadow-[0_6px_16px_rgba(249,115,22,0.28)] transition-all"
+                >
+                  Sign up free <ArrowRight size={14} />
+                </Link>
+              </>
             )
           )}
         </nav>
@@ -261,6 +281,15 @@ export default function Header() {
               <ShieldCheck size={14} /> Admin dashboard
             </Link>
           )}
+          <Link
+            href="/pricing"
+            className={cn(
+              'flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium mb-1',
+              pathname === '/pricing' ? 'bg-[#FFF3E8] text-[#EA580C]' : 'text-[#EA580C] hover:bg-[#FFF7ED]'
+            )}
+          >
+            <Sparkles size={14} /> {user ? 'Upgrade to Pro' : 'Pricing'}
+          </Link>
           {!authLoading && user && (
             <button
               onClick={handleSignOut}
