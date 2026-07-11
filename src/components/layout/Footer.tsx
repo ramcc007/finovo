@@ -57,13 +57,28 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-white/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-3">
+        <div className="border-t border-white/10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-xs text-white/30">
             © {new Date().getFullYear()} Scripwise. Data for informational purposes only. Not investment advice.
           </p>
-          <p className="text-xs text-white/30">
-            Created by <span className="text-[#F97316] font-semibold">RCC</span>
-          </p>
+          <div className="flex items-center gap-4">
+            <a
+              href="https://www.producthunt.com/products/scripwise?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-scripwise"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- external Product Hunt badge SVG, not a local/optimizable asset */}
+              <img
+                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1193506&theme=light"
+                alt="Scripwise - Free stock screener for Indian equities, transparent scoring | Product Hunt"
+                width={250}
+                height={54}
+              />
+            </a>
+            <p className="text-xs text-white/30">
+              Created by <span className="text-[#F97316] font-semibold">RCC</span>
+            </p>
+          </div>
         </div>
       </div>
     </footer>
