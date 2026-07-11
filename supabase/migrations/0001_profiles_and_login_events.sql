@@ -76,3 +76,10 @@ select id,
        raw_user_meta_data->>'investor_profile'
 from auth.users
 on conflict (id) do nothing;
+
+-- handle_new_user() is only meant to run via the trigger above (it references
+-- NEW, so a direct call would error anyway) — but Postgrest auto-exposes every
+-- public-schema function as an RPC endpoint by default. Revoke direct
+-- callability; trigger invocation is unaffected since it bypasses SQL-level
+-- EXECUTE ACL checks.
+revoke execute on function public.handle_new_user() from anon, authenticated, public;
