@@ -41,8 +41,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   try {
+    // Razorpay has no /subscriptions/:id/invoices route — invoices for a
+    // subscription are fetched via a query-param filter on the general
+    // invoices list endpoint. The nested path 404s and was surfacing as a
+    // silent "Could not load payments" error in the admin refund modal.
     const invRes = await fetch(
-      `https://api.razorpay.com/v1/subscriptions/${sub.razorpay_subscription_id}/invoices`,
+      `https://api.razorpay.com/v1/invoices?subscription_id=${sub.razorpay_subscription_id}`,
       { headers: { Authorization: authHeader } }
     );
     if (!invRes.ok) return NextResponse.json({ error: 'Could not load payments from Razorpay.' }, { status: 502 });
