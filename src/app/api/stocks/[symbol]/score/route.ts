@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { computeScripwiseScore } from '@/lib/scripwiseScore';
+import { getEntitlement } from '@/lib/entitlement';
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ symbol: string }> }
 ) {
+  const ent = await getEntitlement(req);
   const { symbol } = await params;
   const sym = symbol.toUpperCase();
   if (!/^[A-Z0-9&-]{1,20}$/.test(sym)) {
@@ -53,6 +55,12 @@ export async function GET(
       sectorAvgPe,
       sectorAvgPb,
     });
+
+    // Free tier gets the headline score/band only — the category breakdown,
+    // red flags, and per-metric detail are the paid "Scorecard" feature.
+    if (!ent.active) {
+      return NextResponse.json({ available: true, score: result.score, maxScore: result.maxScore, band: result.band, breakdown: [], locked: true });
+    }
 
     return NextResponse.json({ available: true, ...result });
   } catch {

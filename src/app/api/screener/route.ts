@@ -3,6 +3,8 @@ import { unstable_cache } from 'next/cache';
 import { supabase } from '@/lib/supabase';
 import { SCREENER_STOCKS } from '@/lib/mock-data';
 import { computeScripwiseScore } from '@/lib/scripwiseScore';
+import { getEntitlement } from '@/lib/entitlement';
+import { PRO_ONLY_SCREENER_PARAMS } from '@/lib/plans';
 
 // Parses a numeric query param, clamping to a sane finite range so that
 // garbage/huge input (Infinity, NaN, absurd magnitudes) can't reach the DB query.
@@ -85,6 +87,22 @@ function scoreRow(r: ScreenerRow, sectorAverages: Map<string, { pe: number | nul
 
 export async function GET(req: NextRequest) {
   const p = req.nextUrl.searchParams;
+  const ent = await getEntitlement(req);
+
+  // Advanced filters (P/B, dividend yield, revenue/profit growth, promoter
+  // holding, pledge) are Pro-only. Rather than reject the request, drop the
+  // gated params for Free/anon callers and tell the client which ones were
+  // dropped — the screener still works, it just doesn't apply that criterion.
+  const restrictedFilters: string[] = [];
+  const getParam = (key: string): string | null => {
+    const v = p.get(key);
+    if (v == null) return null;
+    if (!ent.active && PRO_ONLY_SCREENER_PARAMS.has(key)) {
+      restrictedFilters.push(key);
+      return null;
+    }
+    return v;
+  };
 
   // Optional explicit symbol list (used by Watchlist/Compare) — bypasses
   // pagination and other filters, just resolves these exact symbols.
@@ -95,21 +113,21 @@ export async function GET(req: NextRequest) {
     .slice(0, 20);
 
   const filters = {
-    sector: (p.get('sector') ?? '').slice(0, 50),
-    mcap_min: num(p.get('mcap_min')),
-    mcap_max: num(p.get('mcap_max')),
-    pe_min: num(p.get('pe_min')),
-    pe_max: num(p.get('pe_max')),
-    pb_min: num(p.get('pb_min')),
-    pb_max: num(p.get('pb_max')),
-    roe_min: num(p.get('roe_min')),
-    roe_max: num(p.get('roe_max')),
-    debt_equity_max: num(p.get('debt_equity_max')),
-    rev_growth_1y_min: num(p.get('rev_growth_1y_min')),
-    profit_growth_1y_min: num(p.get('profit_growth_1y_min')),
-    div_yield_min: num(p.get('div_yield_min')),
-    promoter_min: num(p.get('promoter_min')),
-    pledge_max: num(p.get('pledge_max')),
+    sector: (getParam('sector') ?? '').slice(0, 50),
+    mcap_min: num(getParam('mcap_min')),
+    mcap_max: num(getParam('mcap_max')),
+    pe_min: num(getParam('pe_min')),
+    pe_max: num(getParam('pe_max')),
+    pb_min: num(getParam('pb_min')),
+    pb_max: num(getParam('pb_max')),
+    roe_min: num(getParam('roe_min')),
+    roe_max: num(getParam('roe_max')),
+    debt_equity_max: num(getParam('debt_equity_max')),
+    rev_growth_1y_min: num(getParam('rev_growth_1y_min')),
+    profit_growth_1y_min: num(getParam('profit_growth_1y_min')),
+    div_yield_min: num(getParam('div_yield_min')),
+    promoter_min: num(getParam('promoter_min')),
+    pledge_max: num(getParam('pledge_max')),
     score_min: num(p.get('score_min'), 100),
     score_max: num(p.get('score_max'), 100),
     sort_by: p.get('sort_by') ?? 'market_cap',
@@ -223,7 +241,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ data: rows, total });
+    return NextResponse.json({ data: rows, total, restrictedFilters });
   } catch {
     // Fallback: filter mock data
     let results = [...SCREENER_STOCKS];
@@ -251,6 +269,6 @@ export async function GET(req: NextRequest) {
       price: s.price,
     }));
 
-    return NextResponse.json({ data: paged, total: results.length });
+    return NextResponse.json({ data: paged, total: results.length, restrictedFilters });
   }
 }

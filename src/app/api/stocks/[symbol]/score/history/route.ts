@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { computeScripwiseScore } from '@/lib/scripwiseScore';
+import { getEntitlement } from '@/lib/entitlement';
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ symbol: string }> }
 ) {
+  // Score History is a Scorecard (Pro) feature end-to-end — no partial data.
+  const ent = await getEntitlement(req);
+  if (!ent.active) return NextResponse.json({ available: false, locked: true });
+
   const { symbol } = await params;
   const sym = symbol.toUpperCase();
   if (!/^[A-Z0-9&-]{1,20}$/.test(sym)) {

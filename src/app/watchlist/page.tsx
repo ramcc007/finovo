@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Trash2, Star, Download } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Trash2, Star, Download, Lock } from 'lucide-react';
 import { cn, formatCrores, formatPrice, toCSV, downloadTextFile } from '@/lib/utils';
 import { useWatchlist } from '@/lib/useWatchlist';
+import { useEntitlement } from '@/lib/useEntitlement';
 import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
 import AuthGate from '@/components/auth/AuthGate';
 
@@ -14,6 +16,8 @@ interface Row {
 }
 
 function WatchlistPageContent() {
+  const router = useRouter();
+  const ent = useEntitlement();
   const { symbols, remove } = useWatchlist();
   const [rows, setRows] = useState<Row[] | null>(null);
 
@@ -43,6 +47,7 @@ function WatchlistPageContent() {
           {ordered && ordered.length > 0 && (
             <button
               onClick={() => {
+                if (!ent.active) { router.push('/pricing?locked=csv'); return; }
                 const csv = toCSV(ordered as unknown as Record<string, unknown>[], [
                   { key: 'symbol', label: 'Symbol' },
                   { key: 'name', label: 'Name' },
@@ -57,7 +62,7 @@ function WatchlistPageContent() {
               }}
               className="btn btn-secondary !px-3 !py-2 !text-[13px] shrink-0"
             >
-              <Download size={13} /> Export CSV
+              {ent.active ? <Download size={13} /> : <Lock size={13} />} Export CSV
             </button>
           )}
         </div>

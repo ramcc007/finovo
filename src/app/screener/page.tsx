@@ -2,11 +2,12 @@
 
 import { Suspense, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import { SlidersHorizontal, Download, RotateCcw, ChevronUp, ChevronDown, X, Bookmark, Trash2, Gauge } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { SlidersHorizontal, Download, RotateCcw, ChevronUp, ChevronDown, X, Bookmark, Trash2, Gauge, Lock } from 'lucide-react';
 import { cn, formatCrores, formatPrice, toCSV, downloadTextFile } from '@/lib/utils';
 import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
 import { useSavedScreens } from '@/lib/useSavedScreens';
+import { useEntitlement } from '@/lib/useEntitlement';
 
 type SortKey = 'market_cap' | 'price' | 'pe' | 'pb' | 'roe' | 'revenue_growth_1y' | 'profit_growth_1y' | 'debt_to_equity' | 'dividend_yield' | 'scripwise_score';
 
@@ -69,47 +70,66 @@ function FilterSection({ title, children }: { title: string; children: React.Rea
   );
 }
 
-function RangeInput({ label, minKey, maxKey, filters, onChange, unit = '' }: {
+function ProLockBadge() {
+  return (
+    <Link
+      href="/pricing"
+      className="inline-flex items-center gap-0.5 text-[9px] font-bold text-[#F97316] bg-[#FFF3E8] px-1.5 py-0.5 rounded-full ml-1.5 align-middle hover:bg-[#FFE8D4] transition-colors"
+      title="Requires Scripwise Pro"
+    >
+      <Lock size={8} /> PRO
+    </Link>
+  );
+}
+
+function RangeInput({ label, minKey, maxKey, filters, onChange, unit = '', locked = false }: {
   label: string; minKey: keyof Filters; maxKey: keyof Filters;
-  filters: Filters; onChange: (k: keyof Filters, v: string) => void; unit?: string;
+  filters: Filters; onChange: (k: keyof Filters, v: string) => void; unit?: string; locked?: boolean;
 }) {
   return (
     <div>
-      <label className="block text-xs text-[#8A96A8] mb-1.5">{label}{unit && ` (${unit})`}</label>
+      <label className="block text-xs text-[#8A96A8] mb-1.5">
+        {label}{unit && ` (${unit})`}{locked && <ProLockBadge />}
+      </label>
       <div className="flex items-center gap-2">
         <input
           type="number"
-          placeholder="Min"
-          value={filters[minKey]}
-          onChange={e => onChange(minKey, e.target.value)}
-          className="w-full text-xs bg-[#F4F6FA] border border-[#E2E8F0] rounded-[6px] px-2.5 py-2 text-[#0D1117] placeholder:text-[#8A96A8] outline-none focus:border-[#F97316] transition-colors"
+          placeholder={locked ? 'Pro' : 'Min'}
+          value={locked ? '' : filters[minKey]}
+          onChange={e => !locked && onChange(minKey, e.target.value)}
+          disabled={locked}
+          className="w-full text-xs bg-[#F4F6FA] border border-[#E2E8F0] rounded-[6px] px-2.5 py-2 text-[#0D1117] placeholder:text-[#8A96A8] outline-none focus:border-[#F97316] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         />
         <span className="text-[#8A96A8] text-xs shrink-0">to</span>
         <input
           type="number"
-          placeholder="Max"
-          value={filters[maxKey]}
-          onChange={e => onChange(maxKey, e.target.value)}
-          className="w-full text-xs bg-[#F4F6FA] border border-[#E2E8F0] rounded-[6px] px-2.5 py-2 text-[#0D1117] placeholder:text-[#8A96A8] outline-none focus:border-[#F97316] transition-colors"
+          placeholder={locked ? 'Pro' : 'Max'}
+          value={locked ? '' : filters[maxKey]}
+          onChange={e => !locked && onChange(maxKey, e.target.value)}
+          disabled={locked}
+          className="w-full text-xs bg-[#F4F6FA] border border-[#E2E8F0] rounded-[6px] px-2.5 py-2 text-[#0D1117] placeholder:text-[#8A96A8] outline-none focus:border-[#F97316] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         />
       </div>
     </div>
   );
 }
 
-function MinInput({ label, filterKey, filters, onChange, unit = '' }: {
+function MinInput({ label, filterKey, filters, onChange, unit = '', locked = false }: {
   label: string; filterKey: keyof Filters;
-  filters: Filters; onChange: (k: keyof Filters, v: string) => void; unit?: string;
+  filters: Filters; onChange: (k: keyof Filters, v: string) => void; unit?: string; locked?: boolean;
 }) {
   return (
     <div>
-      <label className="block text-xs text-[#8A96A8] mb-1.5">{label}{unit && ` (${unit})`}</label>
+      <label className="block text-xs text-[#8A96A8] mb-1.5">
+        {label}{unit && ` (${unit})`}{locked && <ProLockBadge />}
+      </label>
       <input
         type="number"
-        placeholder="Min value"
-        value={filters[filterKey]}
-        onChange={e => onChange(filterKey, e.target.value)}
-        className="w-full text-xs bg-[#F4F6FA] border border-[#E2E8F0] rounded-[6px] px-2.5 py-2 text-[#0D1117] placeholder:text-[#8A96A8] outline-none focus:border-[#F97316] transition-colors"
+        placeholder={locked ? 'Requires Pro' : 'Min value'}
+        value={locked ? '' : filters[filterKey]}
+        onChange={e => !locked && onChange(filterKey, e.target.value)}
+        disabled={locked}
+        className="w-full text-xs bg-[#F4F6FA] border border-[#E2E8F0] rounded-[6px] px-2.5 py-2 text-[#0D1117] placeholder:text-[#8A96A8] outline-none focus:border-[#F97316] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       />
     </div>
   );
@@ -144,6 +164,7 @@ const SCORE_BAND_COLOR = (score: number): string =>
   score >= 75 ? 'text-positive' : score >= 40 ? 'text-[#D97706]' : 'text-negative';
 
 function ScreenerPageInner() {
+  const router = useRouter();
   const searchParams = useSearchParams();
 
   const initialFilters = (): Filters => {
@@ -155,6 +176,7 @@ function ScreenerPageInner() {
     return f;
   };
 
+  const ent = useEntitlement();
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [sortKey, setSortKey] = useState<SortKey>((searchParams.get('sort_by') as SortKey) || 'market_cap');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>(searchParams.get('sort_dir') === 'asc' ? 'asc' : 'desc');
@@ -220,6 +242,7 @@ function ScreenerPageInner() {
 
   const [exporting, setExporting] = useState(false);
   const exportCSV = async () => {
+    if (!ent.active) { router.push('/pricing?locked=csv'); return; }
     setExporting(true);
     const params = new URLSearchParams();
     if (filters.sector) params.set('sector', filters.sector);
@@ -283,10 +306,11 @@ function ScreenerPageInner() {
 
   const activeFilterCount = Object.values(filters).filter(v => v !== '').length;
 
-  const { screens: savedScreens, save: saveScreen, remove: removeScreen } = useSavedScreens();
+  const { screens: savedScreens, save: saveScreen, remove: removeScreen, atLimit: savedScreensAtLimit, limit: savedScreensLimit } = useSavedScreens();
   const [showSavePanel, setShowSavePanel] = useState(false);
   const [showSavedList, setShowSavedList] = useState(false);
   const [saveName, setSaveName] = useState('');
+  const [saveLimitNote, setSaveLimitNote] = useState(false);
 
   const applySavedScreen = (s: (typeof savedScreens)[number]) => {
     setFilters({ ...defaultFilters, ...s.filters });
@@ -299,9 +323,11 @@ function ScreenerPageInner() {
   const handleSaveScreen = () => {
     const name = saveName.trim();
     if (!name) return;
-    saveScreen(name, { ...filters }, sortKey, sortDir);
+    const saved = saveScreen(name, { ...filters }, sortKey, sortDir);
+    if (!saved) { setSaveLimitNote(true); return; }
     setSaveName('');
     setShowSavePanel(false);
+    setSaveLimitNote(false);
   };
 
   return (
@@ -353,21 +379,33 @@ function ScreenerPageInner() {
               </button>
               {showSavePanel && (
                 <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-[#E2E8F0] rounded-xl shadow-[0_12px_32px_rgba(16,24,40,0.14)] z-20 p-3">
-                  <label className="block text-xs text-[#8A96A8] mb-1.5">Name this screen</label>
-                  <input
-                    autoFocus
-                    value={saveName}
-                    onChange={e => setSaveName(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') handleSaveScreen(); }}
-                    placeholder="e.g. My high-ROE picks"
-                    className="w-full text-sm bg-[#F4F6FA] border border-[#E2E8F0] rounded-[6px] px-2.5 py-2 outline-none focus:border-[#F97316] mb-2.5"
-                  />
-                  <button onClick={handleSaveScreen} className="btn btn-primary w-full !text-xs !py-1.5">Save</button>
+                  {savedScreensAtLimit ? (
+                    <p className="text-xs text-[#4A5568] leading-relaxed">
+                      Free plan is limited to {savedScreensLimit} saved screen.{' '}
+                      <Link href="/pricing" className="text-[#F97316] font-medium hover:underline">Upgrade to Pro</Link> for unlimited.
+                    </p>
+                  ) : (
+                    <>
+                      <label className="block text-xs text-[#8A96A8] mb-1.5">Name this screen</label>
+                      <input
+                        autoFocus
+                        value={saveName}
+                        onChange={e => setSaveName(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') handleSaveScreen(); }}
+                        placeholder="e.g. My high-ROE picks"
+                        className="w-full text-sm bg-[#F4F6FA] border border-[#E2E8F0] rounded-[6px] px-2.5 py-2 outline-none focus:border-[#F97316] mb-2.5"
+                      />
+                      <button onClick={handleSaveScreen} className="btn btn-primary w-full !text-xs !py-1.5">Save</button>
+                      {saveLimitNote && (
+                        <p className="text-xs text-[#DC2626] mt-2">Could not save — you&apos;ve reached the Free plan limit.</p>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
             </div>
             <button onClick={exportCSV} disabled={exporting} className="btn btn-secondary !px-3 !py-2 !text-[13px] disabled:opacity-60">
-              <Download size={13} /> <span className="hidden sm:inline">{exporting ? 'Exporting…' : 'Export CSV'}</span>
+              {ent.active ? <Download size={13} /> : <Lock size={13} />} <span className="hidden sm:inline">{exporting ? 'Exporting…' : 'Export CSV'}</span>
             </button>
           </div>
         </div>
@@ -413,8 +451,8 @@ function ScreenerPageInner() {
 
                 <FilterSection title="Valuation">
                   <RangeInput label="P/E Ratio" minKey="peMin" maxKey="peMax" filters={filters} onChange={updateFilter} />
-                  <RangeInput label="P/B Ratio" minKey="pbMin" maxKey="pbMax" filters={filters} onChange={updateFilter} />
-                  <MinInput label="Dividend Yield" filterKey="divYieldMin" filters={filters} onChange={updateFilter} unit="%" />
+                  <RangeInput label="P/B Ratio" minKey="pbMin" maxKey="pbMax" filters={filters} onChange={updateFilter} locked={!ent.active} />
+                  <MinInput label="Dividend Yield" filterKey="divYieldMin" filters={filters} onChange={updateFilter} unit="%" locked={!ent.active} />
                 </FilterSection>
 
                 <FilterSection title="Profitability">
@@ -422,8 +460,8 @@ function ScreenerPageInner() {
                 </FilterSection>
 
                 <FilterSection title="Growth">
-                  <MinInput label="Revenue Growth 1Y" filterKey="revGrowthMin" filters={filters} onChange={updateFilter} unit="%" />
-                  <MinInput label="Profit Growth 1Y" filterKey="profGrowthMin" filters={filters} onChange={updateFilter} unit="%" />
+                  <MinInput label="Revenue Growth 1Y" filterKey="revGrowthMin" filters={filters} onChange={updateFilter} unit="%" locked={!ent.active} />
+                  <MinInput label="Profit Growth 1Y" filterKey="profGrowthMin" filters={filters} onChange={updateFilter} unit="%" locked={!ent.active} />
                 </FilterSection>
 
                 <FilterSection title="Financial Health">

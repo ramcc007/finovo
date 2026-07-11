@@ -1,13 +1,15 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { computePulse, type PulseInput } from '@/lib/pulse';
+import { getEntitlement } from '@/lib/entitlement';
 
-// Sentiment is an EOD aggregate over the whole universe — recomputing it per
-// request would re-scan thousands of rows, so cache for 5 minutes like the
-// other market-wide aggregates.
-export const revalidate = 300;
+// Response now varies by caller's entitlement (full breakdown for Pro,
+// headline-only for Free) — must be dynamic, not cached, or one plan's
+// response would leak into the other's.
+export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const ent = await getEntitlement(req);
   try {
     const { data: view, error } = await supabase
       .from('screener_view')
@@ -73,7 +75,17 @@ export async function GET() {
       return NextResponse.json({ available: false });
     }
 
-    return NextResponse.json({ available: true, ...computePulse(input) });
+    const pulse = computePulse(input);
+    // Free tier gets the headline score/zone only — the per-component
+    // breakdown and drivers are the paid "full Pulse" feature.
+    if (!ent.active) {
+      return NextResponse.json({
+        available: true, score: pulse.score, zone: pulse.zone,
+        sampleSize: pulse.sampleSize, asOf: pulse.asOf, components: [], locked: true,
+      });
+    }
+
+    return NextResponse.json({ available: true, ...pulse });
   } catch {
     return NextResponse.json({ available: false });
   }

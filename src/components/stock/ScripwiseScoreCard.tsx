@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Gauge, Check, TriangleAlert, X, Minus, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { authFetch } from '@/lib/authFetch';
+import ProUpsell from '@/components/billing/ProUpsell';
 import { summariseByCategory, redFlags, type ScoreResult, type MetricStatus } from '@/lib/scripwiseScore';
 
 const CATEGORY_COLOR = (pct: number) => (pct >= 70 ? '#16A34A' : pct >= 45 ? '#D97706' : '#DC2626');
@@ -55,15 +57,16 @@ interface Props {
 }
 
 export default function ScripwiseScoreCard({ symbol }: Props) {
-  const [data, setData] = useState<ScoreResult | null>(null);
+  const [data, setData] = useState<(ScoreResult & { locked?: boolean }) | null>(null);
   const [available, setAvailable] = useState(true);
   const [loading, setLoading] = useState(true);
   const [history, setHistory] = useState<HistoryPoint[]>([]);
+  const [historyLocked, setHistoryLocked] = useState(false);
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    fetch(`/api/stocks/${symbol}/score`)
+    authFetch(`/api/stocks/${symbol}/score`)
       .then(r => r.json())
       .then(d => {
         if (!alive) return;
@@ -73,9 +76,13 @@ export default function ScripwiseScoreCard({ symbol }: Props) {
       .catch(() => { if (alive) setAvailable(false); })
       .finally(() => { if (alive) setLoading(false); });
 
-    fetch(`/api/stocks/${symbol}/score/history`)
+    authFetch(`/api/stocks/${symbol}/score/history`)
       .then(r => r.json())
-      .then(d => { if (alive && d.available) setHistory(d.points); })
+      .then(d => {
+        if (!alive) return;
+        if (d.available) setHistory(d.points);
+        else if (d.locked) setHistoryLocked(true);
+      })
       .catch(() => {});
 
     return () => { alive = false; };
@@ -115,65 +122,75 @@ export default function ScripwiseScoreCard({ symbol }: Props) {
             </div>
           </div>
 
-          {/* Category dials */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
-            {summariseByCategory(data.breakdown).map(c => (
-              <div key={c.category} className="rounded-[10px] bg-[#F7F9FC] border border-[#EDF0F7] px-3 py-2.5">
-                <div className="text-[11px] text-[#8A96A8] leading-tight mb-1.5 h-7">{c.category}</div>
-                {c.graded ? (
-                  <>
-                    <div className="text-lg font-bold num" style={{ color: CATEGORY_COLOR(c.pct) }}>{c.pct}</div>
-                    <div className="h-1 rounded-full bg-[#E2E8F0] overflow-hidden mt-1">
-                      <div className="h-full rounded-full" style={{ width: `${c.pct}%`, background: CATEGORY_COLOR(c.pct) }} />
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-sm text-[#8A96A8]">—</div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Red flags */}
-          {redFlags(data.breakdown).length > 0 && (
-            <div className="mb-5 rounded-[10px] bg-[#FEF2F2] border border-[#FECACA] px-4 py-3">
-              <div className="flex items-center gap-1.5 mb-2">
-                <ShieldAlert size={14} className="text-[#DC2626]" />
-                <span className="text-xs font-semibold text-[#991B1B]">
-                  Red flags ({redFlags(data.breakdown).length})
-                </span>
-              </div>
-              <ul className="space-y-1">
-                {redFlags(data.breakdown).map(f => (
-                  <li key={f.label} className="flex items-center justify-between text-xs">
-                    <span className="text-[#7F1D1D]">{f.label}</span>
-                    <span className="num text-[#991B1B] font-medium">{f.detail}</span>
-                  </li>
+          {data.locked ? (
+            <ProUpsell
+              compact
+              title="Unlock the full Scorecard"
+              description="Category dials, red flags, the full metric breakdown, and score history — upgrade to Pro to see what's behind this score."
+            />
+          ) : (
+            <>
+              {/* Category dials */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-5">
+                {summariseByCategory(data.breakdown).map(c => (
+                  <div key={c.category} className="rounded-[10px] bg-[#F7F9FC] border border-[#EDF0F7] px-3 py-2.5">
+                    <div className="text-[11px] text-[#8A96A8] leading-tight mb-1.5 h-7">{c.category}</div>
+                    {c.graded ? (
+                      <>
+                        <div className="text-lg font-bold num" style={{ color: CATEGORY_COLOR(c.pct) }}>{c.pct}</div>
+                        <div className="h-1 rounded-full bg-[#E2E8F0] overflow-hidden mt-1">
+                          <div className="h-full rounded-full" style={{ width: `${c.pct}%`, background: CATEGORY_COLOR(c.pct) }} />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-sm text-[#8A96A8]">—</div>
+                    )}
+                  </div>
                 ))}
-              </ul>
-            </div>
-          )}
-
-          <div className="grid sm:grid-cols-2 gap-x-6 gap-y-2">
-            {data.breakdown.map(line => (
-              <div key={line.label} className="flex items-center justify-between py-1.5 border-b border-[#EDF0F7]">
-                <span className="flex items-center gap-2 text-sm text-[#4A5568]">
-                  {STATUS_ICON[line.status]} {line.label}
-                </span>
-                <span className={cn(
-                  'num text-xs font-medium',
-                  line.status === 'good' && 'text-positive',
-                  line.status === 'bad' && 'text-negative',
-                  line.status === 'warn' && 'text-[#D97706]',
-                  line.status === 'na' && 'text-[#8A96A8]',
-                )}>
-                  {line.detail}
-                </span>
               </div>
-            ))}
-          </div>
 
-          <ScoreHistoryChart points={history} />
+              {/* Red flags */}
+              {redFlags(data.breakdown).length > 0 && (
+                <div className="mb-5 rounded-[10px] bg-[#FEF2F2] border border-[#FECACA] px-4 py-3">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <ShieldAlert size={14} className="text-[#DC2626]" />
+                    <span className="text-xs font-semibold text-[#991B1B]">
+                      Red flags ({redFlags(data.breakdown).length})
+                    </span>
+                  </div>
+                  <ul className="space-y-1">
+                    {redFlags(data.breakdown).map(f => (
+                      <li key={f.label} className="flex items-center justify-between text-xs">
+                        <span className="text-[#7F1D1D]">{f.label}</span>
+                        <span className="num text-[#991B1B] font-medium">{f.detail}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="grid sm:grid-cols-2 gap-x-6 gap-y-2">
+                {data.breakdown.map(line => (
+                  <div key={line.label} className="flex items-center justify-between py-1.5 border-b border-[#EDF0F7]">
+                    <span className="flex items-center gap-2 text-sm text-[#4A5568]">
+                      {STATUS_ICON[line.status]} {line.label}
+                    </span>
+                    <span className={cn(
+                      'num text-xs font-medium',
+                      line.status === 'good' && 'text-positive',
+                      line.status === 'bad' && 'text-negative',
+                      line.status === 'warn' && 'text-[#D97706]',
+                      line.status === 'na' && 'text-[#8A96A8]',
+                    )}>
+                      {line.detail}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {historyLocked ? null : <ScoreHistoryChart points={history} />}
+            </>
+          )}
 
           <p className="text-[11px] text-[#8A96A8] mt-4">
             Not investment advice — see <Link href="/disclaimer" className="underline hover:text-[#F97316]">disclaimer</Link>.

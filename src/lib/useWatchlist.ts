@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useEntitlement } from '@/lib/useEntitlement';
+import { FREE_WATCHLIST_LIMIT } from '@/lib/plans';
 
 const STORAGE_KEY = 'scripwise-watchlist';
 
@@ -22,8 +24,13 @@ function write(symbols: string[]) {
   window.dispatchEvent(new CustomEvent('scripwise-watchlist-change'));
 }
 
-/** Device-scoped watchlist (localStorage) — no account required. */
+/** Device-scoped watchlist (localStorage) — no account required. Capped at
+ *  FREE_WATCHLIST_LIMIT for non-Pro users; Pro is unlimited. This is a soft,
+ *  client-side cap (there's no server-side watchlist to enforce it against)
+ *  — good enough to guide free users toward upgrading, not a security
+ *  boundary. */
 export function useWatchlist() {
+  const ent = useEntitlement();
   const [symbols, setSymbols] = useState<string[]>([]);
 
   useEffect(() => {
@@ -38,12 +45,15 @@ export function useWatchlist() {
   }, []);
 
   const isWatched = useCallback((symbol: string) => symbols.includes(symbol), [symbols]);
+  const atLimit = !ent.active && symbols.length >= FREE_WATCHLIST_LIMIT;
 
   const add = useCallback((symbol: string) => {
     const current = read();
-    if (current.includes(symbol)) return;
+    if (current.includes(symbol)) return false;
+    if (!ent.active && current.length >= FREE_WATCHLIST_LIMIT) return false;
     write([...current, symbol]);
-  }, []);
+    return true;
+  }, [ent.active]);
 
   const remove = useCallback((symbol: string) => {
     write(read().filter(s => s !== symbol));
@@ -51,8 +61,14 @@ export function useWatchlist() {
 
   const toggle = useCallback((symbol: string) => {
     const current = read();
-    write(current.includes(symbol) ? current.filter(s => s !== symbol) : [...current, symbol]);
-  }, []);
+    if (current.includes(symbol)) {
+      write(current.filter(s => s !== symbol));
+      return true;
+    }
+    if (!ent.active && current.length >= FREE_WATCHLIST_LIMIT) return false;
+    write([...current, symbol]);
+    return true;
+  }, [ent.active]);
 
-  return { symbols, isWatched, add, remove, toggle };
+  return { symbols, isWatched, add, remove, toggle, atLimit, limit: FREE_WATCHLIST_LIMIT };
 }

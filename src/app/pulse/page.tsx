@@ -4,11 +4,13 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Activity, Info } from 'lucide-react';
 import { useAuth } from '@/lib/AuthProvider';
+import { authFetch } from '@/lib/authFetch';
 import PulseGauge from '@/components/pulse/PulseGauge';
+import ProUpsell from '@/components/billing/ProUpsell';
 import { formatTradeDate } from '@/lib/utils';
 import type { PulseResult } from '@/lib/pulse';
 
-type PulseData = ({ available: true } & PulseResult) | { available: false };
+type PulseData = ({ available: true; locked?: boolean } & PulseResult) | { available: false };
 
 export default function PulsePage() {
   const { user, loading: authLoading } = useAuth();
@@ -22,7 +24,7 @@ export default function PulsePage() {
 
   useEffect(() => {
     if (!user) return;
-    fetch('/api/pulse')
+    authFetch('/api/pulse')
       .then(r => r.json())
       .then((d: PulseData) => setData(d))
       .catch(() => setData({ available: false }))
@@ -82,6 +84,12 @@ export default function PulsePage() {
               </div>
             </div>
 
+            {data.locked ? (
+              <ProUpsell
+                title="See what's driving the Pulse"
+                description="Upgrade to Pro for the full breakdown — breadth, 52-week positioning, new highs vs lows, and benchmark momentum, each with its own weight."
+              />
+            ) : (
             <div className="card-plain p-6">
               <h2 className="text-sm font-semibold text-[#0D1117] mb-4">What&apos;s driving it</h2>
               <div className="space-y-4">
@@ -108,6 +116,7 @@ export default function PulsePage() {
                 ))}
               </div>
             </div>
+            )}
 
             <div className="card-plain p-6">
               <h2 className="text-sm font-semibold text-[#0D1117] mb-2">How it&apos;s calculated</h2>

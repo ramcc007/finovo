@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { headers } from 'next/headers';
 import { Check, Minus, Sparkles, ShieldCheck, HelpCircle } from 'lucide-react';
 import {
   FEATURE_MATRIX, FREE_HIGHLIGHTS, PRO_HIGHLIGHTS,
@@ -38,7 +39,8 @@ const FAQ: { q: string; a: string }[] = [
   },
 ];
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
   return (
     <div className="min-h-screen bg-[#F4F6FA]">
       <div className="max-w-5xl mx-auto px-4 md:px-6 py-12 md:py-16">
@@ -90,7 +92,7 @@ export default function PricingPage() {
               <span className="text-sm text-[#8A96A8] ml-1.5">/ year</span>
             </div>
             <p className="text-xs text-[#8A96A8] mb-6">{PRO_PER_MONTH_LABEL}</p>
-            <div className="mb-6"><ProCTA /></div>
+            <div className="mb-6"><ProCTA nonce={nonce} /></div>
             <ul className="space-y-3 mt-auto">
               {PRO_HIGHLIGHTS.map((f, i) => (
                 <li key={f} className={`flex items-start gap-2.5 text-sm ${i === 0 ? 'text-[#8A96A8] font-medium' : 'text-[#374151]'}`}>

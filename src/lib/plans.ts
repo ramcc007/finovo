@@ -35,7 +35,19 @@ export const PRO_FEATURES: ReadonlySet<FeatureKey> = new Set<FeatureKey>([
 /** Free-tier soft limits, referenced by both the UI and server checks. */
 export const FREE_WATCHLIST_LIMIT = 10;
 export const FREE_SAVED_SCREENS_LIMIT = 1;
-export const FREE_SCREENER_FILTER_COUNT = 10;
+
+/**
+ * Screener query params that require Pro. Deliberately excludes sector,
+ * market cap, P/E, ROE, debt/equity, and score_min/max — those back the
+ * shipped quick-filter chips (Low P/E, High ROE, Zero debt, Strong
+ * Scripwise Score) and the "Free: core filters" promise on /pricing, so
+ * gating them would silently break an existing free feature. Checked by
+ * both /api/screener (enforcement) and the screener page (UI lock icons).
+ */
+export const PRO_ONLY_SCREENER_PARAMS: ReadonlySet<string> = new Set([
+  'pb_min', 'pb_max', 'div_yield_min', 'rev_growth_1y_min', 'profit_growth_1y_min',
+  'promoter_min', 'pledge_max',
+]);
 
 export interface FeatureRow {
   label: string;

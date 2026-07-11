@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, User, Mail, Lock, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthProvider';
 import { supabase } from '@/lib/supabase';
 import { validatePassword, MIN_PASSWORD_LENGTH } from '@/lib/passwordPolicy';
 import Turnstile from '@/components/auth/Turnstile';
+import BillingSection from './BillingSection';
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
@@ -18,6 +19,8 @@ interface Profile {
 export default function ProfileForm({ nonce }: { nonce?: string }) {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const upgraded = searchParams.get('upgraded');
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [firstName, setFirstName] = useState('');
@@ -181,6 +184,17 @@ export default function ProfileForm({ nonce }: { nonce?: string }) {
           <p className="text-sm text-[#4A5568] mt-1.5">Manage your name and password.</p>
         </div>
 
+        {upgraded === '1' && (
+          <div className="rounded-[10px] bg-[#F0FDF4] border border-[#BBF7D0] px-4 py-3 text-sm text-[#166534]">
+            🎉 You&apos;re on Scripwise Pro — all features are unlocked.
+          </div>
+        )}
+        {upgraded === 'pending' && (
+          <div className="rounded-[10px] bg-[#FFF7ED] border border-[#FED7AA] px-4 py-3 text-sm text-[#7C2D12]">
+            Payment received — your Pro access is being activated and will appear here shortly.
+          </div>
+        )}
+
         {/* Recovery mode: set new password after clicking the emailed link */}
         {recoveryMode && (
           <div className="card-plain p-6 border-2 border-[#F97316]">
@@ -282,6 +296,8 @@ export default function ProfileForm({ nonce }: { nonce?: string }) {
             </button>
           </form>
         </div>
+
+        <BillingSection />
 
         {/* Password change */}
         <div className="card-plain p-6">

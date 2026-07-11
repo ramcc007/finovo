@@ -81,7 +81,8 @@ export default function StockPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('Overview');
-  const { isWatched, toggle } = useWatchlist();
+  const { isWatched, toggle, atLimit, limit } = useWatchlist();
+  const [watchlistLimitNote, setWatchlistLimitNote] = useState(false);
   const [finPeriod, setFinPeriod] = useState<'annual' | 'quarterly'>('annual');
   const [finTab, setFinTab] = useState<'pl' | 'bs' | 'cf'>('pl');
 
@@ -200,7 +201,10 @@ export default function StockPage() {
                   <span>At last market close · NSE</span>
                 </div>
                 <button
-                  onClick={() => toggle(symbol)}
+                  onClick={() => {
+                    const ok = toggle(symbol);
+                    setWatchlistLimitNote(!ok);
+                  }}
                   className={cn(
                     'flex items-center gap-1.5 text-sm font-medium px-4 py-1.5 rounded-[6px] transition-all',
                     isWatched(symbol)
@@ -211,6 +215,12 @@ export default function StockPage() {
                   {isWatched(symbol) ? <Check size={14} /> : <Plus size={14} />}
                   {isWatched(symbol) ? 'Watchlisted' : 'Add to Watchlist'}
                 </button>
+                {watchlistLimitNote && atLimit && (
+                  <p className="text-xs text-[#DC2626] max-w-[220px] text-right">
+                    Free watchlist is full ({limit} stocks) —{' '}
+                    <Link href="/pricing" className="underline font-medium">upgrade to Pro</Link> for unlimited.
+                  </p>
+                )}
               </div>
             </div>
           )}
