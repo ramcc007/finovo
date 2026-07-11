@@ -6,6 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Search, X, Menu, Loader2, ArrowRight, User, LogOut, ShieldCheck, UserCog, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/AuthProvider';
+import { useEntitlement } from '@/lib/useEntitlement';
 import { adminFetch } from '@/lib/adminFetch';
 import Logo from './Logo';
 
@@ -33,6 +34,7 @@ export default function Header() {
   const ref = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
   const { user, loading: authLoading, signOut } = useAuth();
+  const ent = useEntitlement();
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
@@ -96,6 +98,11 @@ export default function Header() {
         <Link href="/" className="flex items-center gap-2.5 shrink-0">
           <Logo className="w-8 h-8 rounded-[9px] shadow-[0_2px_8px_rgba(249,115,22,0.30)]" />
           <span className="hidden sm:inline font-bold text-[#131A24] text-[18px] tracking-tight">Scripwise</span>
+          {ent.active && (
+            <span className="hidden sm:inline text-[10px] font-bold text-[#F97316] bg-[#FFF3E8] border border-[#FFEDD5] px-1.5 py-0.5 rounded-md tracking-wide">
+              PRO
+            </span>
+          )}
         </Link>
 
         {/* Search */}

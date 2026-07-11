@@ -4,9 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Script from 'next/script';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthProvider';
 import { authFetch } from '@/lib/authFetch';
+import { useEntitlement } from '@/lib/useEntitlement';
 
 /** Free-plan button: always just points into the product / signup. */
 export function FreeCTA() {
@@ -45,18 +46,29 @@ declare global {
  *  "launching shortly" message if Razorpay isn't configured yet. */
 export function ProCTA({ nonce }: { nonce?: string }) {
   const { user, loading } = useAuth();
+  const ent = useEntitlement();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [scriptReady, setScriptReady] = useState(false);
 
-  if (loading) return <div className="btn btn-primary w-full justify-center opacity-60">Loading…</div>;
+  if (loading || (user && ent.loading)) {
+    return <div className="btn btn-primary w-full justify-center opacity-60">Loading…</div>;
+  }
 
   if (!user) {
     return (
       <Link href="/signup?intent=pro" className="btn btn-primary w-full justify-center">
         Go Pro — ₹499/yr <ArrowRight size={16} />
       </Link>
+    );
+  }
+
+  if (ent.active) {
+    return (
+      <div className="w-full flex items-center justify-center gap-2 text-sm font-semibold text-[#16A34A] bg-[#F0FDF4] border border-[#BBF7D0] rounded-[8px] py-2.5">
+        <CheckCircle2 size={16} /> You&apos;re on Pro
+      </div>
     );
   }
 
@@ -79,7 +91,9 @@ export function ProCTA({ nonce }: { nonce?: string }) {
         // keep polling
       }
     }
-    // Webhook is just slow — payment succeeded, so send them on regardless.
+    // Payment succeeded but hasn't confirmed as active yet even after
+    // checking directly with Razorpay — send them on with an honest
+    // expectation instead of leaving them stuck on this page.
     router.push('/profile?upgraded=pending');
   };
 

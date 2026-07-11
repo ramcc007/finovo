@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, User, Mail, Lock, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthProvider';
 import { supabase } from '@/lib/supabase';
+import { authFetch } from '@/lib/authFetch';
 import { validatePassword, MIN_PASSWORD_LENGTH } from '@/lib/passwordPolicy';
 import Turnstile from '@/components/auth/Turnstile';
 import BillingSection from './BillingSection';
@@ -46,6 +47,35 @@ export default function ProfileForm({ nonce }: { nonce?: string }) {
   useEffect(() => {
     if (!authLoading && !user) router.push('/login');
   }, [authLoading, user, router]);
+
+  // When we sent the user here with an unconfirmed payment, keep checking
+  // in the background — /api/billing/status actively verifies with Razorpay
+  // when not yet active, so this closes the loop even if the webhook is
+  // slow or never fires, instead of leaving the "pending" banner stuck.
+  useEffect(() => {
+    if (upgraded !== 'pending' || !user) return;
+    let alive = true;
+    let attempts = 0;
+    const poll = async () => {
+      attempts++;
+      try {
+        const res = await authFetch('/api/billing/status');
+        if (res.ok) {
+          const d = await res.json();
+          if (d.active && alive) {
+            router.replace('/profile?upgraded=1');
+            router.refresh();
+            return;
+          }
+        }
+      } catch {
+        // keep trying
+      }
+      if (attempts < 12 && alive) setTimeout(poll, 10_000);
+    };
+    const t = setTimeout(poll, 10_000);
+    return () => { alive = false; clearTimeout(t); };
+  }, [upgraded, user, router]);
 
   useEffect(() => {
     if (!user) return;
@@ -186,12 +216,14 @@ export default function ProfileForm({ nonce }: { nonce?: string }) {
 
         {upgraded === '1' && (
           <div className="rounded-[10px] bg-[#F0FDF4] border border-[#BBF7D0] px-4 py-3 text-sm text-[#166534]">
-            🎉 You&apos;re on Scripwise Pro — all features are unlocked.
+            🎉 Thank you for subscribing! You&apos;re on Scripwise Pro — all features are unlocked.
           </div>
         )}
         {upgraded === 'pending' && (
           <div className="rounded-[10px] bg-[#FFF7ED] border border-[#FED7AA] px-4 py-3 text-sm text-[#7C2D12]">
-            Payment received — your Pro access is being activated and will appear here shortly.
+            🎉 Thank you for subscribing! We&apos;ve received your payment. Pro access is usually activated within a
+            few minutes, but can take up to 2 hours. This page will update automatically once it&apos;s ready —
+            no action needed from you.
           </div>
         )}
 
