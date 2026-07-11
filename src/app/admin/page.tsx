@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, ShieldAlert, Users, BarChart3, Ban, Trash2, ShieldCheck, Search, KeyRound } from 'lucide-react';
+import { Loader2, ShieldAlert, Users, BarChart3, Ban, Trash2, ShieldCheck, Search, KeyRound, IndianRupee } from 'lucide-react';
 import { useAuth } from '@/lib/AuthProvider';
 import { adminFetch } from '@/lib/adminFetch';
 import { validatePassword, MIN_PASSWORD_LENGTH } from '@/lib/passwordPolicy';
 import { cn } from '@/lib/utils';
+import RefundModal from './RefundModal';
 
 interface AdminUserRow {
   id: string;
@@ -19,6 +20,9 @@ interface AdminUserRow {
   last_name: string | null;
   city: string | null;
   investor_profile: string | null;
+  plan: 'free' | 'pro';
+  subscriptionStatus: string | null;
+  hasSubscription: boolean;
 }
 
 interface Overview {
@@ -61,6 +65,17 @@ export default function AdminPage() {
   const [usersError, setUsersError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [actingId, setActingId] = useState<string | null>(null);
+  const [refundTarget, setRefundTarget] = useState<AdminUserRow | null>(null);
+
+  const loadUsers = () => {
+    adminFetch('/api/admin/users')
+      .then(async r => {
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error ?? 'Failed to load users');
+        setUsers(d.data ?? []);
+      })
+      .catch(e => setUsersError(e.message));
+  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -83,13 +98,7 @@ export default function AdminPage() {
       })
       .catch(e => setAnalyticsError(e.message));
 
-    adminFetch('/api/admin/users')
-      .then(async r => {
-        const d = await r.json();
-        if (!r.ok) throw new Error(d.error ?? 'Failed to load users');
-        setUsers(d.data ?? []);
-      })
-      .catch(e => setUsersError(e.message));
+    loadUsers();
   }, [checked, isAdmin]);
 
   const handleSuspend = async (u: AdminUserRow) => {
@@ -295,6 +304,7 @@ export default function AdminPage() {
                   <th className="text-left">User</th>
                   <th className="text-left">City</th>
                   <th className="text-left">Profile</th>
+                  <th>Plan</th>
                   <th>Joined</th>
                   <th>Last Login</th>
                   <th>Status</th>
@@ -303,15 +313,15 @@ export default function AdminPage() {
               </thead>
               <tbody>
                 {usersError ? (
-                  <tr><td colSpan={7} className="text-center py-10 text-[#DC2626] font-sans">{usersError}</td></tr>
+                  <tr><td colSpan={8} className="text-center py-10 text-[#DC2626] font-sans">{usersError}</td></tr>
                 ) : !filteredUsers ? (
                   Array(6).fill(0).map((_, i) => (
-                    <tr key={i}>{Array(7).fill(0).map((_, j) => (
+                    <tr key={i}>{Array(8).fill(0).map((_, j) => (
                       <td key={j}><div className="h-4 bg-[#EEF1F7] rounded animate-pulse" /></td>
                     ))}</tr>
                   ))
                 ) : filteredUsers.length === 0 ? (
-                  <tr><td colSpan={7} className="text-center py-10 text-[#8A96A8] font-sans">No users found.</td></tr>
+                  <tr><td colSpan={8} className="text-center py-10 text-[#8A96A8] font-sans">No users found.</td></tr>
                 ) : filteredUsers.map(u => {
                   const banned = isBanned(u);
                   const name = [u.first_name, u.last_name].filter(Boolean).join(' ');
@@ -324,6 +334,14 @@ export default function AdminPage() {
                       </td>
                       <td className="text-[#4A5568] font-sans text-xs">{u.city ?? '—'}</td>
                       <td className="text-[#4A5568] font-sans text-xs capitalize">{u.investor_profile ?? '—'}</td>
+                      <td>
+                        <span className={cn(
+                          'text-[10px] font-semibold px-2 py-0.5 rounded',
+                          u.plan === 'pro' ? 'bg-[#FFF3E8] text-[#F97316]' : 'bg-[#F4F6FA] text-[#8A96A8]'
+                        )}>
+                          {u.plan === 'pro' ? 'PRO' : 'Free'}
+                        </span>
+                      </td>
                       <td className="text-xs">{fmtDate(u.created_at)}</td>
                       <td className="text-xs">{fmtDate(u.last_sign_in_at)}</td>
                       <td>
@@ -348,6 +366,15 @@ export default function AdminPage() {
                           </div>
                         ) : (
                           <div className="flex items-center justify-center gap-1">
+                            {u.hasSubscription && (
+                              <button
+                                onClick={() => setRefundTarget(u)}
+                                title="Refund"
+                                className="p-2 rounded-md text-[#16A34A] hover:bg-[#DCFCE7] transition-colors"
+                              >
+                                <IndianRupee size={14} />
+                              </button>
+                            )}
                             <button
                               onClick={() => handleSetPassword(u)}
                               disabled={actingId === u.id}
@@ -386,6 +413,15 @@ export default function AdminPage() {
           </div>
         </div>
       </div>
+
+      {refundTarget && (
+        <RefundModal
+          userId={refundTarget.id}
+          userEmail={refundTarget.email}
+          onClose={() => setRefundTarget(null)}
+          onRefunded={loadUsers}
+        />
+      )}
     </div>
   );
 }

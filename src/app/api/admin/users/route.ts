@@ -13,6 +13,9 @@ interface AdminUserRow {
   last_name: string | null;
   city: string | null;
   investor_profile: string | null;
+  plan: 'free' | 'pro';
+  subscriptionStatus: string | null;
+  hasSubscription: boolean;
 }
 
 export async function GET(req: NextRequest) {
@@ -36,8 +39,14 @@ export async function GET(req: NextRequest) {
     .select('id, first_name, last_name, city, investor_profile');
   const profileMap = new Map((profiles ?? []).map(p => [p.id as string, p]));
 
+  const { data: subs } = await client
+    .from('subscriptions')
+    .select('user_id, plan, status, razorpay_subscription_id');
+  const subMap = new Map((subs ?? []).map(s => [s.user_id as string, s]));
+
   const rows: AdminUserRow[] = users.map(u => {
     const p = profileMap.get(u.id as string);
+    const s = subMap.get(u.id as string);
     return {
       id: u.id as string,
       email: (u.email as string) ?? null,
@@ -49,6 +58,9 @@ export async function GET(req: NextRequest) {
       last_name: (p?.last_name as string) ?? null,
       city: (p?.city as string) ?? null,
       investor_profile: (p?.investor_profile as string) ?? null,
+      plan: s?.plan === 'pro' && s?.status === 'active' ? 'pro' : 'free',
+      subscriptionStatus: (s?.status as string) ?? null,
+      hasSubscription: !!s?.razorpay_subscription_id,
     };
   });
 
