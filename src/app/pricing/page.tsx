@@ -64,10 +64,14 @@ export default async function PricingPage() {
               <h2 className="text-lg font-bold text-[#0D1117]">Free</h2>
               <p className="text-sm text-[#56616F] mt-1">Everything you need to start researching.</p>
             </div>
-            <div className="mb-6">
+            <div className="mb-1">
               <span className="text-4xl font-extrabold text-[#0D1117]">₹0</span>
               <span className="text-sm text-[#8A96A8] ml-1.5">forever</span>
             </div>
+            {/* Invisible spacer matching Pro's "≈ ₹42/mo…" subtitle line —
+                keeps both CTA buttons aligned to the same vertical position
+                regardless of which card has an extra line of price detail. */}
+            <p className="text-xs mb-6 invisible" aria-hidden="true">placeholder</p>
             <div className="mb-6"><FreeCTA /></div>
             <ul className="space-y-3 mt-auto">
               {FREE_HIGHLIGHTS.map(f => (
