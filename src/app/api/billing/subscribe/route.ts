@@ -8,6 +8,11 @@ export const dynamic = 'force-dynamic';
 // the browser needs to open Razorpay Checkout. No SDK — a single REST call
 // with Basic auth. Returns 501 until the Razorpay env vars are configured, so
 // the pricing page's "Upgrade" button degrades gracefully in the meantime.
+//
+// Vercel serverless functions bake in env vars at deploy time — changing a
+// var's value in the dashboard does NOT retroactively update an
+// already-built deployment. A fresh deploy created after the save is
+// required for a new RAZORPAY_PLAN_ID to actually take effect.
 export async function POST(req: NextRequest) {
   const keyId = process.env.RAZORPAY_KEY_ID;
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
