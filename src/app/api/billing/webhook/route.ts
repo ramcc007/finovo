@@ -77,6 +77,10 @@ export async function POST(req: NextRequest) {
     current_period_end: currentEnd,
     updated_at: new Date().toISOString(),
   };
+  // A genuine activation/charge/resume means the subscription is renewing
+  // normally — clear any stale "will not renew" flag left over from a
+  // previous cancelled subscription reusing this user's row.
+  if (status === 'active') row.cancel_at_period_end = false;
 
   // Prefer the user_id carried in notes; fall back to matching the stored
   // subscription id recorded at checkout time.

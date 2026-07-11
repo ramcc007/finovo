@@ -50,10 +50,18 @@ export async function POST(req: NextRequest) {
     }
 
     // Record the mapping so the webhook can resolve subscription → user, even
-    // if the notes field is ever dropped.
+    // if the notes field is ever dropped. cancel_at_period_end is explicitly
+    // reset here — without it, a user who cancels, lets the old subscription
+    // fully expire, and starts a brand-new one would be stuck seeing "will
+    // not renew" forever, since Supabase upsert only touches the columns
+    // given here and would otherwise leave the old row's flag untouched.
     const svc = getServiceClient();
     await svc.from('subscriptions').upsert(
-      { user_id: ent.userId, plan: 'free', status: 'pending', razorpay_subscription_id: sub.id, updated_at: new Date().toISOString() },
+      {
+        user_id: ent.userId, plan: 'free', status: 'pending',
+        razorpay_subscription_id: sub.id, cancel_at_period_end: false,
+        updated_at: new Date().toISOString(),
+      },
       { onConflict: 'user_id' }
     );
 
