@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const client = getServiceClient();
   let { data: sub } = await client
     .from('subscriptions')
-    .select('plan, status, current_period_end, razorpay_subscription_id')
+    .select('plan, status, current_period_end, razorpay_subscription_id, cancel_at_period_end')
     .eq('user_id', ent.userId)
     .maybeSingle();
 
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     await syncSubscriptionStatus(ent.userId, sub.razorpay_subscription_id);
     const { data: refreshed } = await client
       .from('subscriptions')
-      .select('plan, status, current_period_end, razorpay_subscription_id')
+      .select('plan, status, current_period_end, razorpay_subscription_id, cancel_at_period_end')
       .eq('user_id', ent.userId)
       .maybeSingle();
     sub = refreshed ?? sub;
@@ -38,5 +38,6 @@ export async function GET(req: NextRequest) {
     active,
     status: sub?.status ?? 'inactive',
     currentPeriodEnd: sub?.current_period_end ?? null,
+    cancelAtPeriodEnd: sub?.cancel_at_period_end ?? false,
   });
 }

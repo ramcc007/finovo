@@ -48,5 +48,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Could not cancel. Please try again.' }, { status: 502 });
   }
 
+  // Razorpay's cancel-at-cycle-end leaves the subscription's own status as
+  // 'active' until the cycle actually ends — there's nothing to read back
+  // from their API that says "this is scheduled to cancel." Record that
+  // intent ourselves, or the UI has no way to show it (and won't survive a
+  // page reload).
+  await client
+    .from('subscriptions')
+    .update({ cancel_at_period_end: true, updated_at: new Date().toISOString() })
+    .eq('user_id', ent.userId);
+
   return NextResponse.json({ ok: true });
 }

@@ -361,8 +361,17 @@ export default function AdminPage() {
                       </td>
                       <td>
                         {isSelf ? (
-                          <div className="text-center">
-                            <span className="text-[10px] text-[#8A96A8] italic">Your account</span>
+                          <div className="flex items-center justify-center gap-1">
+                            {u.hasSubscription && (
+                              <button
+                                onClick={() => setRefundTarget(u)}
+                                title="Refund"
+                                className="p-2 rounded-md text-[#16A34A] hover:bg-[#DCFCE7] transition-colors"
+                              >
+                                <IndianRupee size={14} />
+                              </button>
+                            )}
+                            <span className="text-[10px] text-[#8A96A8] italic px-1">Your account</span>
                           </div>
                         ) : (
                           <div className="flex items-center justify-center gap-1">

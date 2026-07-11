@@ -10,10 +10,13 @@ interface EntitlementState {
   active: boolean;
   status: string;
   currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
   loading: boolean;
 }
 
-const DEFAULT_STATE: EntitlementState = { plan: 'free', active: false, status: 'inactive', currentPeriodEnd: null, loading: true };
+const DEFAULT_STATE: EntitlementState = {
+  plan: 'free', active: false, status: 'inactive', currentPeriodEnd: null, cancelAtPeriodEnd: false, loading: true,
+};
 
 /** Client-side read of the signed-in user's plan — for UI decisions only
  *  (locking buttons, showing upsells). The actual enforcement always
@@ -33,7 +36,11 @@ export function useEntitlement() {
       .then(d => {
         if (!alive) return;
         if (!d) { setState({ ...DEFAULT_STATE, loading: false }); return; }
-        setState({ plan: d.plan, active: d.active, status: d.status, currentPeriodEnd: d.currentPeriodEnd, loading: false });
+        setState({
+          plan: d.plan, active: d.active, status: d.status,
+          currentPeriodEnd: d.currentPeriodEnd, cancelAtPeriodEnd: !!d.cancelAtPeriodEnd,
+          loading: false,
+        });
       })
       .catch(() => { if (alive) setState({ ...DEFAULT_STATE, loading: false }); });
     return () => { alive = false; };

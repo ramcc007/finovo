@@ -50,11 +50,11 @@ export default function BillingSection() {
             <div className="text-sm text-[#166534]">
               <span className="font-semibold">Scripwise Pro</span> is active
               {ent.currentPeriodEnd && (
-                <> · renews {formatTradeDate(ent.currentPeriodEnd)}</>
+                <> · {(cancelled || ent.cancelAtPeriodEnd) ? 'access until' : 'renews'} {formatTradeDate(ent.currentPeriodEnd)}</>
               )}
             </div>
           </div>
-          {cancelled ? (
+          {cancelled || ent.cancelAtPeriodEnd ? (
             <p className="text-sm text-[#4A5568]">
               Your subscription will not renew. You&apos;ll keep Pro access until{' '}
               {ent.currentPeriodEnd ? formatTradeDate(ent.currentPeriodEnd) : 'the end of your billing year'}.
