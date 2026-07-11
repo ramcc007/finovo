@@ -44,6 +44,30 @@ export default function RefundModal({ userId, userEmail, onClose, onRefunded }: 
     return () => { alive = false; };
   }, [userId]);
 
+  // For a payment that's already fully refunded on Razorpay's side, the
+  // subscription itself may still be active there (a refund doesn't cancel
+  // it) — re-hitting the refund endpoint with no amount re-syncs that
+  // instead of issuing a new refund.
+  const handleResync = async (p: Payment) => {
+    setBusyId(p.paymentId);
+    setResult(r => ({ ...r, [p.paymentId]: undefined as unknown as { ok: boolean; message: string } }));
+    try {
+      const res = await adminFetch(`/api/admin/users/${userId}/refund`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentId: p.paymentId }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error ?? 'Sync failed');
+      setResult(r => ({ ...r, [p.paymentId]: { ok: !d.warning, message: d.message ?? 'Synced.' } }));
+      onRefunded();
+    } catch (e) {
+      setResult(r => ({ ...r, [p.paymentId]: { ok: false, message: e instanceof Error ? e.message : 'Sync failed' } }));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const handleRefund = async (p: Payment) => {
     const raw = amounts[p.paymentId];
     const amount = parseFloat(raw);
@@ -67,10 +91,15 @@ export default function RefundModal({ userId, userEmail, onClose, onRefunded }: 
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error ?? 'Refund failed');
-      setResult(r => ({ ...r, [p.paymentId]: { ok: true, message: `Refunded ₹${d.amountRefunded.toFixed(2)}${d.fullyRefunded ? ' — Pro access revoked.' : '.'}` } }));
-      setPayments(prev => prev?.map(x => x.paymentId === p.paymentId
-        ? { ...x, amountRefunded: x.amountRefunded + amount, refundable: x.refundable - amount }
-        : x) ?? null);
+      const message = d.alreadyRefunded
+        ? d.message
+        : `Refunded ₹${d.amountRefunded.toFixed(2)}.${d.warning ? ` ${d.warning}` : d.fullyRefunded ? ' — Pro access revoked.' : '.'}`;
+      setResult(r => ({ ...r, [p.paymentId]: { ok: !d.warning, message } }));
+      if (!d.alreadyRefunded) {
+        setPayments(prev => prev?.map(x => x.paymentId === p.paymentId
+          ? { ...x, amountRefunded: x.amountRefunded + amount, refundable: x.refundable - amount }
+          : x) ?? null);
+      }
       onRefunded();
     } catch (e) {
       setResult(r => ({ ...r, [p.paymentId]: { ok: false, message: e instanceof Error ? e.message : 'Refund failed' } }));
@@ -122,7 +151,17 @@ export default function RefundModal({ userId, userEmail, onClose, onRefunded }: 
                       <p className="text-xs text-[#D97706] mb-2">Already refunded: ₹{p.amountRefunded.toFixed(2)}</p>
                     )}
                     {done ? (
-                      <p className="text-xs text-[#16A34A] flex items-center gap-1"><CheckCircle2 size={13} /> Fully refunded.</p>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs text-[#16A34A] flex items-center gap-1"><CheckCircle2 size={13} /> Fully refunded.</p>
+                        <button
+                          onClick={() => handleResync(p)}
+                          disabled={busyId === p.paymentId}
+                          title="Re-check that the subscription is actually cancelled on Razorpay's side"
+                          className="text-xs text-[#8A96A8] underline hover:text-[#0D1117] disabled:opacity-60"
+                        >
+                          {busyId === p.paymentId ? <Loader2 size={12} className="animate-spin" /> : 'Resync'}
+                        </button>
+                      </div>
                     ) : (
                       <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1 bg-[#F4F6FA] border border-[#E2E8F0] rounded-[6px] px-2.5 py-1.5 flex-1">

@@ -7,6 +7,50 @@ export const dynamic = 'force-dynamic';
 
 const PAYMENT_ID_RE = /^pay_[A-Za-z0-9]+$/;
 
+// Refunding a payment does NOT cancel the underlying Razorpay subscription —
+// it stays 'active' there. Our own status-sync reconciliation (which exists
+// to rescue users stuck on a stale 'pending' row) trusts Razorpay as the
+// source of truth, so without this it would silently re-grant Pro the next
+// time the user's entitlement was checked, undoing the refund. Cancels
+// immediately (not at cycle-end) since the money has already been returned.
+// Returns a warning string on partial failure instead of throwing, so a
+// successful refund is never reported as failed just because this cleanup
+// step had trouble.
+async function cancelSubscriptionAndDowngrade(
+  svc: ReturnType<typeof getServiceClient>,
+  authHeader: string,
+  userId: string
+): Promise<string | null> {
+  const { data: sub } = await svc
+    .from('subscriptions')
+    .select('razorpay_subscription_id, status')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (sub?.razorpay_subscription_id && sub.status !== 'cancelled') {
+    const rzpCancel = await fetch(
+      `https://api.razorpay.com/v1/subscriptions/${sub.razorpay_subscription_id}/cancel`,
+      {
+        method: 'POST',
+        headers: { Authorization: authHeader, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cancel_at_cycle_end: 0 }),
+      }
+    );
+    if (!rzpCancel.ok) {
+      return 'The subscription could not be cancelled automatically — cancel it manually in the Razorpay dashboard.';
+    }
+  }
+
+  await svc.from('subscriptions').update({
+    plan: 'free',
+    status: 'cancelled',
+    cancel_at_period_end: false,
+    updated_at: new Date().toISOString(),
+  }).eq('user_id', userId);
+
+  return null;
+}
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const admin = await requireAdmin(req);
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
@@ -38,11 +82,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!payRes.ok) return NextResponse.json({ error: 'Payment not found.' }, { status: 404 });
     const pay = await payRes.json();
 
+    const svc = getServiceClient();
     const totalPaise: number = pay.amount;
     const refundedPaise: number = pay.amount_refunded ?? 0;
     const refundablePaise = totalPaise - refundedPaise;
     if (refundablePaise <= 0) {
-      return NextResponse.json({ error: 'This payment has already been fully refunded.' }, { status: 400 });
+      // Already fully refunded on Razorpay's side — but if our local row
+      // still shows an active subscription (e.g. self-heal reconciliation
+      // re-granted Pro because the subscription itself was never
+      // cancelled), fix that now instead of just erroring out.
+      const syncWarning = await cancelSubscriptionAndDowngrade(svc, authHeader, id);
+      return NextResponse.json({
+        ok: true,
+        alreadyRefunded: true,
+        fullyRefunded: true,
+        amountRefunded: 0,
+        message: syncWarning ?? 'Already fully refunded — subscription access has been synced to match.',
+        warning: syncWarning ?? undefined,
+      });
     }
 
     const requestedPaise = amountRupees !== undefined ? Math.round(amountRupees * 100) : refundablePaise;
@@ -71,7 +128,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       }, { status: 502 });
     }
 
-    const svc = getServiceClient();
     const refundedAmount = requestedPaise / 100;
 
     await svc.from('refund_events').insert({
@@ -85,19 +141,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // immediately — giving the money back while leaving paid features
     // unlocked would be inconsistent.
     const nowFullyRefunded = requestedPaise >= refundablePaise;
-    if (nowFullyRefunded) {
-      await svc.from('subscriptions').update({
-        plan: 'free',
-        status: 'cancelled',
-        updated_at: new Date().toISOString(),
-      }).eq('user_id', id);
-    }
+    const syncWarning = nowFullyRefunded ? await cancelSubscriptionAndDowngrade(svc, authHeader, id) : null;
 
     return NextResponse.json({
       ok: true,
       refundId: refund.id,
       amountRefunded: refundedAmount,
       fullyRefunded: nowFullyRefunded,
+      warning: syncWarning ?? undefined,
     });
   } catch {
     return NextResponse.json({ error: 'Refund failed. Please try again.' }, { status: 502 });
