@@ -57,7 +57,10 @@ export async function POST(req: NextRequest) {
       { onConflict: 'user_id' }
     );
 
-    return NextResponse.json({ subscriptionId: sub.id, keyId });
+    // planId is a public identifier (not a secret) — returning it lets the
+    // caller self-verify in DevTools which Plan Vercel actually resolved,
+    // without needing server-log access.
+    return NextResponse.json({ subscriptionId: sub.id, keyId, planId });
   } catch {
     return NextResponse.json({ error: 'Could not start checkout. Please try again.' }, { status: 502 });
   }
