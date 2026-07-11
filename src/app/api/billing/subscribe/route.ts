@@ -28,7 +28,13 @@ export async function POST(req: NextRequest) {
       headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         plan_id: planId,
-        total_count: 1, // ₹499 once a year; renews for another cycle each year
+        // total_count is the number of billing cycles Razorpay will run
+        // before the subscription auto-completes — NOT "renews forever".
+        // total_count: 1 was wrong: it would charge once and then stop
+        // auto-renewing. Razorpay has no literal "until cancelled" option,
+        // so the standard pattern is a large cycle count (100 years on an
+        // annual plan) and let /api/billing/cancel actually end it.
+        total_count: 100,
         customer_notify: 1,
         notes: { user_id: ent.userId },
       }),
