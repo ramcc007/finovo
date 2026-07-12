@@ -49,6 +49,14 @@ export async function GET(req: NextRequest) {
       metrics: [{ name: 'activeUsers' }],
       orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
     });
+    const [locations] = await analyticsClient.runReport({
+      property,
+      dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
+      dimensions: [{ name: 'country' }, { name: 'city' }],
+      metrics: [{ name: 'activeUsers' }],
+      orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
+      limit: 8,
+    });
 
     const rowVals = (rows: { metricValues?: { value?: string | null }[] | null }[] | null | undefined) =>
       (rows?.[0]?.metricValues ?? []).map(v => Number(v.value ?? 0));
@@ -65,6 +73,11 @@ export async function GET(req: NextRequest) {
       })),
       devices: (devices.rows ?? []).map(r => ({
         category: r.dimensionValues?.[0]?.value ?? '',
+        users: Number(r.metricValues?.[0]?.value ?? 0),
+      })),
+      locations: (locations.rows ?? []).map(r => ({
+        country: r.dimensionValues?.[0]?.value ?? '',
+        city: r.dimensionValues?.[1]?.value ?? '',
         users: Number(r.metricValues?.[0]?.value ?? 0),
       })),
     });

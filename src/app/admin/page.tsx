@@ -32,6 +32,7 @@ interface Analytics {
   last7d: Overview; last30d: Overview;
   topPages: { path: string; views: number }[];
   devices: { category: string; users: number }[];
+  locations: { country: string; city: string; users: number }[];
 }
 
 function isBanned(u: AdminUserRow): boolean {
@@ -245,7 +246,7 @@ export default function AdminPage() {
                 ))}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <h3 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-2">Top Pages (30d)</h3>
                   <div className="space-y-1.5">
@@ -268,6 +269,21 @@ export default function AdminPage() {
                       <div key={d.category} className="flex items-center justify-between text-sm">
                         <span className="text-[#4A5568] capitalize">{d.category}</span>
                         <span className="tnum font-semibold text-[#0D1117]">{d.users.toLocaleString('en-IN')}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-2">Top Locations (30d)</h3>
+                  <div className="space-y-1.5">
+                    {analytics!.locations.length === 0 ? (
+                      <p className="text-sm text-[#8A96A8]">No data yet.</p>
+                    ) : analytics!.locations.map((l, i) => (
+                      <div key={`${l.country}-${l.city}-${i}`} className="flex items-center justify-between text-sm">
+                        <span className="text-[#4A5568] truncate pr-2">
+                          {l.city && l.city !== '(not set)' ? `${l.city}, ` : ''}{l.country || 'Unknown'}
+                        </span>
+                        <span className="tnum font-semibold text-[#0D1117] shrink-0">{l.users.toLocaleString('en-IN')}</span>
                       </div>
                     ))}
                   </div>
