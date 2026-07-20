@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { computeScripwiseScore } from '@/lib/scripwiseScore';
-import { getEntitlement } from '@/lib/entitlement';
+import { getEntitlement, isWithinAnonPreview } from '@/lib/entitlement';
 
 export async function GET(
   req: NextRequest,
@@ -57,8 +57,14 @@ export async function GET(
     });
 
     // Free tier gets the headline score/band only — the category breakdown,
-    // red flags, and per-metric detail are the paid "Scorecard" feature.
+    // red flags, and per-metric detail are the paid "Scorecard" feature. A
+    // first-time anonymous visitor gets a full unlocked preview for their
+    // first 3 minutes on the site; anyone already signed in (even Free) has
+    // already seen the paywall, so they don't get this grace window.
     if (!ent.active) {
+      if (!ent.userId && isWithinAnonPreview(req)) {
+        return NextResponse.json({ available: true, ...result, previewing: true });
+      }
       return NextResponse.json({ available: true, score: result.score, maxScore: result.maxScore, band: result.band, breakdown: [], locked: true });
     }
 

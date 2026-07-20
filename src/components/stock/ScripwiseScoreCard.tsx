@@ -57,7 +57,7 @@ interface Props {
 }
 
 export default function ScripwiseScoreCard({ symbol }: Props) {
-  const [data, setData] = useState<(ScoreResult & { locked?: boolean }) | null>(null);
+  const [data, setData] = useState<(ScoreResult & { locked?: boolean; previewing?: boolean }) | null>(null);
   const [available, setAvailable] = useState(true);
   const [loading, setLoading] = useState(true);
   const [history, setHistory] = useState<HistoryPoint[]>([]);
@@ -96,6 +96,11 @@ export default function ScripwiseScoreCard({ symbol }: Props) {
         <h3 className="font-semibold text-[#0D1117] text-sm flex items-center gap-1.5">
           <Gauge size={14} className="text-[#F97316]" /> Scripwise Scorecard
         </h3>
+        {data?.previewing && (
+          <span className="text-[10px] font-semibold text-[#D97706] bg-[#FFF7ED] border border-[#FED7AA] px-1.5 py-0.5 rounded-md">
+            Free preview
+          </span>
+        )}
       </div>
 
       {loading || !data ? (
