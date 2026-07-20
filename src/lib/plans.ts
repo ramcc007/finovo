@@ -84,8 +84,8 @@ export const FEATURE_MATRIX: FeatureGroup[] = [
   {
     group: 'Markets & data',
     rows: [
-      { label: 'Markets overview & live ticker', free: true, pro: true },
-      { label: 'Near-real-time prices', detail: 'Refreshed through the trading day', free: true, pro: true },
+      { label: 'Markets overview & index ticker', free: true, pro: true },
+      { label: 'End-of-day prices', detail: 'Updated after each trading day’s close', free: true, pro: true },
       { label: 'Corporate actions calendar', free: true, pro: true },
     ],
   },
@@ -101,7 +101,7 @@ export const FEATURE_MATRIX: FeatureGroup[] = [
 export const FREE_HIGHLIGHTS: string[] = [
   'Screener with core filters',
   'Company pages, fundamentals & charts',
-  'Markets, live ticker & near-real-time prices',
+  'Markets, index ticker & end-of-day prices',
   `Watchlist up to ${FREE_WATCHLIST_LIMIT} stocks`,
   'Scripwise Score & Pulse — headline reading',
   'Corporate actions calendar',

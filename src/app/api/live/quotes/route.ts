@@ -3,8 +3,8 @@ import { supabase } from '@/lib/supabase';
 
 // Uncached, on-demand read of the `quotes` table for a small explicit symbol
 // list — backs the homepage's rotating hero preview. Same freshness ceiling
-// as /api/live/indices: as current as the last NSE-quotes cron run, just
-// without an added Next.js cache layer on top.
+// as /api/live/indices: end-of-day (the daily EOD job), since the intraday
+// NSE quotes cron has been blocked by NSE since ~June 2026.
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {

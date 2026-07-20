@@ -35,7 +35,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'Is the market data real-time?',
-    a: 'Prices are refreshed through the trading day and are near-real-time (subject to the exchange’s standard ~15-minute delay). Scripwise is a research and screening tool — not investment advice.',
+    a: 'No — prices are end-of-day, updated once after each trading day’s close. Scripwise is a research and screening tool, not a live trading terminal — not investment advice.',
   },
 ];
 

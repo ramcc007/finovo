@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { cn, timeAgoLabel } from '@/lib/utils';
+import { cn, formatTradeDate } from '@/lib/utils';
 
 interface Index {
   symbol: string;
@@ -11,11 +11,10 @@ interface Index {
   change_pct: number | null;
 }
 
-// Re-poll often enough to feel live without hammering the DB — the
-// underlying NSE-quotes cron itself only writes new rows every 5 min
-// during market hours, so anything faster than that just re-confirms
-// the same numbers.
-const POLL_MS = 30_000;
+// Index levels only move once a day (the EOD archive job) — polling every
+// few minutes just re-confirms the same numbers, so this is set low to catch
+// same-day corrections rather than to feel "live".
+const POLL_MS = 5 * 60_000;
 
 export default function TickerBar() {
   const [items, setItems] = useState<Index[]>([]);
@@ -48,7 +47,7 @@ export default function TickerBar() {
   return (
     <div
       className="bg-white text-[#131A24] h-9 flex items-center overflow-hidden border-b border-[#E9EDF4]"
-      title={updatedAt ? `Live · updated ${timeAgoLabel(updatedAt)}` : undefined}
+      title={updatedAt ? `As of ${formatTradeDate(updatedAt)} close` : undefined}
     >
       {/* Clip the scrolling strip to its own slot — without this, the
           translateX animation can paint outside its intended bounds. */}

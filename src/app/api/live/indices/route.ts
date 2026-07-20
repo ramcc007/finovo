@@ -2,11 +2,10 @@ import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 // Deliberately uncached (unlike /api/indices, which is fine served a few
-// minutes stale) — this backs the ticker bar, which we want to reflect the
-// freshest row our NSE-quotes cron has written the instant the page loads.
-// The underlying data is still only as fresh as that cron (every 5 min
-// during market hours, itself ~15 min delayed per NSE) — this route just
-// removes our own extra layer of staleness on top of that.
+// minutes stale) — this backs the ticker bar. Index levels only actually
+// change once a day via the EOD archive job; the intraday NSE quotes cron
+// that used to refresh this intraday has been blocked by NSE since ~June
+// 2026 (see ingest_quotes.py) and currently writes nothing.
 export const dynamic = 'force-dynamic';
 
 export async function GET() {

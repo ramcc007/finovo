@@ -11,7 +11,7 @@ import TickerBar from '@/components/layout/TickerBar';
 import Reveal from '@/components/ui/Reveal';
 import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
 import { PRE_BUILT_SCREENS } from '@/lib/mock-data';
-import { cn, formatPrice, formatVolume, formatCrores, formatTradeDate, timeAgoLabel } from '@/lib/utils';
+import { cn, formatPrice, formatVolume, formatCrores, formatTradeDate } from '@/lib/utils';
 
 interface SearchHit { symbol: string; name: string; sector: string }
 
@@ -325,11 +325,8 @@ export default function Home() {
                       </div>
                       <div className="px-5 py-3 bg-[#FAFBFD] border-t border-[#EDF0F7] flex items-center justify-between">
                         <span className="inline-flex items-center gap-1.5 text-xs text-[#4A5568]">
-                          <span className="relative flex h-1.5 w-1.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#15A05B] opacity-75" />
-                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#15A05B]" />
-                          </span>
-                          Live price{heroUpdatedAt ? ` · ${timeAgoLabel(heroUpdatedAt)}` : ''}
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#15A05B]" />
+                          {heroUpdatedAt ? `As of ${formatTradeDate(heroUpdatedAt)} close` : 'End-of-day price'}
                         </span>
                         <ArrowUpRight size={14} className="text-[#F97316]" />
                       </div>
