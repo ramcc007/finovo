@@ -12,13 +12,21 @@ without this the `indices` table only moves once a day via the EOD archive job.
 NSE public endpoints (no auth needed, just proper headers + session cookie):
 https://www.nseindia.com/api/equity-stockIndices?index=NIFTY%2050
 https://www.nseindia.com/api/allIndices
+
+NSE's Akamai bot-management fronts these JSON endpoints (unlike the plain
+CSV archives on nsearchives.nseindia.com used by the EOD jobs) and started
+404-ing every request from GitHub Actions around late June — plain `requests`
+only speaks HTTP/1.1 with no browser TLS fingerprint, which datacenter-IP
+bot detection flags. curl_cffi impersonates a real Chrome TLS/JA3 fingerprint
+over HTTP/2, which is what community NSE scrapers use to stay reachable from
+CI/cloud environments.
 """
 
 import os
 import sys
 import time
 from datetime import datetime, timezone
-import requests
+from curl_cffi import requests
 from supabase import create_client
 from dotenv import load_dotenv
 
@@ -55,8 +63,11 @@ HEADERS = {
 
 
 def get_nse_session() -> requests.Session:
-    """NSE requires a valid cookie from a page visit before API calls."""
-    session = requests.Session()
+    """NSE requires a valid cookie from a page visit before API calls.
+    impersonate="chrome124" makes curl_cffi present a genuine Chrome
+    TLS/JA3 fingerprint over HTTP/2 — without it these requests get a fake
+    404 from NSE's bot detection despite browser-like headers."""
+    session = requests.Session(impersonate="chrome124")
     session.headers.update(HEADERS)
     session.get(NSE_BASE, timeout=10)
     time.sleep(1)
