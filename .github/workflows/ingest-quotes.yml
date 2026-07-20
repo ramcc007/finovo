@@ -15,7 +15,11 @@ concurrency:
 jobs:
   quotes:
     runs-on: ubuntu-latest
-    timeout-minutes: 7
+    # curl_cffi's Chrome TLS impersonation does a real handshake per request
+    # instead of the near-instant 404 the old plain-requests client got from
+    # NSE's bot detection — genuine fetches take meaningfully longer, so the
+    # old 7-minute budget (sized for fast-fail) is too tight for 4 real passes.
+    timeout-minutes: 12
 
     steps:
       - uses: actions/checkout@v4
@@ -37,4 +41,9 @@ jobs:
           # 4 passes ~60s apart per 5-min cron tick ≈ 60–75s effective freshness.
           LOOP_COUNT: '4'
           LOOP_INTERVAL: '60'
+          # Unbuffered stdout — Python fully buffers non-tty output by
+          # default, so a run killed by a timeout or cancellation (as
+          # happened diagnosing this exact job) shows zero log output
+          # instead of whatever progress was actually made.
+          PYTHONUNBUFFERED: '1'
         run: python scripts/ingest_quotes.py
