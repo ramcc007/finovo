@@ -15,7 +15,9 @@ https://www.nseindia.com/api/allIndices
 """
 
 import os
+import sys
 import time
+from datetime import datetime, timezone
 import requests
 from supabase import create_client
 from dotenv import load_dotenv
@@ -69,7 +71,8 @@ def fetch_index_quotes(session: requests.Session, index_name: str) -> list[dict]
     return data.get("data", [])
 
 
-def update_stock_quotes(client, session) -> None:
+def update_stock_quotes(client, session) -> int:
+    now_iso = datetime.now(timezone.utc).isoformat()
     all_records = {}
     for idx_name in NSE_INDICES:
         try:
@@ -94,7 +97,7 @@ def update_stock_quotes(client, session) -> None:
                     "low": float(s.get("dayLow", price) or price),
                     "prev_close": prev,
                     "volume": int(s.get("totalTradedVolume", 0) or 0),
-                    "updated_at": "now()",
+                    "updated_at": now_iso,
                 }
             time.sleep(0.5)
         except Exception as e:
@@ -106,6 +109,7 @@ def update_stock_quotes(client, session) -> None:
         print(f"  Updated {len(records)} quotes.")
     else:
         print("  No quotes fetched.")
+    return len(all_records)
 
 
 def update_index_levels(client, session) -> None:
@@ -149,7 +153,7 @@ def update_index_levels(client, session) -> None:
                 "last": last,
                 "change": round(float(change), 2) if change is not None else None,
                 "change_pct": round(float(change_pct), 2) if change_pct is not None else None,
-                "updated_at": "now()",
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             })
         except (TypeError, ValueError):
             continue
@@ -161,19 +165,21 @@ def update_index_levels(client, session) -> None:
         print("  No index levels matched.")
 
 
-def run_once(client) -> None:
+def run_once(client) -> int:
     session = get_nse_session()
-    update_stock_quotes(client, session)
+    updated = update_stock_quotes(client, session)
     update_index_levels(client, session)
+    return updated
 
 
-def run():
+def run() -> int:
     client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    total_updated = 0
     for i in range(LOOP_COUNT):
         started = time.monotonic()
         print(f"Pass {i + 1}/{LOOP_COUNT}: fetching live NSE data...")
         try:
-            run_once(client)
+            total_updated += run_once(client)
         except Exception as e:
             # One bad pass (cookie expiry, transient NSE block) shouldn't kill
             # the remaining passes.
@@ -181,7 +187,14 @@ def run():
         if i + 1 < LOOP_COUNT:
             elapsed = time.monotonic() - started
             time.sleep(max(0, LOOP_INTERVAL - elapsed))
+    return total_updated
 
 
 if __name__ == "__main__":
-    run()
+    # A run that fetches zero quotes on every pass means the NSE endpoint is
+    # blocked/changed, not a transient blip — this exact failure mode went
+    # unnoticed in production for ~3 weeks because the job kept exiting 0.
+    # Fail loudly so GitHub Actions surfaces it instead of masking it.
+    if run() == 0:
+        print("No quotes were updated in any pass — treating as a failed run.")
+        sys.exit(1)

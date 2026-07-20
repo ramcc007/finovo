@@ -11,7 +11,7 @@ Schedule: GitHub Actions, daily at 16:30 IST (11:00 UTC) on weekdays.
 
 import io
 import os
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import pandas as pd
 import requests
@@ -115,6 +115,7 @@ def run():
     df = df[df["SYMBOL"].isin(active)]
     print(f"  {len(df)} rows after filtering to tracked equities")
 
+    now_iso = datetime.now(timezone.utc).isoformat()
     price_records, quote_records = [], []
     for _, row in df.iterrows():
         sym = row["SYMBOL"]
@@ -138,6 +139,7 @@ def run():
             "symbol": sym, "price": close, "change": change, "change_pct": change_pct,
             "open": o, "high": h, "low": lo, "prev_close": prev,
             "volume": int(vol) if vol is not None else None,
+            "updated_at": now_iso,
         })
 
     def upsert(table, records, conflict):
