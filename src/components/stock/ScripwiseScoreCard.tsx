@@ -39,12 +39,18 @@ function ScoreHistoryChart({ points }: { points: HistoryPoint[] }) {
   const formatPoint = (d: string) =>
     new Date(d).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
 
+  // Fewer than a handful of months of real history — fixed-width bars
+  // packed to the left (instead of flex-1 stretching each bar across its
+  // own share of the full width) so 2-3 points don't spread edge-to-edge
+  // with a large empty gap that reads as broken rather than "still early".
+  const sparse = points.length < 6;
+
   return (
     <div className="mt-5 pt-4 border-t border-[#EDF0F7]">
       <h4 className="text-[11px] font-semibold text-[#8A96A8] uppercase tracking-wide mb-3">Score History</h4>
-      <div className="flex items-end gap-2.5 h-20 px-0.5">
+      <div className={cn('flex items-end gap-2.5 h-20 px-0.5', sparse && 'justify-start')}>
         {points.map(p => (
-          <div key={p.date} className="flex-1 flex flex-col items-center justify-end h-full min-w-0 group">
+          <div key={p.date} className={cn('flex flex-col items-center justify-end h-full min-w-0 group', sparse ? 'w-10 shrink-0' : 'flex-1')}>
             <span className="text-[10px] font-semibold text-[#0D1117] mb-1 opacity-0 group-hover:opacity-100 transition-opacity num">{p.score}</span>
             <div
               className="w-full max-w-[22px] rounded-t-sm transition-all"
@@ -57,6 +63,11 @@ function ScoreHistoryChart({ points }: { points: HistoryPoint[] }) {
           </div>
         ))}
       </div>
+      {sparse && (
+        <p className="text-[10px] text-[#8A96A8] mt-2">
+          More history will appear here as new monthly data comes in.
+        </p>
+      )}
     </div>
   );
 }
