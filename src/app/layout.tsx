@@ -21,7 +21,16 @@ const jetbrainsMono = JetBrains_Mono({
 
 const BASE_URL = 'https://www.scripwise.co.in';
 
-export const metadata: Metadata = {
+// Self-referencing canonical, stripped of query string, applied site-wide —
+// a URL carrying tracking params (?ref=..., utm_*, etc.) always canonicalizes
+// to the clean path so Google consolidates onto that instead of indexing the
+// tracked variant as its own page.
+export async function generateMetadata(): Promise<Metadata> {
+  const pathname = (await headers()).get('x-pathname') ?? '/';
+  return { ...metadata, alternates: { canonical: pathname } };
+}
+
+const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
     default: 'Scripwise | Free Indian Stocks Screener & Research Tool',

@@ -77,6 +77,11 @@ export function middleware(request: NextRequest) {
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);
+  // Query-string-free path, read by the root layout to set a self-referencing
+  // canonical tag (see generateMetadata in layout.tsx) — so a URL carrying
+  // tracking params (?ref=..., utm_*, etc.) always canonicalizes to the clean
+  // path instead of getting indexed as its own separate page.
+  requestHeaders.set('x-pathname', pathname);
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set('Content-Security-Policy', csp);
