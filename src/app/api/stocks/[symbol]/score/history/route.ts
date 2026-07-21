@@ -3,6 +3,24 @@ import { supabase } from '@/lib/supabase';
 import { computeScripwiseScore } from '@/lib/scripwiseScore';
 import { getEntitlement, isWithinAnonPreview } from '@/lib/entitlement';
 
+function monthKeyOf(dateStr: string): string {
+  return dateStr.slice(0, 7); // YYYY-MM
+}
+
+/** Last day of each of the last 12 calendar months, oldest first, as
+ * YYYY-MM-DD — used both as the month key and as the upper bound when
+ * picking a representative EOD price for months with no real snapshot. */
+function lastTwelveMonthEnds(): { key: string; monthEnd: string }[] {
+  const out: { key: string; monthEnd: string }[] = [];
+  const now = new Date();
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i + 1, 0); // last day of that month
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    out.push({ key, monthEnd: d.toISOString().slice(0, 10) });
+  }
+  return out;
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ symbol: string }> }
@@ -22,37 +40,57 @@ export async function GET(
   }
 
   try {
-    const twelveMonthsAgo = new Date();
-    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+    const months = lastTwelveMonthEnds();
+    const twelveMonthsAgo = months[0].key + '-01';
 
-    const [{ data: company }, { data: rows }] = await Promise.all([
+    const [{ data: company }, { data: ratiosRows }, { data: priceRows }] = await Promise.all([
       supabase.from('companies').select('sector').eq('symbol', sym).single(),
       supabase.from('ratios')
-        .select('date, pe, pb, roe, roce, debt_to_equity, current_ratio, revenue_growth_1y, profit_growth_1y, dividend_yield')
+        .select('date, pe, pb, eps, roe, roce, debt_to_equity, current_ratio, revenue_growth_1y, profit_growth_1y, dividend_yield')
         .eq('symbol', sym)
-        .gte('date', twelveMonthsAgo.toISOString().slice(0, 10))
+        .gte('date', twelveMonthsAgo)
+        .order('date', { ascending: false }),
+      supabase.from('prices')
+        .select('date, close')
+        .eq('symbol', sym)
+        .gte('date', twelveMonthsAgo)
         .order('date', { ascending: false }),
     ]);
 
-    // Ratios are captured weekly, not monthly — collapsing to the latest
-    // snapshot per calendar month gives a real 12-month trend instead of a
-    // dozen near-identical points from the last ~8 weeks all clustered in
-    // the current month.
-    const latestByMonth = new Map<string, NonNullable<typeof rows>[number]>();
-    for (const r of rows ?? []) {
-      const monthKey = (r.date as string).slice(0, 7); // YYYY-MM
-      if (!latestByMonth.has(monthKey)) latestByMonth.set(monthKey, r); // rows are date-desc, so first hit per month is the latest
-    }
-    const history = [...latestByMonth.values()].sort((a, b) => (a.date as string).localeCompare(b.date as string));
-
-    if (history.length < 2) {
-      return NextResponse.json({ available: false });
+    // Ratios are captured weekly, not monthly — real snapshots naturally
+    // cluster in whichever recent months ingestion has actually run in.
+    // Keep the latest real snapshot per month as the source of truth for
+    // any month that has one.
+    const realByMonth = new Map<string, NonNullable<typeof ratiosRows>[number]>();
+    for (const r of ratiosRows ?? []) {
+      const key = monthKeyOf(r.date as string);
+      if (!realByMonth.has(key)) realByMonth.set(key, r); // date-desc, so first hit is latest
     }
 
-    // Same-sector P/E & P/B averages, computed from today's peer set — the
-    // score's one comparative input isn't tracked historically, so every
-    // point in the trend is scored against the current sector, not the
-    // sector as it stood on that date.
+    // For months with no real snapshot, approximate P/E and P/B from that
+    // month's closing price against the most recent trailing EPS and book
+    // value per share — the only two score inputs that are meaningfully
+    // point-in-time; everything else (ROE, growth, debt/equity, dividend
+    // yield) is quarterly/annual and effectively static across a few weeks
+    // regardless, so pinning them to the latest reported figures isn't a
+    // meaningful approximation, it's what a real snapshot would show too.
+    const latestReal = (ratiosRows ?? [])[0] ?? null;
+    const latestEps = latestReal?.eps ?? null;
+    // Book value per share = price / P/B. Ratios doesn't carry a raw price
+    // column, so derive it from the most recent EOD close instead.
+    const priceByDate = new Map<string, number>();
+    for (const p of priceRows ?? []) priceByDate.set(p.date as string, p.close as number);
+    const latestPrice = (priceRows ?? [])[0]?.close ?? null;
+    const bvps = latestPrice && latestReal?.pb ? latestPrice / latestReal.pb : null;
+
+    const pricesDesc = (priceRows ?? []) as { date: string; close: number }[];
+    const closestPriceOnOrBefore = (targetDate: string): number | null => {
+      for (const p of pricesDesc) {
+        if (p.date <= targetDate) return p.close;
+      }
+      return null;
+    };
+
     let sectorAvgPe: number | null = null;
     let sectorAvgPb: number | null = null;
     if (company?.sector) {
@@ -67,19 +105,50 @@ export async function GET(
       if (pbs.length >= 3) sectorAvgPb = pbs.reduce((a, b) => a + b, 0) / pbs.length;
     }
 
-    const points = history.map(r => ({
-      date: r.date as string,
-      score: computeScripwiseScore({
-        pe: r.pe, pb: r.pb, roe: r.roe, roce: r.roce,
-        debtToEquity: r.debt_to_equity, currentRatio: r.current_ratio,
-        revenueGrowth1Y: r.revenue_growth_1y, profitGrowth1Y: r.profit_growth_1y,
-        dividendYield: r.dividend_yield,
-        // Pledge history isn't tracked per ratios date — omit rather than
-        // apply today's pledge % to a past quarter.
-        pledgePct: null,
-        sectorAvgPe, sectorAvgPb,
-      }).score,
-    }));
+    const points: { date: string; score: number; approx: boolean }[] = [];
+    for (const { key, monthEnd } of months) {
+      const real = realByMonth.get(key);
+      if (real) {
+        points.push({
+          date: real.date as string,
+          approx: false,
+          score: computeScripwiseScore({
+            pe: real.pe, pb: real.pb, roe: real.roe, roce: real.roce,
+            debtToEquity: real.debt_to_equity, currentRatio: real.current_ratio,
+            revenueGrowth1Y: real.revenue_growth_1y, profitGrowth1Y: real.profit_growth_1y,
+            dividendYield: real.dividend_yield,
+            pledgePct: null,
+            sectorAvgPe, sectorAvgPb,
+          }).score,
+        });
+        continue;
+      }
+
+      // No real snapshot for this month — approximate from that month's
+      // closing price, if we have one and a baseline to compare it to.
+      const priceThatMonth = priceByDate.get(monthEnd) ?? closestPriceOnOrBefore(monthEnd);
+      if (!priceThatMonth || !latestReal) continue; // nothing to approximate from
+      const approxPe = latestEps && latestEps > 0 ? priceThatMonth / latestEps : null;
+      const approxPb = bvps && bvps > 0 ? priceThatMonth / bvps : null;
+
+      points.push({
+        date: monthEnd,
+        approx: true,
+        score: computeScripwiseScore({
+          pe: approxPe, pb: approxPb,
+          roe: latestReal.roe, roce: latestReal.roce,
+          debtToEquity: latestReal.debt_to_equity, currentRatio: latestReal.current_ratio,
+          revenueGrowth1Y: latestReal.revenue_growth_1y, profitGrowth1Y: latestReal.profit_growth_1y,
+          dividendYield: latestReal.dividend_yield,
+          pledgePct: null,
+          sectorAvgPe, sectorAvgPb,
+        }).score,
+      });
+    }
+
+    if (points.length < 2) {
+      return NextResponse.json({ available: false });
+    }
 
     return NextResponse.json({ available: true, points });
   } catch {

@@ -25,25 +25,22 @@ const STATUS_ICON: Record<MetricStatus, React.ReactNode> = {
   na: <Minus size={13} className="text-[#8A96A8]" />,
 };
 
-interface HistoryPoint { date: string; score: number }
+interface HistoryPoint { date: string; score: number; approx?: boolean }
 
 function ScoreHistoryChart({ points }: { points: HistoryPoint[] }) {
   if (points.length < 2) return null;
   const barColor = (score: number) => score >= 75 ? '#16A34A' : score >= 58 ? '#65A30D' : score >= 40 ? '#D97706' : '#DC2626';
 
-  // The API collapses weekly ratio snapshots to one point per calendar
-  // month, so each bar already represents a distinct month — month + year
-  // is the correct label granularity (previously this showed "Jul 26" for
-  // every point because the API sent the last 8 raw weekly rows, which all
-  // landed in the same month).
   const formatPoint = (d: string) =>
     new Date(d).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
 
-  // Fewer than a handful of months of real history — fixed-width bars
-  // packed to the left (instead of flex-1 stretching each bar across its
-  // own share of the full width) so 2-3 points don't spread edge-to-edge
-  // with a large empty gap that reads as broken rather than "still early".
+  // Fewer than a handful of points — fixed-width bars packed to the left
+  // (instead of flex-1 stretching each bar across its own share of the
+  // full width) so a couple of points don't spread edge-to-edge with a
+  // large empty gap that reads as broken rather than "still early". Only
+  // triggers for a brand-new listing with no price history to fall back on.
   const sparse = points.length < 6;
+  const hasApprox = points.some(p => p.approx);
 
   return (
     <div className="mt-5 pt-4 border-t border-[#EDF0F7]">
@@ -53,19 +50,25 @@ function ScoreHistoryChart({ points }: { points: HistoryPoint[] }) {
           <div key={p.date} className={cn('flex flex-col items-center justify-end h-full min-w-0 group', sparse ? 'w-10 shrink-0' : 'flex-1')}>
             <span className="text-[10px] font-semibold text-[#0D1117] mb-1 opacity-0 group-hover:opacity-100 transition-opacity num">{p.score}</span>
             <div
-              className="w-full max-w-[22px] rounded-t-sm transition-all"
+              className={cn('w-full max-w-[22px] rounded-t-sm transition-all', p.approx && 'opacity-50')}
               style={{ height: `${Math.max(4, p.score)}%`, background: barColor(p.score) }}
-              title={`${p.date}: ${p.score}`}
+              title={`${p.date}: ${p.score}${p.approx ? ' (estimated from price history)' : ''}`}
             />
             <span className="text-[9px] text-[#8A96A8] mt-1.5 whitespace-nowrap">
-              {formatPoint(p.date)}
+              {formatPoint(p.date)}{p.approx && '*'}
             </span>
           </div>
         ))}
       </div>
+      {hasApprox && (
+        <p className="text-[10px] text-[#8A96A8] mt-2">
+          * Estimated from that month&apos;s closing price against the latest reported fundamentals — not a captured
+          snapshot for that month.
+        </p>
+      )}
       {sparse && (
         <p className="text-[10px] text-[#8A96A8] mt-2">
-          More history will appear here as new monthly data comes in.
+          More history will appear here as new price and fundamentals data comes in.
         </p>
       )}
     </div>
