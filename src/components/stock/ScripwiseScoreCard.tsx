@@ -30,6 +30,15 @@ interface HistoryPoint { date: string; score: number }
 function ScoreHistoryChart({ points }: { points: HistoryPoint[] }) {
   if (points.length < 2) return null;
   const barColor = (score: number) => score >= 75 ? '#16A34A' : score >= 58 ? '#65A30D' : score >= 40 ? '#D97706' : '#DC2626';
+
+  // The API collapses weekly ratio snapshots to one point per calendar
+  // month, so each bar already represents a distinct month — month + year
+  // is the correct label granularity (previously this showed "Jul 26" for
+  // every point because the API sent the last 8 raw weekly rows, which all
+  // landed in the same month).
+  const formatPoint = (d: string) =>
+    new Date(d).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
+
   return (
     <div className="mt-5 pt-4 border-t border-[#EDF0F7]">
       <h4 className="text-[11px] font-semibold text-[#8A96A8] uppercase tracking-wide mb-3">Score History</h4>
@@ -43,7 +52,7 @@ function ScoreHistoryChart({ points }: { points: HistoryPoint[] }) {
               title={`${p.date}: ${p.score}`}
             />
             <span className="text-[9px] text-[#8A96A8] mt-1.5 whitespace-nowrap">
-              {new Date(p.date).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })}
+              {formatPoint(p.date)}
             </span>
           </div>
         ))}
