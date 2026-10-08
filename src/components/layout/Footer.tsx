@@ -63,7 +63,7 @@ export default function Footer() {
           </p>
           <div className="flex items-center gap-4">
             <p className="text-xs text-white/30">
-              Created by <span className="text-[#F97316] font-semibold">RCC</span>
+              Created by <span className="text-[#F97316] font-semibold">Ram C</span>
             </p>
           </div>
         </div>
