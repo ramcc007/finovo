@@ -86,7 +86,7 @@ export function middleware(request: NextRequest) {
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   response.headers.set('Content-Security-Policy', csp);
 
-  // Anchors the anonymous 15-minute full-access preview window (see
+  // Anchors the anonymous 30-minute full-access preview window (see
   // anonPreviewRemainingMs in lib/entitlement.ts). No Max-Age — a real session
   // cookie, so it clears when the browser closes and a fresh visit gets its
   // own fresh preview rather than the clock persisting indefinitely.

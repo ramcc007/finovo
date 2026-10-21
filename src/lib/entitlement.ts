@@ -60,7 +60,7 @@ export function getBearerToken(req: NextRequest): string | null {
   return authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
 }
 
-export const ANON_PREVIEW_MS = 15 * 60 * 1000;
+export const ANON_PREVIEW_MS = 30 * 60 * 1000;
 
 /**
  * Milliseconds left in an anonymous visitor's free full-access window, or 0.
