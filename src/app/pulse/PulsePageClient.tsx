@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2, Activity, Info } from 'lucide-react';
 import { useAuth } from '@/lib/AuthProvider';
 import { authFetch } from '@/lib/authFetch';
+import { usePreview } from '@/lib/usePreview';
 import PulseGauge from '@/components/pulse/PulseGauge';
 import ProUpsell from '@/components/billing/ProUpsell';
 import { formatTradeDate } from '@/lib/utils';
@@ -15,23 +16,25 @@ type PulseData = ({ available: true; locked?: boolean } & PulseResult) | { avail
 export default function PulsePageClient() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const preview = usePreview();
+  const allowed = !!user || preview.active;
   const [data, setData] = useState<PulseData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!authLoading && !user) router.push('/login');
-  }, [authLoading, user, router]);
+    if (!authLoading && !preview.pending && !allowed) router.push('/login');
+  }, [authLoading, preview.pending, allowed, router]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!allowed) return;
     authFetch('/api/pulse')
       .then(r => r.json())
       .then((d: PulseData) => setData(d))
       .catch(() => setData({ available: false }))
       .finally(() => setLoading(false));
-  }, [user]);
+  }, [allowed]);
 
-  if (authLoading || !user) {
+  if (authLoading || preview.pending || !allowed) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <Loader2 size={22} className="animate-spin text-[#8A96A8]" />

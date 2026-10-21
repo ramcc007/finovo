@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/AuthProvider';
 import { authFetch } from '@/lib/authFetch';
+import { usePreview } from '@/lib/usePreview';
 import type { PlanId } from '@/lib/plans';
 
 interface EntitlementState {
@@ -12,6 +13,7 @@ interface EntitlementState {
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
   loading: boolean;
+  preview?: boolean; // anonymous visitor inside the free full-access window
 }
 
 const DEFAULT_STATE: EntitlementState = {
@@ -24,6 +26,7 @@ const DEFAULT_STATE: EntitlementState = {
  *  "should I show a lock icon", never for "should I return the data". */
 export function useEntitlement() {
   const { user, loading: authLoading } = useAuth();
+  const preview = usePreview();
   const [state, setState] = useState<EntitlementState>(DEFAULT_STATE);
 
   useEffect(() => {
@@ -46,5 +49,12 @@ export function useEntitlement() {
     return () => { alive = false; };
   }, [user, authLoading]);
 
+  // Anonymous visitors inside their free window see everything unlocked.
+  if (!user && !authLoading) {
+    if (preview.active) {
+      return { ...DEFAULT_STATE, plan: 'pro' as PlanId, active: true, status: 'preview', loading: false, preview: true };
+    }
+    if (preview.pending) return { ...DEFAULT_STATE, loading: true };
+  }
   return state;
 }

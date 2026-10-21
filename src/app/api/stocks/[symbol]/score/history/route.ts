@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { computeScripwiseScore } from '@/lib/scripwiseScore';
-import { getEntitlement, isWithinAnonPreview } from '@/lib/entitlement';
+import { getEntitlement } from '@/lib/entitlement';
 
 function monthKeyOf(dateStr: string): string {
   return dateStr.slice(0, 7); // YYYY-MM
@@ -25,11 +25,10 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ symbol: string }> }
 ) {
-  // Score History is a Scorecard (Pro) feature end-to-end — no partial data,
-  // except during a first-time anonymous visitor's 3-minute preview window
-  // (matches score/route.ts, since both render inside the same card).
+  // Score History is a Scorecard (Pro) feature end-to-end — no partial data.
+  // Anonymous visitors in their free preview window count as active.
   const ent = await getEntitlement(req);
-  if (!ent.active && !(!ent.userId && isWithinAnonPreview(req))) {
+  if (!ent.active) {
     return NextResponse.json({ available: false, locked: true });
   }
 

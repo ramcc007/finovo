@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Loader2, Lock, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/lib/AuthProvider';
+import { usePreview } from '@/lib/usePreview';
 
 interface Props {
   feature: string;
@@ -12,8 +13,9 @@ interface Props {
 
 export default function AuthGate({ feature, description, children }: Props) {
   const { user, loading } = useAuth();
+  const preview = usePreview();
 
-  if (loading) {
+  if (loading || (!user && preview.pending)) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <Loader2 size={22} className="animate-spin text-[#8A96A8]" />
@@ -21,7 +23,7 @@ export default function AuthGate({ feature, description, children }: Props) {
     );
   }
 
-  if (!user) {
+  if (!user && !preview.active) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center bg-[#F4F6FA] px-4 py-16">
         <div className="max-w-md w-full bg-white border border-[#E2E8F0] rounded-2xl p-8 text-center">

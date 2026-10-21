@@ -8,6 +8,7 @@ export interface Entitlement {
   plan: PlanId;
   active: boolean; // true only for a live Pro subscription (or the admin)
   admin?: boolean;
+  preview?: boolean; // anonymous visitor inside the free full-access window
 }
 
 const FREE: Entitlement = { userId: null, plan: 'free', active: false };
@@ -59,26 +60,35 @@ export function getBearerToken(req: NextRequest): string | null {
   return authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
 }
 
-export async function getEntitlement(req: NextRequest): Promise<Entitlement> {
-  return getEntitlementFromToken(getBearerToken(req));
-}
-
-const ANON_PREVIEW_MS = 3 * 60 * 1000;
+export const ANON_PREVIEW_MS = 5 * 60 * 1000;
 
 /**
- * Anonymous-only, session-scoped grace window that unlocks the Scorecard for
- * a first-time visitor before they've had a chance to decide whether Pro is
- * worth it. Gated on `!ent.userId` at the call site — a signed-in Free user
- * is a known quantity already offered the paywall, so they get no preview.
+ * Milliseconds left in an anonymous visitor's free full-access window, or 0.
  * Backed by a session cookie (middleware.ts) rather than anything durable,
  * so it resets on next browser session rather than being a one-time-ever grant.
  */
-export function isWithinAnonPreview(req: NextRequest): boolean {
+export function anonPreviewRemainingMs(req: NextRequest): number {
   const since = req.cookies.get('sw_anon_since')?.value;
-  if (!since) return false;
+  if (!since) return 0;
   const startedAt = Number(since);
-  if (!Number.isFinite(startedAt)) return false;
-  return Date.now() - startedAt < ANON_PREVIEW_MS;
+  if (!Number.isFinite(startedAt)) return 0;
+  return Math.max(0, ANON_PREVIEW_MS - (Date.now() - startedAt));
+}
+
+/**
+ * Request-level entitlement. Signed-in callers resolve from their token. An
+ * anonymous (no token) first-time visitor gets every Pro feature unlocked for
+ * their first ANON_PREVIEW_MS on the site, so they can see what the product
+ * does before deciding. A signed-in Free user is a known quantity already
+ * offered the paywall, so gets no preview.
+ */
+export async function getEntitlement(req: NextRequest): Promise<Entitlement> {
+  const token = getBearerToken(req);
+  const ent = await getEntitlementFromToken(token);
+  if (!ent.userId && anonPreviewRemainingMs(req) > 0) {
+    return { userId: null, plan: 'pro', active: true, preview: true };
+  }
+  return ent;
 }
 
 /** Does this plan unlock a given capability? */

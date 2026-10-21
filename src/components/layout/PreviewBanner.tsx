@@ -1,0 +1,36 @@
+'use client';
+
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { Sparkles } from 'lucide-react';
+import { usePreview } from '@/lib/usePreview';
+
+/** Slim countdown shown to anonymous visitors while their free full-access
+ *  window is open, so the paywall appearing afterwards isn't a surprise. */
+export default function PreviewBanner() {
+  const { active, expiresAt } = usePreview();
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!active) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [active]);
+
+  if (!active) return null;
+  const left = Math.max(0, Math.ceil((expiresAt - now) / 1000));
+  const mm = Math.floor(left / 60);
+  const ss = String(left % 60).padStart(2, '0');
+
+  return (
+    <div className="bg-[#FFF7ED] border-b border-[#FED7AA] text-[#9A3412] text-xs sm:text-[13px] px-4 py-2 flex items-center justify-center gap-2 flex-wrap text-center">
+      <Sparkles size={13} className="shrink-0" />
+      <span>
+        Everything is unlocked for your first 5 minutes — <span className="font-semibold tabular-nums">{mm}:{ss}</span> left.
+      </span>
+      <Link href="/signup" className="font-semibold underline underline-offset-2 hover:text-[#7C2D12]">
+        Sign up free to keep going
+      </Link>
+    </div>
+  );
+}

@@ -4,6 +4,7 @@ import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import PreviewBanner from '@/components/layout/PreviewBanner';
 import GoogleAnalytics from '@/components/layout/GoogleAnalytics';
 import { AuthProvider } from '@/lib/AuthProvider';
 
@@ -67,6 +68,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <GoogleAnalytics nonce={nonce} />
         <AuthProvider>
+          <PreviewBanner />
           <Header />
           <main className="min-h-screen">{children}</main>
           <Footer />
