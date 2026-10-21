@@ -26,7 +26,7 @@ export default function PreviewBanner() {
     <div className="bg-[#FFF7ED] border-b border-[#FED7AA] text-[#9A3412] text-xs sm:text-[13px] px-4 py-2 flex items-center justify-center gap-2 flex-wrap text-center">
       <Sparkles size={13} className="shrink-0" />
       <span>
-        Everything is unlocked for your first 5 minutes — <span className="font-semibold tabular-nums">{mm}:{ss}</span> left.
+        Everything is unlocked for your first 15 minutes — <span className="font-semibold tabular-nums">{mm}:{ss}</span> left.
       </span>
       <Link href="/signup" className="font-semibold underline underline-offset-2 hover:text-[#7C2D12]">
         Sign up free to keep going
