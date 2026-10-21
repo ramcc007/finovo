@@ -9,6 +9,12 @@ export async function GET(req: NextRequest) {
   const ent = await getEntitlement(req);
   if (!ent.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  if (ent.admin) {
+    return NextResponse.json({
+      plan: 'pro', active: true, status: 'active', currentPeriodEnd: null, cancelAtPeriodEnd: false,
+    });
+  }
+
   const client = getServiceClient();
   let { data: sub } = await client
     .from('subscriptions')

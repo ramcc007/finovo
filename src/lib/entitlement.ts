@@ -6,7 +6,8 @@ import { PRO_FEATURES } from '@/lib/plans';
 export interface Entitlement {
   userId: string | null;
   plan: PlanId;
-  active: boolean; // true only for a live Pro subscription
+  active: boolean; // true only for a live Pro subscription (or the admin)
+  admin?: boolean;
 }
 
 const FREE: Entitlement = { userId: null, plan: 'free', active: false };
@@ -25,6 +26,16 @@ export async function getEntitlementFromToken(token: string | null): Promise<Ent
   const { data, error } = await client.auth.getUser(token);
   if (error || !data.user) return FREE;
   const userId = data.user.id;
+
+  // The admin gets every Pro feature unlocked without needing a subscription
+  // row. Same identity check as requireAdmin(): immutable ADMIN_USER_ID when
+  // set, ADMIN_EMAIL as a fallback.
+  const adminUserId = process.env.ADMIN_USER_ID;
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const isAdmin = adminUserId
+    ? userId === adminUserId
+    : !!adminEmail && !!data.user.email && data.user.email.toLowerCase() === adminEmail.toLowerCase();
+  if (isAdmin) return { userId, plan: 'pro', active: true, admin: true };
 
   try {
     const { data: sub } = await client
