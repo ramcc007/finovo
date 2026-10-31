@@ -26,6 +26,7 @@ export default function Footer() {
                 { href: '/markets', label: 'Market Overview' },
                 { href: '/screens', label: 'Pre-built Screens' },
                 { href: '/pricing', label: 'Pricing' },
+                { href: '/blog', label: 'Blog' },
               ].map(l => (
                 <li key={l.href}>
                   <Link href={l.href} className="text-sm text-white/60 hover:text-[#F97316] transition-colors">

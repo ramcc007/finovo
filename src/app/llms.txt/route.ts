@@ -23,6 +23,10 @@ Scripwise is not a SEBI-registered investment adviser. All data is for informati
 - [Sign up](${base}/signup): Free account creation — name, email, investor profile (Beginner through Institutional), optional city.
 - [Log in](${base}/login): Existing-user sign-in, reachable from the signup page's tab switcher.
 
+## Blog
+
+- [Blog](${base}/blog): Plain-language Indian stock market articles (FPI flows, SIPs, index funds, screening).
+
 ## Legal
 
 - [Disclaimer](${base}/disclaimer)
