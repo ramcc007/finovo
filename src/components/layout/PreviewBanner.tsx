@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Sparkles, RotateCcw } from 'lucide-react';
 import { usePreview, resetPreview } from '@/lib/usePreview';
 
@@ -9,6 +10,7 @@ import { usePreview, resetPreview } from '@/lib/usePreview';
  *  window is open, and, once it has ended, the one-time offer to restart it.
  *  Both states carry the one-time Reset button until it has been used. */
 export default function PreviewBanner() {
+  const pathname = usePathname();
   const { active, expiresAt, anon, resolved, canReset } = usePreview();
   const [now, setNow] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
@@ -29,6 +31,9 @@ export default function PreviewBanner() {
       <RotateCcw size={12} /> Reset timer to 30 min
     </button>
   );
+
+  // Blog pages are public reading content — no preview banner there.
+  if (pathname === '/blog' || pathname?.startsWith('/blog/')) return null;
 
   if (active) {
     const left = Math.max(0, Math.ceil((expiresAt - now) / 1000));
