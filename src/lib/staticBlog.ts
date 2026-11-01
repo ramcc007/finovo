@@ -38,6 +38,6 @@ export function getStaticPosts(): Post[] {
     metaTitle: null, metaDescription: p.description, category: p.category, tags: p.tags,
     createdAt: `${p.publishedAt}T04:00:00.000Z`, author: p.author, status: 'published' as const,
     publishedAt: `${p.publishedAt}T04:00:00.000Z`, updatedAt: `${p.updatedAt}T04:00:00.000Z`,
-    keyTakeaways: p.keyTakeaways, faq: p.faq, readingMinutes: p.readingMinutes,
+    keyTakeaways: p.keyTakeaways, faq: p.faq, sources: [], readingMinutes: p.readingMinutes,
   }));
 }

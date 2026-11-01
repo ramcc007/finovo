@@ -53,6 +53,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       mainEntityOfPage: { '@type': 'WebPage', '@id': url },
       datePublished: post.publishedAt,
       dateCreated: post.createdAt,
+      ...(post.sources.length ? { citation: post.sources.map(s => ({ '@type': 'CreativeWork', name: s.name, url: s.url })) } : {}),
       dateModified: post.updatedAt,
       author: { '@type': 'Person', name: post.author },
       publisher: { '@type': 'Organization', name: 'Scripwise', url: BASE },
@@ -142,6 +143,22 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 </div>
               ))}
             </div>
+          </section>
+        )}
+
+        {post.sources.length > 0 && (
+          <section aria-labelledby="sources" className="mt-12">
+            <h2 id="sources" className="mb-3 text-lg font-bold text-[#0D1117]">Sources &amp; credits</h2>
+            <p className="mb-3 text-sm text-[#4A5568]">Facts and figures in this article draw on these sources. All writing is our own.</p>
+            <ul className="flex flex-wrap gap-2">
+              {post.sources.map(s => (
+                <li key={s.url}>
+                  <a href={s.url} target="_blank" rel="noopener noreferrer" className="inline-block rounded-full border border-[#E5E7EB] bg-white px-3.5 py-1.5 text-sm font-semibold text-[#EA580C] hover:border-[#F97316]">
+                    {s.name} ↗
+                  </a>
+                </li>
+              ))}
+            </ul>
           </section>
         )}
 

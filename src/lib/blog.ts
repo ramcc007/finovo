@@ -2,6 +2,7 @@
 // `blog_posts` Supabase table; see blogDb.ts for queries.
 
 export interface FaqItem { q: string; a: string }
+export interface SourceItem { name: string; url: string }
 
 export interface Post {
   id: string;
@@ -20,6 +21,7 @@ export interface Post {
   updatedAt: string;
   keyTakeaways: string[]; // may contain **bold**
   faq: FaqItem[];
+  sources: SourceItem[]; // credits shown at the bottom of the article
   readingMinutes: number;
 }
 

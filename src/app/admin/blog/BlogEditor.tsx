@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Trash2, Plus, X, ExternalLink } from 'lucide-react';
 import { adminFetch } from '@/lib/adminFetch';
-import { slugify, type FaqItem, type Post } from '@/lib/blog';
+import { slugify, type FaqItem, type SourceItem, type Post } from '@/lib/blog';
 import RichEditor from './RichEditor';
 
 type Status = 'draft' | 'published';
@@ -49,6 +49,7 @@ export default function BlogEditor({ id }: { id?: string }) {
   const [metaDesc, setMetaDesc] = useState('');
   const [takeaways, setTakeaways] = useState('');
   const [faq, setFaq] = useState<FaqItem[]>([]);
+  const [sources, setSources] = useState<SourceItem[]>([]);
   const [status, setStatus] = useState<Status>('draft');
   const [publishAt, setPublishAt] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
@@ -73,7 +74,7 @@ export default function BlogEditor({ id }: { id?: string }) {
           setTitle(p.title); setSlug(p.slug); setHtml(p.contentHtml); setInitialHtml(p.contentHtml);
           setExcerpt(p.excerpt); setCategory(p.category); setAuthor(p.author); setTags(p.tags);
           setMetaTitle(p.metaTitle ?? ''); setMetaDesc(p.metaDescription ?? '');
-          setTakeaways(p.keyTakeaways.join('\n')); setFaq(p.faq); setStatus(p.status);
+          setTakeaways(p.keyTakeaways.join('\n')); setFaq(p.faq); setSources(p.sources ?? []); setStatus(p.status);
           setPublishAt(toLocalInput(p.publishedAt));
           setLoading(false);
         })
@@ -95,7 +96,7 @@ export default function BlogEditor({ id }: { id?: string }) {
       category, author, tags, status: nextStatus,
       publishedAt: nextStatus === 'published' && publishAt ? new Date(publishAt).toISOString() : null,
       keyTakeaways: takeaways.split('\n').map(s => s.trim()).filter(Boolean),
-      faq,
+      faq, sources,
     };
     try {
       const r = await adminFetch(postId ? `/api/admin/blog/${postId}` : '/api/admin/blog', {
@@ -159,6 +160,21 @@ export default function BlogEditor({ id }: { id?: string }) {
 
           <Box title="Key takeaways (shown in a highlighted box; one per line, **bold** supported)">
             <textarea value={takeaways} onChange={e => setTakeaways(e.target.value)} rows={5} className={input} />
+          </Box>
+
+          <Box title="Sources & credits (shown at the bottom; list where the facts came from)">
+            {sources.map((s, i) => (
+              <div key={i} className="grid gap-2 rounded-md border border-[#E5E7EB] p-3 sm:grid-cols-[1fr_2fr_auto]">
+                <input value={s.name} onChange={e => setSources(sources.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} placeholder="Name, e.g. AMFI" maxLength={80} className={input} />
+                <input value={s.url} onChange={e => setSources(sources.map((x, j) => j === i ? { ...x, url: e.target.value } : x))} placeholder="https://www.amfiindia.com" className={input} />
+                <button type="button" onClick={() => setSources(sources.filter((_, j) => j !== i))} className="text-xs font-semibold text-red-600 hover:underline">Remove</button>
+              </div>
+            ))}
+            {sources.length < 8 && (
+              <button type="button" onClick={() => setSources([...sources, { name: '', url: 'https://' }])} className="inline-flex items-center gap-1 text-sm font-semibold text-[#EA580C]">
+                <Plus size={14} /> Add source
+              </button>
+            )}
           </Box>
 
           <Box title="FAQ (helps answer engines; adds FAQ rich-result markup)">

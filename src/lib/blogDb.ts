@@ -11,10 +11,10 @@ interface Row {
   meta_title: string | null; meta_description: string | null; category: string;
   tags: string[]; created_at: string; author: string;
   status: 'draft' | 'published'; published_at: string | null; updated_at: string;
-  key_takeaways: unknown; faq: unknown; reading_minutes: number;
+  key_takeaways: unknown; faq: unknown; sources: unknown; reading_minutes: number;
 }
 
-const COLS = 'id, slug, title, excerpt, content_html, meta_title, meta_description, category, tags, author, status, published_at, created_at, updated_at, key_takeaways, faq, reading_minutes';
+const COLS = 'id, slug, title, excerpt, content_html, meta_title, meta_description, category, tags, author, status, published_at, created_at, updated_at, key_takeaways, faq, sources, reading_minutes';
 
 function toPost(r: Row): Post {
   return {
@@ -24,6 +24,7 @@ function toPost(r: Row): Post {
     publishedAt: r.published_at, updatedAt: r.updated_at,
     keyTakeaways: Array.isArray(r.key_takeaways) ? (r.key_takeaways as string[]) : [],
     faq: Array.isArray(r.faq) ? (r.faq as Post['faq']) : [],
+    sources: Array.isArray(r.sources) ? (r.sources as Post['sources']) : [],
     readingMinutes: r.reading_minutes,
   };
 }

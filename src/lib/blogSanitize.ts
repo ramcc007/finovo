@@ -1,5 +1,5 @@
 import sanitizeHtml from 'sanitize-html';
-import { slugify, readingMinutes, type FaqItem } from '@/lib/blog';
+import { slugify, readingMinutes, type FaqItem, type SourceItem } from '@/lib/blog';
 
 // Server-only. Admin-authored HTML is still sanitised before storage so a
 // compromised session can't plant scripts that run for every reader.
@@ -32,7 +32,7 @@ export interface PostInput {
   title: string; slug: string; excerpt: string; contentHtml: string;
   metaTitle: string | null; metaDescription: string | null; category: string; author: string;
   tags: string[]; status: 'draft' | 'published';
-  publishedAt: string | null; keyTakeaways: string[]; faq: FaqItem[]; readingMinutes: number;
+  publishedAt: string | null; keyTakeaways: string[]; faq: FaqItem[]; sources: SourceItem[]; readingMinutes: number;
 }
 
 const str = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
@@ -73,6 +73,22 @@ export function parsePostInput(body: unknown): { ok: true; value: PostInput } | 
         .slice(0, 15)
     : [];
 
+  const sources: SourceItem[] = [];
+  if (Array.isArray(b.sources)) {
+    for (const s of b.sources.slice(0, 8)) {
+      const name = str((s as SourceItem)?.name, 80);
+      const raw = str((s as SourceItem)?.url, 500);
+      if (!name && !raw) continue;
+      try {
+        const u = new URL(raw);
+        if (u.protocol !== 'https:' || !name) throw new Error('bad');
+        sources.push({ name, url: u.toString() });
+      } catch {
+        return { ok: false, error: `Source "${name || raw}" needs a name and a valid https:// link.` };
+      }
+    }
+  }
+
   return {
     ok: true,
     value: {
@@ -81,7 +97,7 @@ export function parsePostInput(body: unknown): { ok: true; value: PostInput } | 
       metaDescription: str(b.metaDescription, 320) || null,
       category: str(b.category, 60) || 'Uncategorized',
       author: str(b.author, 80) || 'Admin',
-      tags, status, publishedAt, keyTakeaways, faq,
+      tags, status, publishedAt, keyTakeaways, faq, sources,
       readingMinutes: readingMinutes(contentHtml),
     },
   };
@@ -92,7 +108,7 @@ export function toRow(v: PostInput) {
     slug: v.slug, title: v.title, excerpt: v.excerpt, content_html: v.contentHtml,
     meta_title: v.metaTitle, meta_description: v.metaDescription, category: v.category, author: v.author,
     tags: v.tags, featured_image: null, status: v.status, published_at: v.publishedAt,
-    key_takeaways: v.keyTakeaways, faq: v.faq, reading_minutes: v.readingMinutes,
+    key_takeaways: v.keyTakeaways, faq: v.faq, sources: v.sources, reading_minutes: v.readingMinutes,
     updated_at: new Date().toISOString(),
   };
 }
