@@ -1,10 +1,14 @@
 import { MetadataRoute } from 'next';
 import { supabase } from '@/lib/supabase';
-import { POSTS } from '@/lib/blog';
+import { getPublishedPosts } from '@/lib/blogDb';
 
 const base = 'https://www.scripwise.co.in';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const blogPosts = await getPublishedPosts();
+  const blogRoutes: MetadataRoute.Sitemap = blogPosts.map(p => ({
+    url: `${base}/blog/${p.slug}`, lastModified: new Date(p.updatedAt), changeFrequency: 'monthly' as const, priority: 0.7,
+  }));
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: base, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
     { url: `${base}/screener`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
@@ -13,9 +17,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/screens`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.7 },
     { url: `${base}/pulse`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.7 },
     { url: `${base}/compare`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.6 },
-    { url: `${base}/calendar`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.6 },
     { url: `${base}/blog`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.7 },
-    ...POSTS.map(p => ({ url: `${base}/blog/${p.slug}`, lastModified: new Date(p.updatedAt), changeFrequency: 'monthly' as const, priority: 0.7 })),
     { url: `${base}/signup`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
     { url: `${base}/contact`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
     { url: `${base}/disclaimer`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
@@ -40,9 +42,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.6,
     }));
 
-    return [...staticRoutes, ...stockRoutes];
+    return [...staticRoutes, ...blogRoutes, ...stockRoutes];
   } catch {
     // DB unreachable at build/request time — ship the static routes rather than fail the sitemap entirely.
-    return staticRoutes;
+    return [...staticRoutes, ...blogRoutes];
   }
 }

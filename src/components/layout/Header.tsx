@@ -16,8 +16,8 @@ const NAV = [
   { href: '/pulse', label: 'Pulse' },
   { href: '/screens', label: 'Screens' },
   { href: '/compare', label: 'Compare' },
-  { href: '/calendar', label: 'Calendar' },
   { href: '/watchlist', label: 'Watchlist' },
+  { href: '/blog', label: 'Blog' },
 ];
 
 interface SearchHit { symbol: string; name: string; sector: string }

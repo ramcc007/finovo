@@ -1,64 +1,51 @@
-// Blog content. Each post is a JSON file in src/content/blog/, listed in src/content/blog/index.ts.
-// Inline markup supported in strings: **bold** and [text](/path).
-import { POST_DATA } from '@/content/blog';
+// Shared (client + server safe) blog types and helpers. Posts live in the
+// `blog_posts` Supabase table; see blogDb.ts for queries.
 
-export type Block =
-  | { type: 'p'; text: string }
-  | { type: 'h2'; text: string; id: string }
-  | { type: 'ol'; items: string[] }
-  | { type: 'ul'; items: string[] };
+export interface FaqItem { q: string; a: string }
 
 export interface Post {
+  id: string;
   slug: string;
   title: string;
-  description: string; // meta description (~155 chars)
   excerpt: string;
-  author: string; // one of AUTHORS, picked at random when the post is added
+  contentHtml: string;
+  metaTitle: string | null;
+  metaDescription: string | null;
   category: string;
   tags: string[];
-  publishedAt: string; // ISO date
+  featuredImage: string | null;
+  author: string;
+  status: 'draft' | 'published';
+  publishedAt: string | null; // ISO timestamp
   updatedAt: string;
+  keyTakeaways: string[]; // may contain **bold**
+  faq: FaqItem[];
   readingMinutes: number;
-  keyTakeaways: string[];
-  faq: { q: string; a: string }[];
-  body: Block[];
-  disclaimer: string;
 }
 
-// Bylines for blog posts. Each new post gets one of these at random (fixed per post, not per page view).
-export const AUTHORS = [
-  'Prateek Desai',
-  'Ram Das',
-  'Preeta Kulkarni',
-  'Rahul Dev',
-  'Veena Sharma',
-  'Ankit Gupta',
-  'Vaibhav Poddar',
-  'Avinash Solanki',
-] as const;
-
-const BLOCK_TYPES = new Set(['p', 'h2', 'ol', 'ul']);
-
-// Light shape check so one malformed file fails loudly at build time instead of rendering a broken page.
-function toPost(raw: unknown): Post {
-  const p = raw as Post;
-  const ok =
-    p && typeof p.slug === 'string' && typeof p.title === 'string' && typeof p.author === 'string' &&
-    typeof p.publishedAt === 'string' && Array.isArray(p.body) && Array.isArray(p.faq) &&
-    Array.isArray(p.keyTakeaways) && Array.isArray(p.tags) &&
-    p.body.every(b => b && BLOCK_TYPES.has((b as Block).type));
-  if (!ok) throw new Error(`Invalid blog post data: ${(p && p.slug) || 'unknown slug'}`);
-  return p;
-}
-
-export const POSTS: Post[] = POST_DATA.map(toPost);
-
-export function getPost(slug: string): Post | undefined {
-  return POSTS.find(p => p.slug === slug);
-}
+export const DEFAULT_DISCLAIMER =
+  'This article is only for information and education. It is not investment advice or a recommendation to buy or sell any security. Please consult a SEBI-registered investment adviser before making any investment decisions.';
 
 export function formatDate(iso: string): string {
-  return new Date(iso + 'T00:00:00Z').toLocaleDateString('en-IN', {
-    day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',
+  return new Date(iso).toLocaleDateString('en-IN', {
+    day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata',
   });
+}
+
+export function slugify(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 100);
+}
+
+export function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+}
+
+export function readingMinutes(html: string): number {
+  const words = stripHtml(html).split(' ').filter(Boolean).length;
+  return Math.max(1, Math.round(words / 220));
 }

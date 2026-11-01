@@ -164,7 +164,7 @@ export default function LoginForm({ nonce }: { nonce?: string }) {
         <AuthTabs active="login" />
 
         <h1 className="text-xl font-bold text-[#0D1117] mb-1">Welcome back</h1>
-        <p className="text-sm text-[#4A5568] mb-6">Access Markets, Screens, Compare, Corporate Calendars and so much more!</p>
+        <p className="text-sm text-[#4A5568] mb-6">Access Markets, Screens, Compare and so much more!</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
