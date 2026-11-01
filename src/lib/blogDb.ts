@@ -35,16 +35,26 @@ export async function getPublishedPosts(): Promise<Post[]> {
       .eq('status', 'published').lte('published_at', new Date().toISOString())
       .order('published_at', { ascending: false });
     const db = ((data ?? []) as Row[]).map(toPost);
-    return mergeStatic(db);
+    return mergeStatic(db, await getHiddenSlugs());
   } catch {
-    return mergeStatic([]);
+    return mergeStatic([], new Set());
+  }
+}
+
+/** Slugs of file-based posts the admin has deleted. */
+export async function getHiddenSlugs(): Promise<Set<string>> {
+  try {
+    const { data } = await getServiceClient().from('blog_hidden_slugs').select('slug');
+    return new Set((data ?? []).map((r: { slug: string }) => r.slug));
+  } catch {
+    return new Set();
   }
 }
 
 /** File-based posts fill in any slug the database doesn't override. */
-function mergeStatic(db: Post[]): Post[] {
+function mergeStatic(db: Post[], hidden: Set<string>): Post[] {
   const slugs = new Set(db.map(p => p.slug));
-  return [...db, ...getStaticPosts().filter(p => !slugs.has(p.slug))]
+  return [...db, ...getStaticPosts().filter(p => !slugs.has(p.slug) && !hidden.has(p.slug))]
     .sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''));
 }
 
@@ -58,7 +68,8 @@ export async function getPublishedPost(slug: string): Promise<Post | null> {
   } catch {
     // fall through to file-based posts
   }
-  return getStaticPosts().find(p => p.slug === slug) ?? null;
+  const hidden = await getHiddenSlugs();
+  return getStaticPosts().find(p => p.slug === slug && !hidden.has(slug)) ?? null;
 }
 
 export { toPost, COLS };
