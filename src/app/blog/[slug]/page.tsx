@@ -8,6 +8,7 @@ import { PostCard } from '@/components/blog/PostCard';
 import { formatDate, stripHtml, DEFAULT_DISCLAIMER } from '@/lib/blog';
 import Inline from '@/components/blog/Inline';
 import PostAdminActions from '@/components/blog/PostAdminActions';
+import ShareBar from '@/components/blog/ShareBar';
 import { categoryHref } from '@/components/blog/categories';
 import { ld } from '@/components/blog/jsonLd';
 
@@ -164,6 +165,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             </ul>
           </section>
         )}
+
+        <ShareBar url={url} title={post.title} />
 
         <section className="mt-12 rounded-2xl bg-[#0B0E14] p-6 text-white md:p-8">
           <h2 className="text-xl font-bold">Screen stocks yourself</h2>
