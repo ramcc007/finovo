@@ -1,4 +1,6 @@
+import Link from 'next/link';
 import { headers } from 'next/headers';
+import { categoryHref } from './categories';
 import { notFound } from 'next/navigation';
 import { Rss } from 'lucide-react';
 import { getPublishedPosts } from '@/lib/blogDb';
@@ -21,6 +23,18 @@ export default async function BlogListing({ page }: { page: number }) {
   const featured = page === 1 ? posts[0] : undefined;
   const grid = page === 1 ? posts.slice(1) : posts;
 
+  const itemList = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    itemListElement: posts.map((p, i) => ({
+      '@type': 'ListItem',
+      position: (page - 1) * POSTS_PER_PAGE + i + 1,
+      url: `https://www.scripwise.co.in/blog/${p.slug}`,
+      name: p.title,
+    })),
+  };
+  const categories = [...new Set(all.map(p => p.category))].sort();
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Blog',
@@ -39,6 +53,7 @@ export default async function BlogListing({ page }: { page: number }) {
   return (
     <div>
       <script type="application/ld+json" nonce={nonce} dangerouslySetInnerHTML={{ __html: ld(jsonLd) }} />
+      <script type="application/ld+json" nonce={nonce} dangerouslySetInnerHTML={{ __html: ld(itemList) }} />
 
       <header className="hero-dark relative overflow-hidden">
         <div className="hero-grid" />
@@ -58,6 +73,13 @@ export default async function BlogListing({ page }: { page: number }) {
 
       <div className="mx-auto max-w-6xl px-4 py-10 md:px-6 md:py-14">
         <BlogAdminBar />
+        {categories.length > 1 && (
+          <nav aria-label="Blog categories" className="mb-8 flex flex-wrap gap-2">
+            {categories.map(c => (
+              <Link key={c} href={categoryHref(c)} className="rounded-full border border-[#E5E7EB] bg-white px-3.5 py-1.5 text-sm font-semibold text-[#0D1117] hover:border-[#F97316] hover:text-[#EA580C]">{c}</Link>
+            ))}
+          </nav>
+        )}
         {posts.length === 0 && <p className="text-[#4A5568]">No posts yet. Check back soon.</p>}
         {featured && <div className="mb-8"><FeaturedPostCard post={featured} /></div>}
         {grid.length > 0 && (

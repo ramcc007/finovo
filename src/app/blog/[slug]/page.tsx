@@ -8,6 +8,7 @@ import { PostCard } from '@/components/blog/PostCard';
 import { formatDate, stripHtml, DEFAULT_DISCLAIMER } from '@/lib/blog';
 import Inline from '@/components/blog/Inline';
 import PostAdminActions from '@/components/blog/PostAdminActions';
+import { categoryHref } from '@/components/blog/categories';
 import { ld } from '@/components/blog/jsonLd';
 
 const BASE = 'https://www.scripwise.co.in';
@@ -69,7 +70,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home', item: BASE },
         { '@type': 'ListItem', position: 2, name: 'Blog', item: `${BASE}/blog` },
-        { '@type': 'ListItem', position: 3, name: post.title, item: url },
+        { '@type': 'ListItem', position: 3, name: post.category, item: `${BASE}${categoryHref(post.category)}` },
+        { '@type': 'ListItem', position: 4, name: post.title, item: url },
       ],
     },
   ];
@@ -98,7 +100,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             </nav>
             <PostAdminActions id={post.id} title={post.title} redirectTo="/blog" />
           </div>
-          <span className="inline-block rounded-full bg-[#F97316]/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#FB923C]">{post.category}</span>
+          <Link href={categoryHref(post.category)} className="inline-block rounded-full bg-[#F97316]/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#FB923C] hover:bg-[#F97316]/25">{post.category}</Link>
           <h1 className="mt-4 text-3xl font-bold leading-tight text-white md:text-5xl">{post.title}</h1>
           <div className="mt-6 flex items-center gap-3 text-sm text-white/60">
             <span aria-hidden className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#FB923C] to-[#EA580C] text-sm font-bold text-white">

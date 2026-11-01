@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ArrowUpRight, Clock } from 'lucide-react';
 import { formatDate, type Post } from '@/lib/blog';
 import PostAdminActions from './PostAdminActions';
+import { categoryHref } from './categories';
 
 // Text-only design: hierarchy comes from type, colour accents and spacing.
 
@@ -36,7 +37,7 @@ export function FeaturedPostCard({ post }: { post: Post }) {
       <div aria-hidden className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[#F97316]/20 blur-3xl" />
       <div className="relative max-w-3xl">
         <span className="inline-block rounded-full bg-[#F97316]/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#FB923C]">
-          Latest · {post.category}
+          Latest · <Link href={categoryHref(post.category)} className="hover:text-white">{post.category}</Link>
         </span>
         <h2 className="mt-5 text-2xl font-bold leading-tight text-white md:text-4xl">
           <Link href={`/blog/${post.slug}`} className="hover:text-[#FB923C]">{post.title}</Link>
@@ -60,7 +61,7 @@ export function PostCard({ post }: { post: Post }) {
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#F97316]/40 hover:shadow-lg">
       <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#FB923C] to-[#EA580C]" />
-      <span className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#EA580C]">{post.category}</span>
+      <Link href={categoryHref(post.category)} className="relative z-10 mb-3 self-start text-xs font-semibold uppercase tracking-wide text-[#EA580C] hover:underline">{post.category}</Link>
       <h2 className="text-xl font-bold leading-snug text-[#0D1117]">
         <Link href={`/blog/${post.slug}`} className="after:absolute after:inset-0 hover:text-[#EA580C]">{post.title}</Link>
       </h2>

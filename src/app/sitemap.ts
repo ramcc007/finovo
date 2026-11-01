@@ -1,6 +1,7 @@
 import { MetadataRoute } from 'next';
 import { supabase } from '@/lib/supabase';
 import { getPublishedPosts } from '@/lib/blogDb';
+import { slugify } from '@/lib/blog';
 
 const base = 'https://www.scripwise.co.in';
 
@@ -20,6 +21,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.4,
       };
     }),
+    ...[...new Set(blogPosts.map(p => slugify(p.category)))].map(cat => ({
+      url: `${base}/blog/category/${cat}`,
+      changeFrequency: 'weekly' as const,
+      priority: 0.5,
+    })),
     ...blogPosts.map(p => ({
       url: `${base}/blog/${p.slug}`,
       changeFrequency: 'monthly' as const,
