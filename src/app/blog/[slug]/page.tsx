@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { ShieldAlert } from 'lucide-react';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { getPublishedPost, getPublishedPosts } from '@/lib/blogDb';
@@ -171,9 +172,16 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           </div>
         </section>
 
-        <p className="mt-8 border-t border-[#E5E7EB] pt-4 text-xs leading-relaxed text-[#8A96A8]">
-          <strong>Disclaimer:</strong> {DEFAULT_DISCLAIMER}
-        </p>
+        <aside aria-labelledby="disclaimer" className="mt-10 rounded-2xl border border-[#FED7AA] border-l-4 border-l-[#F97316] bg-[#FFF7ED] p-5 md:p-6">
+          <h2 id="disclaimer" className="mb-2 flex items-center gap-2 text-lg font-bold text-[#9A3412]">
+            <ShieldAlert size={20} aria-hidden /> Disclaimer
+          </h2>
+          <p className="text-base leading-relaxed text-[#7C2D12]">{DEFAULT_DISCLAIMER}</p>
+          <p className="mt-2 text-sm leading-relaxed text-[#9A3412]">
+            Scripwise is not registered with SEBI as an investment adviser or research analyst. Figures are taken from
+            {post.sources.length > 0 ? ' the sources credited above' : ' public reports'} and may change; please verify them before acting on them.
+          </p>
+        </aside>
       </article>
 
       {related.length > 0 && (
