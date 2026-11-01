@@ -15,7 +15,6 @@ Scripwise is not a SEBI-registered investment adviser. All data is for informati
 - [Markets](${base}/markets): Market overview — top gainers/losers, most active, 52-week highs/lows, sector performance, and sector heatmap. Requires a free account.
 - [Pre-built Screens](${base}/screens): Ready-made screens for quality, value, income, momentum, and turnaround investing frameworks. Requires a free account.
 - [Compare](${base}/compare): Side-by-side comparison of up to 4 companies across 14 fundamental metrics. Requires a free account.
-- [Corporate Actions Calendar](${base}/calendar): Dividends, bonuses, splits, rights, buybacks, and board/AGM/EGM meeting dates. Requires a free account.
 - [Watchlist](${base}/watchlist): Personal tracked-stocks list with CSV export. Requires a free account.
 
 ## Account
@@ -35,7 +34,7 @@ Scripwise is not a SEBI-registered investment adviser. All data is for informati
 
 ## Notes for automated agents
 
-- The Explorer (\`/screener\`) is the only research tool that does not require authentication; Markets, Screens, Compare, Calendar, and Watchlist require a free Scripwise account.
+- The Explorer (\`/screener\`) is the only research tool that does not require authentication; Markets, Screens, Compare, and Watchlist require a free Scripwise account.
 - Data is NSE/BSE end-of-day; treat it as informational, not real-time trading data or investment advice.
 - \`/api/*\` routes are internal application endpoints, not a public API, and are disallowed in robots.txt.
 

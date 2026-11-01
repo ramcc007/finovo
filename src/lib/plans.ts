@@ -86,7 +86,6 @@ export const FEATURE_MATRIX: FeatureGroup[] = [
     rows: [
       { label: 'Markets overview & index ticker', free: true, pro: true },
       { label: 'End-of-day prices', detail: 'Updated after each trading day’s close', free: true, pro: true },
-      { label: 'Corporate actions calendar', free: true, pro: true },
     ],
   },
   {
@@ -104,7 +103,6 @@ export const FREE_HIGHLIGHTS: string[] = [
   'Markets, index ticker & end-of-day prices',
   `Watchlist up to ${FREE_WATCHLIST_LIMIT} stocks`,
   'Scripwise Score & Pulse — headline reading',
-  'Corporate actions calendar',
 ];
 
 export const PRO_HIGHLIGHTS: string[] = [

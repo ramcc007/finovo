@@ -239,7 +239,7 @@ export default function SignupForm({ nonce }: { nonce?: string }) {
 
         <h1 className="text-xl font-bold text-[#0D1117] mb-1">Create your free account</h1>
         <p className="text-sm text-[#4A5568] mb-6">
-          Unlock Markets, Screens, Compare, Calendar and Watchlist — synced across devices.
+          Unlock Markets, Screens, Compare and Watchlist — synced across devices.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
