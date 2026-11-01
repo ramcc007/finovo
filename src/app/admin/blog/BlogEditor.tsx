@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Trash2, Plus, X, ImagePlus, ExternalLink } from 'lucide-react';
+import { Loader2, Trash2, Plus, X, ExternalLink } from 'lucide-react';
 import { adminFetch } from '@/lib/adminFetch';
 import { slugify, type FaqItem, type Post } from '@/lib/blog';
 import RichEditor from './RichEditor';
@@ -45,7 +45,6 @@ export default function BlogEditor({ id }: { id?: string }) {
   const [author, setAuthor] = useState('Admin');
   const [tags, setTags] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState('');
-  const [featured, setFeatured] = useState<string | null>(null);
   const [metaTitle, setMetaTitle] = useState('');
   const [metaDesc, setMetaDesc] = useState('');
   const [takeaways, setTakeaways] = useState('');
@@ -55,7 +54,6 @@ export default function BlogEditor({ id }: { id?: string }) {
   const [categories, setCategories] = useState<string[]>([]);
 
   const [saving, setSaving] = useState(false);
-  const [uploadingFeatured, setUploadingFeatured] = useState(false);
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [openedAt] = useState(() => Date.now());
 
@@ -73,7 +71,7 @@ export default function BlogEditor({ id }: { id?: string }) {
           if (!alive) return;
           const p = d.data as Post;
           setTitle(p.title); setSlug(p.slug); setHtml(p.contentHtml); setInitialHtml(p.contentHtml);
-          setExcerpt(p.excerpt); setCategory(p.category); setAuthor(p.author); setTags(p.tags); setFeatured(p.featuredImage);
+          setExcerpt(p.excerpt); setCategory(p.category); setAuthor(p.author); setTags(p.tags);
           setMetaTitle(p.metaTitle ?? ''); setMetaDesc(p.metaDescription ?? '');
           setTakeaways(p.keyTakeaways.join('\n')); setFaq(p.faq); setStatus(p.status);
           setPublishAt(toLocalInput(p.publishedAt));
@@ -90,27 +88,11 @@ export default function BlogEditor({ id }: { id?: string }) {
     setTagDraft('');
   };
 
-  const uploadFeatured = async (file: File) => {
-    setUploadingFeatured(true);
-    try {
-      const fd = new FormData();
-      fd.append('file', file);
-      const r = await adminFetch('/api/admin/blog/upload', { method: 'POST', body: fd });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error ?? 'Upload failed');
-      setFeatured(d.url);
-    } catch (e) {
-      setMsg({ type: 'err', text: e instanceof Error ? e.message : 'Upload failed' });
-    } finally {
-      setUploadingFeatured(false);
-    }
-  };
-
   const save = async (nextStatus: Status) => {
     setSaving(true); setMsg(null);
     const body = {
       title, slug: slug || slugify(title), excerpt, contentHtml: html, metaTitle, metaDescription: metaDesc,
-      category, author, tags, featuredImage: featured, status: nextStatus,
+      category, author, tags, status: nextStatus,
       publishedAt: nextStatus === 'published' && publishAt ? new Date(publishAt).toISOString() : null,
       keyTakeaways: takeaways.split('\n').map(s => s.trim()).filter(Boolean),
       faq,
@@ -253,23 +235,6 @@ export default function BlogEditor({ id }: { id?: string }) {
               onBlur={() => tagDraft && addTag(tagDraft)}
               placeholder="Type a tag, press Enter" className={input}
             />
-          </Box>
-
-          <Box title="Featured image">
-            {featured && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={featured} alt="" className="w-full rounded-md object-cover max-h-40" />
-            )}
-            <div className="flex gap-3 text-sm font-semibold">
-              <label className="inline-flex cursor-pointer items-center gap-1.5 text-[#EA580C] hover:underline">
-                {uploadingFeatured ? <Loader2 size={14} className="animate-spin" /> : <ImagePlus size={14} />}
-                {featured ? 'Replace' : 'Set featured image'}
-                <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden
-                  onChange={e => { const f = e.target.files?.[0]; if (f) uploadFeatured(f); e.target.value = ''; }} />
-              </label>
-              {featured && <button type="button" onClick={() => setFeatured(null)} className="text-red-600 hover:underline">Remove</button>}
-            </div>
-            <p className="text-xs text-[#8A96A8]">Used on the blog list and as the social-share image (1200×630 works best).</p>
           </Box>
 
           <Box title="SEO">

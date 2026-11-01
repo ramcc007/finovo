@@ -9,7 +9,7 @@ import AdminGate from '@/components/blog/AdminGate';
 
 interface Row {
   id: string; slug: string; title: string; category: string;
-  status: 'draft' | 'published'; published_at: string | null; updated_at: string;
+  status: 'draft' | 'published'; published_at: string | null; updated_at: string; created_at: string;
 }
 
 function badge(r: Row) {
@@ -55,7 +55,7 @@ function List() {
         <div className="overflow-x-auto border border-[#E5E7EB] rounded-xl bg-white">
           <table className="w-full text-sm">
             <thead className="bg-[#F9FAFB] text-left text-xs uppercase tracking-wide text-[#8A96A8]">
-              <tr><th className="px-4 py-3">Title</th><th className="px-4 py-3">Category</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Date</th><th className="px-4 py-3 text-right">Actions</th></tr>
+              <tr><th className="px-4 py-3">Title</th><th className="px-4 py-3">Category</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Published</th><th className="px-4 py-3">Created / modified</th><th className="px-4 py-3 text-right">Actions</th></tr>
             </thead>
             <tbody className="divide-y divide-[#E5E7EB]">
               {rows.map(r => {
@@ -68,7 +68,11 @@ function List() {
                     </td>
                     <td className="px-4 py-3 text-[#4A5568]">{r.category}</td>
                     <td className="px-4 py-3"><span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${b.cls}`}>{b.text}</span></td>
-                    <td className="px-4 py-3 text-[#4A5568] whitespace-nowrap">{formatDate(r.published_at ?? r.updated_at)}</td>
+                    <td className="px-4 py-3 text-[#4A5568] whitespace-nowrap">{r.published_at ? formatDate(r.published_at) : '—'}</td>
+                    <td className="px-4 py-3 text-xs text-[#8A96A8] whitespace-nowrap">
+                      <div>Created {formatDate(r.created_at)}</div>
+                      <div>Modified {formatDate(r.updated_at)}</div>
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
                         {r.status === 'published' && (

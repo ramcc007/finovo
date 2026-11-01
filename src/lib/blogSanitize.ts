@@ -3,20 +3,17 @@ import { slugify, readingMinutes, type FaqItem } from '@/lib/blog';
 
 // Server-only. Admin-authored HTML is still sanitised before storage so a
 // compromised session can't plant scripts that run for every reader.
-const SUPABASE_HOST_RE = /^https:\/\/[a-z0-9-]+\.supabase\.co\//i;
 
 export function sanitizeContent(html: string): string {
   return sanitizeHtml(html, {
     allowedTags: [
       'p', 'br', 'h2', 'h3', 'h4', 'strong', 'b', 'em', 'i', 'u', 's', 'a', 'ul', 'ol', 'li',
-      'blockquote', 'hr', 'img', 'code', 'pre',
+      'blockquote', 'hr', 'code', 'pre',
     ],
     allowedAttributes: {
       a: ['href', 'title', 'target', 'rel'],
-      img: ['src', 'alt', 'title', 'width', 'height'],
     },
     allowedSchemes: ['http', 'https', 'mailto'],
-    allowedSchemesByTag: { img: ['https'] },
     allowProtocolRelative: false,
     transformTags: {
       a: (tag, attribs) => {
@@ -34,7 +31,7 @@ export function sanitizeContent(html: string): string {
 export interface PostInput {
   title: string; slug: string; excerpt: string; contentHtml: string;
   metaTitle: string | null; metaDescription: string | null; category: string; author: string;
-  tags: string[]; featuredImage: string | null; status: 'draft' | 'published';
+  tags: string[]; status: 'draft' | 'published';
   publishedAt: string | null; keyTakeaways: string[]; faq: FaqItem[]; readingMinutes: number;
 }
 
@@ -63,9 +60,6 @@ export function parsePostInput(body: unknown): { ok: true; value: PostInput } | 
     publishedAt = d.toISOString();
   }
 
-  const featured = str(b.featuredImage, 500);
-  if (featured && !SUPABASE_HOST_RE.test(featured)) return { ok: false, error: 'Featured image must be an uploaded image.' };
-
   const tags = Array.isArray(b.tags)
     ? [...new Set(b.tags.map(t => str(t, 40)).filter(Boolean))].slice(0, 15)
     : [];
@@ -87,7 +81,7 @@ export function parsePostInput(body: unknown): { ok: true; value: PostInput } | 
       metaDescription: str(b.metaDescription, 320) || null,
       category: str(b.category, 60) || 'Uncategorized',
       author: str(b.author, 80) || 'Admin',
-      tags, featuredImage: featured || null, status, publishedAt, keyTakeaways, faq,
+      tags, status, publishedAt, keyTakeaways, faq,
       readingMinutes: readingMinutes(contentHtml),
     },
   };
@@ -97,7 +91,7 @@ export function toRow(v: PostInput) {
   return {
     slug: v.slug, title: v.title, excerpt: v.excerpt, content_html: v.contentHtml,
     meta_title: v.metaTitle, meta_description: v.metaDescription, category: v.category, author: v.author,
-    tags: v.tags, featured_image: v.featuredImage, status: v.status, published_at: v.publishedAt,
+    tags: v.tags, featured_image: null, status: v.status, published_at: v.publishedAt,
     key_takeaways: v.keyTakeaways, faq: v.faq, reading_minutes: v.readingMinutes,
     updated_at: new Date().toISOString(),
   };

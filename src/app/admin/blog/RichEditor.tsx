@@ -1,15 +1,12 @@
 'use client';
 
-import { useRef, useState } from 'react';
 import { useEditor, EditorContent, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough, Heading2, Heading3, List, ListOrdered,
-  Quote, Link as LinkIcon, ImagePlus, Minus, Undo2, Redo2, Pilcrow, Loader2,
+  Quote, Link as LinkIcon, Minus, Undo2, Redo2, Pilcrow,
 } from 'lucide-react';
-import { adminFetch } from '@/lib/adminFetch';
 import { cn } from '@/lib/utils';
 
 function Btn({ onClick, active, disabled, label, children }: {
@@ -27,33 +24,12 @@ function Btn({ onClick, active, disabled, label, children }: {
 }
 
 function Toolbar({ editor }: { editor: Editor }) {
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
-
   const setLink = () => {
     const prev = editor.getAttributes('link').href as string | undefined;
     const url = window.prompt('Link URL (leave empty to remove)', prev ?? 'https://');
     if (url === null) return;
     if (url.trim() === '') { editor.chain().focus().extendMarkRange('link').unsetLink().run(); return; }
     editor.chain().focus().extendMarkRange('link').setLink({ href: url.trim() }).run();
-  };
-
-  const onFile = async (file: File) => {
-    setUploading(true);
-    try {
-      const fd = new FormData();
-      fd.append('file', file);
-      const r = await adminFetch('/api/admin/blog/upload', { method: 'POST', body: fd });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error ?? 'Upload failed');
-      const alt = window.prompt('Image description (alt text, good for SEO)', '') ?? '';
-      editor.chain().focus().setImage({ src: d.url, alt }).run();
-    } catch (e) {
-      window.alert(e instanceof Error ? e.message : 'Upload failed');
-    } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = '';
-    }
   };
 
   return (
@@ -73,11 +49,6 @@ function Toolbar({ editor }: { editor: Editor }) {
       <Btn label="Divider" onClick={() => editor.chain().focus().setHorizontalRule().run()}><Minus size={16} /></Btn>
       <span className="mx-1 h-5 w-px bg-[#E5E7EB]" />
       <Btn label="Link" onClick={setLink} active={editor.isActive('link')}><LinkIcon size={16} /></Btn>
-      <Btn label="Insert image" onClick={() => fileRef.current?.click()} disabled={uploading}>
-        {uploading ? <Loader2 size={16} className="animate-spin" /> : <ImagePlus size={16} />}
-      </Btn>
-      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden
-        onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f); }} />
       <span className="mx-1 h-5 w-px bg-[#E5E7EB]" />
       <Btn label="Undo" onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()}><Undo2 size={16} /></Btn>
       <Btn label="Redo" onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()}><Redo2 size={16} /></Btn>
@@ -92,7 +63,6 @@ export default function RichEditor({ initialHtml, onChange }: { initialHtml: str
         heading: { levels: [2, 3] },
         link: { openOnClick: false, autolink: true, HTMLAttributes: { rel: 'noopener noreferrer' } },
       }),
-      Image,
       Placeholder.configure({ placeholder: 'Start writing your article…' }),
     ],
     content: initialHtml,

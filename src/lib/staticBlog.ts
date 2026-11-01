@@ -36,7 +36,7 @@ export function getStaticPosts(): Post[] {
     id: `static:${p.slug}`,
     slug: p.slug, title: p.title, excerpt: p.excerpt, contentHtml: blocksToHtml(p.body),
     metaTitle: null, metaDescription: p.description, category: p.category, tags: p.tags,
-    featuredImage: null, author: p.author, status: 'published' as const,
+    createdAt: `${p.publishedAt}T04:00:00.000Z`, author: p.author, status: 'published' as const,
     publishedAt: `${p.publishedAt}T04:00:00.000Z`, updatedAt: `${p.updatedAt}T04:00:00.000Z`,
     keyTakeaways: p.keyTakeaways, faq: p.faq, readingMinutes: p.readingMinutes,
   }));

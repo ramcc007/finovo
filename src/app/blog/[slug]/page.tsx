@@ -31,12 +31,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       authors: [post.author],
       section: post.category,
       tags: post.tags,
-      ...(post.featuredImage ? { images: [{ url: post.featuredImage }] } : {}),
     },
-    twitter: {
-      card: 'summary_large_image', title, description,
-      ...(post.featuredImage ? { images: [post.featuredImage] } : {}),
-    },
+    twitter: { card: 'summary_large_image', title, description },
   };
 }
 
@@ -56,6 +52,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       url,
       mainEntityOfPage: { '@type': 'WebPage', '@id': url },
       datePublished: post.publishedAt,
+      dateCreated: post.createdAt,
       dateModified: post.updatedAt,
       author: { '@type': 'Person', name: post.author },
       publisher: { '@type': 'Organization', name: 'Scripwise', url: BASE },
@@ -63,7 +60,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       keywords: post.tags.join(', '),
       inLanguage: 'en-IN',
       wordCount: stripHtml(post.contentHtml).split(' ').filter(Boolean).length,
-      ...(post.featuredImage ? { image: post.featuredImage } : {}),
     },
     {
       '@context': 'https://schema.org',
@@ -118,11 +114,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       </header>
 
       <article className="mx-auto max-w-3xl px-4 py-10 md:px-6 md:py-12">
-        {post.featuredImage && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={post.featuredImage} alt={post.title} className="-mt-20 mb-10 w-full rounded-2xl object-cover shadow-xl max-h-[460px] relative" />
-        )}
-
         {post.keyTakeaways.length > 0 && (
           <section aria-labelledby="key-takeaways" className="mb-10 rounded-2xl border border-[#FFEDD5] border-l-4 border-l-[#F97316] bg-[#FFF7ED] p-5 md:p-6">
             <h2 id="key-takeaways" className="mb-3 font-bold text-[#0D1117]">Key takeaways</h2>

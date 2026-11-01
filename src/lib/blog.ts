@@ -13,7 +13,7 @@ export interface Post {
   metaDescription: string | null;
   category: string;
   tags: string[];
-  featuredImage: string | null;
+  createdAt: string; // real creation time (publishedAt may be backdated)
   author: string;
   status: 'draft' | 'published';
   publishedAt: string | null; // ISO timestamp

@@ -4,40 +4,64 @@ import { getPublishedPosts } from '@/lib/blogDb';
 
 const base = 'https://www.scripwise.co.in';
 
+const POSTS_PER_PAGE = 9; // keep in step with BlogListing
+
+// lastModified is only emitted where we know a real date: blog pages use the
+// post's real last-edit time (not its possibly backdated publish date), stock
+// pages use the latest end-of-day price date. Pages with no tracked change
+// date omit it rather than claiming "modified now" on every crawl.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const blogPosts = await getPublishedPosts();
-  const blogRoutes: MetadataRoute.Sitemap = blogPosts.map(p => ({
-    url: `${base}/blog/${p.slug}`, lastModified: new Date(p.updatedAt), changeFrequency: 'monthly' as const, priority: 0.7,
-  }));
+  const blogPosts = await getPublishedPosts(); // newest publish date first
+  const newest = (posts: typeof blogPosts) =>
+    posts.length ? new Date(Math.max(...posts.map(p => new Date(p.updatedAt).getTime()))) : undefined;
+
+  const blogRoutes: MetadataRoute.Sitemap = [
+    { url: `${base}/blog`, lastModified: newest(blogPosts), changeFrequency: 'daily', priority: 0.8 },
+    ...Array.from({ length: Math.max(0, Math.ceil(blogPosts.length / POSTS_PER_PAGE) - 1) }, (_, i) => {
+      const pageNo = i + 2;
+      return {
+        url: `${base}/blog/page/${pageNo}`,
+        lastModified: newest(blogPosts.slice((pageNo - 1) * POSTS_PER_PAGE, pageNo * POSTS_PER_PAGE)),
+        changeFrequency: 'weekly' as const,
+        priority: 0.4,
+      };
+    }),
+    ...blogPosts.map(p => ({
+      url: `${base}/blog/${p.slug}`,
+      lastModified: new Date(p.updatedAt),
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    })),
+  ];
+
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url: base, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
-    { url: `${base}/screener`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
-    { url: `${base}/markets`, lastModified: new Date(), changeFrequency: 'hourly', priority: 0.8 },
-    { url: `${base}/pricing`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.8 },
-    { url: `${base}/screens`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.7 },
-    { url: `${base}/pulse`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.7 },
-    { url: `${base}/compare`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.6 },
-    { url: `${base}/blog`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.7 },
-    { url: `${base}/signup`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
-    { url: `${base}/contact`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
-    { url: `${base}/disclaimer`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
-    { url: `${base}/privacy`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
-    { url: `${base}/refund`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
-    { url: `${base}/terms`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.3 },
+    { url: base, changeFrequency: 'daily', priority: 1 },
+    { url: `${base}/screener`, changeFrequency: 'daily', priority: 0.9 },
+    { url: `${base}/markets`, changeFrequency: 'daily', priority: 0.8 },
+    { url: `${base}/pricing`, changeFrequency: 'weekly', priority: 0.8 },
+    { url: `${base}/screens`, changeFrequency: 'weekly', priority: 0.7 },
+    { url: `${base}/pulse`, changeFrequency: 'daily', priority: 0.7 },
+    { url: `${base}/compare`, changeFrequency: 'weekly', priority: 0.6 },
+    { url: `${base}/signup`, changeFrequency: 'monthly', priority: 0.5 },
+    { url: `${base}/contact`, changeFrequency: 'monthly', priority: 0.3 },
+    { url: `${base}/disclaimer`, changeFrequency: 'monthly', priority: 0.3 },
+    { url: `${base}/privacy`, changeFrequency: 'monthly', priority: 0.3 },
+    { url: `${base}/refund`, changeFrequency: 'monthly', priority: 0.3 },
+    { url: `${base}/terms`, changeFrequency: 'monthly', priority: 0.3 },
   ];
 
   try {
-    const { data } = await supabase
-      .from('companies')
-      .select('symbol')
-      .eq('is_active', true)
-      .order('symbol');
+    const [{ data }, { data: latest }] = await Promise.all([
+      supabase.from('companies').select('symbol').eq('is_active', true).order('symbol'),
+      supabase.from('prices').select('date').order('date', { ascending: false }).limit(1),
+    ]);
+    const priceDate = latest?.[0]?.date ? new Date(`${latest[0].date}T00:00:00Z`) : undefined;
 
     const stockRoutes: MetadataRoute.Sitemap = (data ?? []).map(c => ({
       // NSE symbols can contain characters like "&" (e.g. M&M) that are
       // invalid unescaped in XML — encode the path segment.
       url: `${base}/stocks/${encodeURIComponent(c.symbol)}`,
-      lastModified: new Date(),
+      lastModified: priceDate,
       changeFrequency: 'daily',
       priority: 0.6,
     }));

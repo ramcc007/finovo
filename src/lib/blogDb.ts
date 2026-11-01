@@ -1,6 +1,7 @@
 import { getServiceClient } from '@/lib/supabase';
 import type { Post } from '@/lib/blog';
 import { getStaticPosts } from '@/lib/staticBlog';
+import { sanitizeContent } from '@/lib/blogSanitize';
 
 // Server-only: uses the service-role client (the table has RLS on and no
 // public policies). Never import from a client component.
@@ -8,18 +9,18 @@ import { getStaticPosts } from '@/lib/staticBlog';
 interface Row {
   id: string; slug: string; title: string; excerpt: string; content_html: string;
   meta_title: string | null; meta_description: string | null; category: string;
-  tags: string[]; featured_image: string | null; author: string;
+  tags: string[]; created_at: string; author: string;
   status: 'draft' | 'published'; published_at: string | null; updated_at: string;
   key_takeaways: unknown; faq: unknown; reading_minutes: number;
 }
 
-const COLS = 'id, slug, title, excerpt, content_html, meta_title, meta_description, category, tags, featured_image, author, status, published_at, updated_at, key_takeaways, faq, reading_minutes';
+const COLS = 'id, slug, title, excerpt, content_html, meta_title, meta_description, category, tags, author, status, published_at, created_at, updated_at, key_takeaways, faq, reading_minutes';
 
 function toPost(r: Row): Post {
   return {
     id: r.id, slug: r.slug, title: r.title, excerpt: r.excerpt, contentHtml: r.content_html,
     metaTitle: r.meta_title, metaDescription: r.meta_description, category: r.category,
-    tags: r.tags ?? [], featuredImage: r.featured_image, author: r.author, status: r.status,
+    tags: r.tags ?? [], createdAt: r.created_at, author: r.author, status: r.status,
     publishedAt: r.published_at, updatedAt: r.updated_at,
     keyTakeaways: Array.isArray(r.key_takeaways) ? (r.key_takeaways as string[]) : [],
     faq: Array.isArray(r.faq) ? (r.faq as Post['faq']) : [],
@@ -64,7 +65,11 @@ export async function getPublishedPost(slug: string): Promise<Post | null> {
       .from('blog_posts').select(COLS).eq('slug', slug)
       .eq('status', 'published').lte('published_at', new Date().toISOString())
       .maybeSingle();
-    if (data) return toPost(data as Row);
+    if (data) {
+      const post = toPost(data as Row);
+      // Posts are text-only: strips any <img> left in older content.
+      return { ...post, contentHtml: sanitizeContent(post.contentHtml) };
+    }
   } catch {
     // fall through to file-based posts
   }

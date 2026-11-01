@@ -3,48 +3,53 @@ import { ArrowUpRight, Clock } from 'lucide-react';
 import { formatDate, type Post } from '@/lib/blog';
 import PostAdminActions from './PostAdminActions';
 
-function Cover({ post, tall }: { post: Post; tall?: boolean }) {
-  const h = tall ? 'h-full min-h-[220px]' : 'aspect-[16/9]';
-  if (post.featuredImage) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={post.featuredImage} alt="" loading="lazy" className={`w-full ${h} object-cover transition-transform duration-500 group-hover:scale-[1.03]`} />;
-  }
+// Text-only design: hierarchy comes from type, colour accents and spacing.
+
+function Initials({ name, dark }: { name: string; dark?: boolean }) {
+  const letters = name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
   return (
-    <div className={`relative w-full ${h} overflow-hidden bg-gradient-to-br from-[#FB923C] via-[#F97316] to-[#C2410C]`}>
-      <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 20% 20%, #fff 0, transparent 40%), radial-gradient(circle at 80% 80%, #fff 0, transparent 35%)' }} />
-      <span className="absolute bottom-3 left-4 text-white/90 text-xs font-semibold uppercase tracking-widest">{post.category}</span>
-    </div>
+    <span aria-hidden className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${dark ? 'bg-white/10 text-white' : 'bg-[#FFF7ED] text-[#C2410C]'}`}>
+      {letters}
+    </span>
   );
 }
 
-function Meta({ post }: { post: Post }) {
+function ByLine({ post, dark }: { post: Post; dark?: boolean }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#8A96A8]">
-      <span className="font-semibold text-[#EA580C] uppercase tracking-wide">{post.category}</span>
-      {post.publishedAt && <><span aria-hidden>·</span><time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time></>}
-      <span aria-hidden>·</span>
-      <span className="inline-flex items-center gap-1"><Clock size={11} />{post.readingMinutes} min read</span>
+    <div className="flex items-center gap-2.5">
+      <Initials name={post.author} dark={dark} />
+      <div className={`text-xs leading-tight ${dark ? 'text-white/55' : 'text-[#8A96A8]'}`}>
+        <div className={`font-semibold ${dark ? 'text-white/90' : 'text-[#0D1117]'}`}>{post.author}</div>
+        <div className="flex items-center gap-1.5">
+          {post.publishedAt && <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>}
+          <span aria-hidden>·</span>
+          <span className="inline-flex items-center gap-1"><Clock size={10} />{post.readingMinutes} min</span>
+        </div>
+      </div>
     </div>
   );
 }
 
 export function FeaturedPostCard({ post }: { post: Post }) {
   return (
-    <article className="group grid md:grid-cols-2 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm transition-shadow hover:shadow-lg">
-      <Link href={`/blog/${post.slug}`} className="block overflow-hidden" aria-label={post.title} tabIndex={-1}>
-        <Cover post={post} tall />
-      </Link>
-      <div className="flex flex-col justify-center gap-3 p-6 md:p-8">
-        <Meta post={post} />
-        <h2 className="text-2xl md:text-3xl font-bold leading-tight text-[#0D1117]">
-          <Link href={`/blog/${post.slug}`} className="hover:text-[#EA580C]">{post.title}</Link>
+    <article className="group relative overflow-hidden rounded-3xl bg-[#0B0E14] p-7 shadow-sm md:p-12">
+      <div aria-hidden className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[#F97316]/20 blur-3xl" />
+      <div className="relative max-w-3xl">
+        <span className="inline-block rounded-full bg-[#F97316]/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#FB923C]">
+          Latest · {post.category}
+        </span>
+        <h2 className="mt-5 text-2xl font-bold leading-tight text-white md:text-4xl">
+          <Link href={`/blog/${post.slug}`} className="hover:text-[#FB923C]">{post.title}</Link>
         </h2>
-        <p className="text-[#4A5568] leading-relaxed line-clamp-3">{post.excerpt}</p>
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-          <Link href={`/blog/${post.slug}`} className="inline-flex items-center gap-1 text-sm font-semibold text-[#EA580C] hover:underline">
-            Read article <ArrowUpRight size={15} />
-          </Link>
-          <PostAdminActions id={post.id} title={post.title} />
+        <p className="mt-4 line-clamp-3 text-base leading-relaxed text-white/60 md:text-lg">{post.excerpt}</p>
+        <div className="mt-7 flex flex-wrap items-center justify-between gap-4">
+          <ByLine post={post} dark />
+          <div className="flex items-center gap-4">
+            <PostAdminActions id={post.id} title={post.title} />
+            <Link href={`/blog/${post.slug}`} className="inline-flex items-center gap-1 rounded-lg bg-[#F97316] px-4 py-2 text-sm font-semibold text-white hover:bg-[#EA580C]">
+              Read article <ArrowUpRight size={15} />
+            </Link>
+          </div>
         </div>
       </div>
     </article>
@@ -53,23 +58,22 @@ export function FeaturedPostCard({ post }: { post: Post }) {
 
 export function PostCard({ post }: { post: Post }) {
   return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg">
-      <Link href={`/blog/${post.slug}`} className="block overflow-hidden" aria-label={post.title} tabIndex={-1}>
-        <Cover post={post} />
-      </Link>
-      <div className="flex flex-1 flex-col gap-2.5 p-5">
-        <Meta post={post} />
-        <h2 className="text-lg font-bold leading-snug text-[#0D1117]">
-          <Link href={`/blog/${post.slug}`} className="hover:text-[#EA580C]">{post.title}</Link>
-        </h2>
-        <p className="line-clamp-3 text-sm leading-relaxed text-[#4A5568]">{post.excerpt}</p>
-        <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-2">
-          <div className="flex flex-wrap gap-1.5">
-            {post.tags.slice(0, 2).map(t => (
-              <span key={t} className="rounded-full bg-[#FFF7ED] px-2.5 py-0.5 text-xs text-[#C2410C]">{t}</span>
-            ))}
-          </div>
-          <PostAdminActions id={post.id} title={post.title} />
+    <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#F97316]/40 hover:shadow-lg">
+      <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#FB923C] to-[#EA580C]" />
+      <span className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#EA580C]">{post.category}</span>
+      <h2 className="text-xl font-bold leading-snug text-[#0D1117]">
+        <Link href={`/blog/${post.slug}`} className="after:absolute after:inset-0 hover:text-[#EA580C]">{post.title}</Link>
+      </h2>
+      <p className="mt-3 line-clamp-4 text-sm leading-relaxed text-[#4A5568]">{post.excerpt}</p>
+      <div className="mt-auto pt-5">
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          {post.tags.slice(0, 2).map(t => (
+            <span key={t} className="rounded-full bg-[#FFF7ED] px-2.5 py-0.5 text-xs text-[#C2410C]">{t}</span>
+          ))}
+        </div>
+        <div className="flex items-center justify-between gap-2 border-t border-[#F1F3F9] pt-4">
+          <ByLine post={post} />
+          <div className="relative z-10"><PostAdminActions id={post.id} title={post.title} /></div>
         </div>
       </div>
     </article>
