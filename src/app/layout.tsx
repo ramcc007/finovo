@@ -61,11 +61,33 @@ const metadata: Metadata = {
   },
 };
 
+const SITE_JSON_LD = JSON.stringify([
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    '@id': `${BASE_URL}/#organization`,
+    name: 'Scripwise',
+    url: BASE_URL,
+    logo: `${BASE_URL}/icon`,
+    description: 'Free Indian stock research and screening platform for NSE & BSE listed companies.',
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    '@id': `${BASE_URL}/#website`,
+    name: 'Scripwise',
+    url: BASE_URL,
+    inLanguage: 'en-IN',
+    publisher: { '@id': `${BASE_URL}/#organization` },
+  },
+]).replace(/</g, '\\u003c');
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const nonce = (await headers()).get('x-nonce') ?? undefined;
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body>
+        <script type="application/ld+json" nonce={nonce} dangerouslySetInnerHTML={{ __html: SITE_JSON_LD }} />
         <GoogleAnalytics nonce={nonce} />
         <AuthProvider>
           <PreviewBanner />

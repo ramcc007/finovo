@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { getPublishedPosts } from '@/lib/blogDb';
 
 const base = 'https://www.scripwise.co.in';
 
@@ -24,7 +25,7 @@ Scripwise is not a SEBI-registered investment adviser. All data is for informati
 
 ## Blog
 
-- [Blog](${base}/blog): Plain-language Indian stock market articles (FPI flows, SIPs, index funds, screening).
+- [Blog](${base}/blog): Plain-language Indian stock market articles (FPI flows, SIPs, index funds, screening). RSS: ${base}/blog/feed.xml
 
 ## Legal
 
@@ -45,6 +46,11 @@ Every listed company has a research page at \`/stocks/{SYMBOL}\` with company pr
 
 export async function GET() {
   let body = HEADER;
+
+  const posts = await getPublishedPosts();
+  if (posts.length > 0) {
+    body = body.replace('## Legal', `### Latest articles\n\n${posts.map(p => `- [${p.title}](${base}/blog/${p.slug}): ${p.metaDescription || p.excerpt}`).join('\n')}\n\n## Legal`);
+  }
 
   try {
     const { data } = await supabase
