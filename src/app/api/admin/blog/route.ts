@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
+import { pingIndexNow } from '@/lib/indexNow';
 import { requireAdmin } from '@/lib/adminAuth';
 import { getServiceClient } from '@/lib/supabase';
 import { parsePostInput, toRow } from '@/lib/blogSanitize';
@@ -24,5 +25,6 @@ export async function POST(req: NextRequest) {
     if (error.code === '23505') return NextResponse.json({ error: 'That URL slug is already used by another post.' }, { status: 409 });
     return NextResponse.json({ error: 'Failed to create post.' }, { status: 500 });
   }
+  if (parsed.value.status === 'published') after(() => pingIndexNow([`/blog/${data.slug}`, '/blog', '/sitemap.xml']));
   return NextResponse.json({ data }, { status: 201 });
 }
