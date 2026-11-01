@@ -4,6 +4,18 @@ import { slugify, readingMinutes, type FaqItem, type SourceItem } from '@/lib/bl
 // Server-only. Admin-authored HTML is still sanitised before storage so a
 // compromised session can't plant scripts that run for every reader.
 
+// Policy: the blog never links to government or regulator websites.
+const GOV_HOST_RE = /(\.gov|\.gov\.[a-z]{2}|\.nic\.in|\.mil)$/i;
+const GOV_HOSTS = new Set(['rbi.org.in', 'www.rbi.org.in', 'sebi.gov.in', 'www.sebi.gov.in']);
+export function isGovUrl(raw: string): boolean {
+  try {
+    const host = new URL(raw).hostname.toLowerCase();
+    return GOV_HOST_RE.test(host) || GOV_HOSTS.has(host);
+  } catch {
+    return false;
+  }
+}
+
 export function sanitizeContent(html: string): string {
   return sanitizeHtml(html, {
     allowedTags: [
@@ -18,6 +30,8 @@ export function sanitizeContent(html: string): string {
     transformTags: {
       a: (tag, attribs) => {
         const href = attribs.href ?? '';
+        // Government links are unwrapped to plain text.
+        if (isGovUrl(href)) return { tagName: 'span', attribs: {} };
         const external = /^https?:\/\//i.test(href);
         return {
           tagName: 'a',
@@ -82,6 +96,9 @@ export function parsePostInput(body: unknown): { ok: true; value: PostInput } | 
       try {
         const u = new URL(raw);
         if (u.protocol !== 'https:' || !name) throw new Error('bad');
+        if (isGovUrl(u.toString())) {
+          return { ok: false, error: `"${name}" is a government website; the blog doesn't link to those.` };
+        }
         sources.push({ name, url: u.toString() });
       } catch {
         return { ok: false, error: `Source "${name || raw}" needs a name and a valid https:// link.` };
