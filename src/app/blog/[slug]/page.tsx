@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
-import { getPublishedPost } from '@/lib/blogDb';
+import { getPublishedPost, getPublishedPosts } from '@/lib/blogDb';
+import { PostCard } from '@/components/blog/PostCard';
 import { formatDate, stripHtml, DEFAULT_DISCLAIMER } from '@/lib/blog';
 import Inline from '@/components/blog/Inline';
 import PostAdminActions from '@/components/blog/PostAdminActions';
@@ -44,6 +45,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   if (!post) notFound();
   const nonce = (await headers()).get('x-nonce') ?? undefined;
   const url = `${BASE}/blog/${post.slug}`;
+  const related = (await getPublishedPosts()).filter(p => p.slug !== post.slug).slice(0, 3);
 
   const jsonLd: unknown[] = [
     {
@@ -84,80 +86,98 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   }
 
   return (
-    <article className="max-w-3xl mx-auto px-4 md:px-6 py-12">
+    <div>
       {jsonLd.map((d, i) => (
         <script key={i} type="application/ld+json" nonce={nonce} dangerouslySetInnerHTML={{ __html: ld(d) }} />
       ))}
 
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <nav aria-label="Breadcrumb" className="text-xs text-[#8A96A8]">
-          <Link href="/" className="hover:text-[#EA580C]">Home</Link> / <Link href="/blog" className="hover:text-[#EA580C]">Blog</Link>
-        </nav>
-        <PostAdminActions id={post.id} title={post.title} redirectTo="/blog" />
-      </div>
-
-      <header className="mb-8">
-        <div className="text-xs font-semibold uppercase tracking-wide text-[#EA580C] mb-2">{post.category}</div>
-        <h1 className="text-3xl md:text-4xl font-bold text-[#0D1117] leading-tight mb-4">{post.title}</h1>
-        <div className="text-sm text-[#4A5568] flex flex-wrap gap-x-3 gap-y-1">
-          <span>By <strong className="font-semibold text-[#0D1117]">{post.author}</strong></span>
-          {post.publishedAt && (
-            <>
-              <span>·</span>
-              <span>Published <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time></span>
-            </>
-          )}
-          <span>·</span>
-          <span>{post.readingMinutes} min read</span>
+      <header className="hero-dark relative overflow-hidden">
+        <div className="hero-grid" />
+        <div className="relative mx-auto max-w-3xl px-4 py-12 md:px-6 md:py-16">
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <nav aria-label="Breadcrumb" className="text-xs text-white/50">
+              <Link href="/" className="hover:text-white">Home</Link> / <Link href="/blog" className="hover:text-white">Blog</Link>
+            </nav>
+            <PostAdminActions id={post.id} title={post.title} redirectTo="/blog" />
+          </div>
+          <span className="inline-block rounded-full bg-[#F97316]/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#FB923C]">{post.category}</span>
+          <h1 className="mt-4 text-3xl font-bold leading-tight text-white md:text-5xl">{post.title}</h1>
+          <div className="mt-6 flex items-center gap-3 text-sm text-white/60">
+            <span aria-hidden className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#FB923C] to-[#EA580C] text-sm font-bold text-white">
+              {post.author.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
+            </span>
+            <div className="leading-tight">
+              <div className="font-semibold text-white">{post.author}</div>
+              <div className="text-xs">
+                {post.publishedAt && <>Published <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time> · </>}
+                {post.readingMinutes} min read
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2 mt-4">
-          {post.tags.map(t => (
-            <span key={t} className="text-xs bg-[#FFF7ED] text-[#C2410C] rounded-full px-2.5 py-0.5">{t}</span>
-          ))}
-        </div>
-        {post.featuredImage && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={post.featuredImage} alt={post.title} className="w-full rounded-xl mt-6 object-cover max-h-[420px]" />
-        )}
       </header>
 
-      {post.keyTakeaways.length > 0 && (
-        <section aria-labelledby="key-takeaways" className="bg-[#FFF7ED] border border-[#FFEDD5] border-l-4 border-l-[#F97316] rounded-lg p-5 mb-8">
-          <h2 id="key-takeaways" className="font-bold text-[#0D1117] mb-3">Key takeaways</h2>
-          <ul className="list-disc pl-5 space-y-2 text-[15px] text-[#4A5568] leading-relaxed">
-            {post.keyTakeaways.map((k, i) => <li key={i}><Inline text={k} /></li>)}
-          </ul>
+      <article className="mx-auto max-w-3xl px-4 py-10 md:px-6 md:py-12">
+        {post.featuredImage && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={post.featuredImage} alt={post.title} className="-mt-20 mb-10 w-full rounded-2xl object-cover shadow-xl max-h-[460px] relative" />
+        )}
+
+        {post.keyTakeaways.length > 0 && (
+          <section aria-labelledby="key-takeaways" className="mb-10 rounded-2xl border border-[#FFEDD5] border-l-4 border-l-[#F97316] bg-[#FFF7ED] p-5 md:p-6">
+            <h2 id="key-takeaways" className="mb-3 font-bold text-[#0D1117]">Key takeaways</h2>
+            <ul className="list-disc space-y-2 pl-5 text-[15px] leading-relaxed text-[#4A5568]">
+              {post.keyTakeaways.map((k, i) => <li key={i}><Inline text={k} /></li>)}
+            </ul>
+          </section>
+        )}
+
+        <div className="blog-prose" dangerouslySetInnerHTML={{ __html: post.contentHtml }} />
+
+        <div className="mt-8 flex flex-wrap gap-2">
+          {post.tags.map(t => (
+            <span key={t} className="rounded-full bg-[#FFF7ED] px-3 py-1 text-xs text-[#C2410C]">{t}</span>
+          ))}
+        </div>
+
+        {post.faq.length > 0 && (
+          <section aria-labelledby="faq" className="mt-12">
+            <h2 id="faq" className="mb-4 text-2xl font-bold text-[#0D1117]">Frequently asked questions</h2>
+            <div className="divide-y divide-[#E5E7EB] rounded-2xl border border-[#E5E7EB] bg-white">
+              {post.faq.map((f, i) => (
+                <div key={i} className="p-5">
+                  <h3 className="mb-1 font-semibold text-[#0D1117]">{f.q}</h3>
+                  <p className="leading-relaxed text-[#4A5568]">{f.a}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section className="mt-12 rounded-2xl bg-[#0B0E14] p-6 text-white md:p-8">
+          <h2 className="text-xl font-bold">Screen stocks yourself</h2>
+          <p className="mt-1 mb-4 text-sm text-white/60">Run quality filters on 5,000+ NSE &amp; BSE companies with Scripwise, free.</p>
+          <div className="flex flex-wrap gap-3 text-sm font-semibold">
+            <Link href="/screens" className="rounded-lg bg-[#F97316] px-4 py-2 text-white hover:bg-[#EA580C]">Open pre-built screens</Link>
+            <Link href="/screener" className="rounded-lg border border-white/20 px-4 py-2 text-white hover:border-[#F97316]">Stock Explorer</Link>
+          </div>
         </section>
-      )}
 
-      <div className="blog-prose" dangerouslySetInnerHTML={{ __html: post.contentHtml }} />
+        <p className="mt-8 border-t border-[#E5E7EB] pt-4 text-xs leading-relaxed text-[#8A96A8]">
+          <strong>Disclaimer:</strong> {DEFAULT_DISCLAIMER}
+        </p>
+      </article>
 
-      {post.faq.length > 0 && (
-        <section aria-labelledby="faq" className="mt-12">
-          <h2 id="faq" className="text-2xl font-bold text-[#0D1117] mb-4">Frequently asked questions</h2>
-          <div className="space-y-5">
-            {post.faq.map((f, i) => (
-              <div key={i}>
-                <h3 className="font-semibold text-[#0D1117] mb-1">{f.q}</h3>
-                <p className="text-[#4A5568] leading-relaxed">{f.a}</p>
-              </div>
-            ))}
+      {related.length > 0 && (
+        <section aria-labelledby="more" className="border-t border-[#E5E7EB] bg-[#F9FAFB]">
+          <div className="mx-auto max-w-6xl px-4 py-12 md:px-6">
+            <h2 id="more" className="mb-6 text-2xl font-bold text-[#0D1117]">Keep reading</h2>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {related.map(p => <PostCard key={p.id} post={p} />)}
+            </div>
           </div>
         </section>
       )}
-
-      <section className="mt-12 rounded-xl border border-[#E5E7EB] p-5 bg-white">
-        <h2 className="font-bold text-[#0D1117] mb-1">Screen stocks yourself</h2>
-        <p className="text-sm text-[#4A5568] mb-3">Run quality filters on 5,000+ NSE &amp; BSE companies with Scripwise, free.</p>
-        <div className="flex flex-wrap gap-3 text-sm font-semibold">
-          <Link href="/screens" className="bg-[#F97316] text-white rounded-lg px-4 py-2 hover:bg-[#EA580C]">Open pre-built screens</Link>
-          <Link href="/screener" className="border border-[#E5E7EB] text-[#0D1117] rounded-lg px-4 py-2 hover:border-[#F97316]">Stock Explorer</Link>
-        </div>
-      </section>
-
-      <p className="mt-8 text-xs text-[#8A96A8] leading-relaxed border-t border-[#E5E7EB] pt-4">
-        <strong>Disclaimer:</strong> {DEFAULT_DISCLAIMER}
-      </p>
-    </article>
+    </div>
   );
 }
