@@ -166,6 +166,17 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           </section>
         )}
 
+        <aside aria-labelledby="disclaimer" className="mt-12 rounded-2xl border border-[#FED7AA] border-l-4 border-l-[#F97316] bg-[#FFF7ED] p-5 md:p-6">
+          <h2 id="disclaimer" className="mb-2 flex items-center gap-2 text-lg font-bold text-[#9A3412]">
+            <ShieldAlert size={20} aria-hidden /> Disclaimer
+          </h2>
+          <p className="text-base leading-relaxed text-[#7C2D12]">{DEFAULT_DISCLAIMER}</p>
+          <p className="mt-2 text-sm leading-relaxed text-[#9A3412]">
+            Scripwise is not registered with SEBI as an investment adviser or research analyst. Figures are taken from
+            {post.sources.length > 0 ? ' the sources credited above' : ' public reports'} and may change; please verify them before acting on them.
+          </p>
+        </aside>
+
         <ShareBar url={url} title={post.title} />
 
         <section className="mt-12 rounded-2xl bg-[#0B0E14] p-6 text-white md:p-8">
@@ -176,17 +187,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             <Link href="/screener" className="rounded-lg border border-white/20 px-4 py-2 text-white hover:border-[#F97316]">Stock Explorer</Link>
           </div>
         </section>
-
-        <aside aria-labelledby="disclaimer" className="mt-10 rounded-2xl border border-[#FED7AA] border-l-4 border-l-[#F97316] bg-[#FFF7ED] p-5 md:p-6">
-          <h2 id="disclaimer" className="mb-2 flex items-center gap-2 text-lg font-bold text-[#9A3412]">
-            <ShieldAlert size={20} aria-hidden /> Disclaimer
-          </h2>
-          <p className="text-base leading-relaxed text-[#7C2D12]">{DEFAULT_DISCLAIMER}</p>
-          <p className="mt-2 text-sm leading-relaxed text-[#9A3412]">
-            Scripwise is not registered with SEBI as an investment adviser or research analyst. Figures are taken from
-            {post.sources.length > 0 ? ' the sources credited above' : ' public reports'} and may change; please verify them before acting on them.
-          </p>
-        </aside>
       </article>
 
       {related.length > 0 && (
