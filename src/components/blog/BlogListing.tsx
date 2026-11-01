@@ -46,7 +46,7 @@ export default async function BlogListing({ page }: { page: number }) {
       headline: p.title,
       url: `https://www.scripwise.co.in/blog/${p.slug}`,
       datePublished: p.publishedAt,
-      author: { '@type': 'Person', name: p.author },
+      author: { '@type': 'Organization', name: p.author },
     })),
   };
 

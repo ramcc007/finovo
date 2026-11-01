@@ -57,7 +57,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       dateCreated: post.createdAt,
       ...(post.sources.length ? { citation: post.sources.map(s => ({ '@type': 'CreativeWork', name: s.name, url: s.url })) } : {}),
       dateModified: post.updatedAt,
-      author: { '@type': 'Person', name: post.author },
+      author: { '@type': 'Organization', name: post.author },
       publisher: { '@type': 'Organization', name: 'Scripwise', url: BASE },
       articleSection: post.category,
       keywords: post.tags.join(', '),
