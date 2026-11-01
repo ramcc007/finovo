@@ -22,12 +22,27 @@ function set(next: PreviewState) {
   listeners.forEach(l => l());
 }
 
+// Re-run the page so server-gated content picks up the new access state
+// (unlocks after a reset, re-locks when the window ends). Public blog pages
+// have nothing gated, so a reader there isn't interrupted.
+function refreshPage() {
+  if (typeof window === 'undefined') return;
+  const path = window.location.pathname;
+  if (path === '/blog' || path.startsWith('/blog/')) return;
+  window.location.reload();
+}
+
 function apply(remainingMs: number, canReset: boolean) {
   if (timer) clearTimeout(timer);
   const remaining = Math.max(0, Number(remainingMs) || 0);
   set({ resolved: true, expiresAt: remaining > 0 ? Date.now() + remaining : 0, canReset });
   if (remaining > 0) {
-    timer = setTimeout(() => set({ ...state, expiresAt: 0 }), remaining);
+    // Small buffer so the server's own clock has also passed the deadline
+    // by the time the page reloads.
+    timer = setTimeout(() => {
+      set({ ...state, expiresAt: 0 });
+      refreshPage();
+    }, remaining + 500);
   }
 }
 
@@ -50,6 +65,7 @@ export async function resetPreview(): Promise<boolean> {
     }
     const d = (await r.json()) as { remainingMs?: number };
     apply(d.remainingMs ?? 0, false);
+    refreshPage();
     return true;
   } catch {
     return false;
