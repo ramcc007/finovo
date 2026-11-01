@@ -2,6 +2,7 @@ import { MetadataRoute } from 'next';
 import { supabase } from '@/lib/supabase';
 import { getPublishedPosts } from '@/lib/blogDb';
 import { slugify } from '@/lib/blog';
+import { getPublishedTerms } from '@/lib/glossaryDb';
 
 const base = 'https://www.scripwise.co.in';
 
@@ -33,6 +34,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ];
 
+  const glossaryTerms = await getPublishedTerms();
+  const glossaryRoutes: MetadataRoute.Sitemap = [
+    { url: `${base}/glossary`, changeFrequency: 'weekly', priority: 0.7 },
+    ...glossaryTerms.map(t => ({ url: `${base}/glossary/${t.slug}`, changeFrequency: 'monthly' as const, priority: 0.6 })),
+  ];
+
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: base, changeFrequency: 'daily', priority: 1 },
     { url: `${base}/screener`, changeFrequency: 'daily', priority: 0.9 },
@@ -60,9 +67,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.6,
     }));
 
-    return [...staticRoutes, ...blogRoutes, ...stockRoutes];
+    return [...staticRoutes, ...blogRoutes, ...glossaryRoutes, ...stockRoutes];
   } catch {
     // DB unreachable at build/request time — ship the static routes rather than fail the sitemap entirely.
-    return [...staticRoutes, ...blogRoutes];
+    return [...staticRoutes, ...blogRoutes, ...glossaryRoutes];
   }
 }
