@@ -6,29 +6,22 @@ const base = 'https://www.scripwise.co.in';
 
 const POSTS_PER_PAGE = 9; // keep in step with BlogListing
 
-// lastModified is only emitted where we know a real date: blog pages use the
-// post's real last-edit time (not its possibly backdated publish date), stock
-// pages use the latest end-of-day price date. Pages with no tracked change
-// date omit it rather than claiming "modified now" on every crawl.
+// No <lastmod> is emitted: the sitemap lists URLs only.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const blogPosts = await getPublishedPosts(); // newest publish date first
-  const newest = (posts: typeof blogPosts) =>
-    posts.length ? new Date(Math.max(...posts.map(p => new Date(p.updatedAt).getTime()))) : undefined;
 
   const blogRoutes: MetadataRoute.Sitemap = [
-    { url: `${base}/blog`, lastModified: newest(blogPosts), changeFrequency: 'daily', priority: 0.8 },
+    { url: `${base}/blog`, changeFrequency: 'daily', priority: 0.8 },
     ...Array.from({ length: Math.max(0, Math.ceil(blogPosts.length / POSTS_PER_PAGE) - 1) }, (_, i) => {
       const pageNo = i + 2;
       return {
         url: `${base}/blog/page/${pageNo}`,
-        lastModified: newest(blogPosts.slice((pageNo - 1) * POSTS_PER_PAGE, pageNo * POSTS_PER_PAGE)),
         changeFrequency: 'weekly' as const,
         priority: 0.4,
       };
     }),
     ...blogPosts.map(p => ({
       url: `${base}/blog/${p.slug}`,
-      lastModified: new Date(p.updatedAt),
       changeFrequency: 'monthly' as const,
       priority: 0.7,
     })),
@@ -51,17 +44,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   try {
-    const [{ data }, { data: latest }] = await Promise.all([
-      supabase.from('companies').select('symbol').eq('is_active', true).order('symbol'),
-      supabase.from('prices').select('date').order('date', { ascending: false }).limit(1),
-    ]);
-    const priceDate = latest?.[0]?.date ? new Date(`${latest[0].date}T00:00:00Z`) : undefined;
+    const { data } = await supabase.from('companies').select('symbol').eq('is_active', true).order('symbol');
 
     const stockRoutes: MetadataRoute.Sitemap = (data ?? []).map(c => ({
       // NSE symbols can contain characters like "&" (e.g. M&M) that are
       // invalid unescaped in XML — encode the path segment.
       url: `${base}/stocks/${encodeURIComponent(c.symbol)}`,
-      lastModified: priceDate,
       changeFrequency: 'daily',
       priority: 0.6,
     }));
