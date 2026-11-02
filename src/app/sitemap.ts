@@ -5,6 +5,11 @@ import { getPublishedTerms } from '@/lib/glossaryDb';
 
 const base = 'https://www.scripwise.co.in';
 
+// Regenerated every 10 minutes (not frozen at deploy time), so posts and
+// glossary terms published from the admin, or reaching their scheduled time,
+// appear without a redeploy.
+export const revalidate = 600;
+
 // No <lastmod> is emitted: the sitemap lists URLs only. Paginated blog
 // listings (/blog/page/N) and stock pages are deliberately not listed.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
