@@ -10,9 +10,9 @@ const isAdminPath = (p: string) => p === '/admin' || p.startsWith('/admin/');
 // 'strict-dynamic' in the CSP, host-based allowlisting alone isn't enough —
 // the nonce is required for the browser to trust these regardless of host.
 //
-// Admin pages are never tracked: opened directly, the scripts aren't loaded
-// at all; reached by in-app navigation, GaRouteGuard sets Google's
-// documented opt-out flag so no hits are sent while on /admin.
+// The site owner is never tracked: admin pages opened directly don't load
+// the scripts at all, and GaRouteGuard (rendered inside AuthProvider) sets
+// GA's opt-out flag on /admin and in any browser where the admin signed in.
 export default function GoogleAnalytics({ nonce, pathname }: { nonce?: string; pathname: string }) {
   if (isAdminPath(pathname)) return null;
   return (

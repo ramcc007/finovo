@@ -90,8 +90,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body>
         <script type="application/ld+json" nonce={nonce} dangerouslySetInnerHTML={{ __html: SITE_JSON_LD }} />
-        <GoogleAnalytics nonce={nonce} pathname={pathname} />
         <AuthProvider>
+          <GoogleAnalytics nonce={nonce} pathname={pathname} />
           <PreviewBanner />
           <Header />
           <main className="min-h-screen">{children}</main>
