@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { Search, X, Menu, Loader2, ArrowRight, User, LogOut, ShieldCheck, UserCog, Sparkles } from 'lucide-react';
+import { Search, X, Menu, Loader2, ArrowRight, User, LogOut, ShieldCheck, UserCog, Sparkles, FileText, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/AuthProvider';
 import { useEntitlement } from '@/lib/useEntitlement';
@@ -209,6 +209,19 @@ export default function Header() {
                         <ShieldCheck size={14} /> Admin dashboard
                       </Link>
                     )}
+                    {isAdmin && [
+                      { href: '/admin/blog', label: 'Manage blog', Icon: FileText },
+                      { href: '/admin/glossary', label: 'Manage glossary', Icon: BookOpen },
+                    ].map(({ href, label, Icon }) => (
+                      <Link
+                        key={href}
+                        href={href}
+                        onClick={() => setAccountOpen(false)}
+                        className="w-full flex items-center gap-2 px-4 py-3 text-sm text-[#56616F] hover:bg-[#F2F4F9] hover:text-[#131A24] transition-colors border-b border-[#F0F3F8]"
+                      >
+                        <Icon size={14} /> {label}
+                      </Link>
+                    ))}
                     <button
                       onClick={handleSignOut}
                       className="w-full flex items-center gap-2 px-4 py-3 text-sm text-[#56616F] hover:bg-[#F2F4F9] hover:text-[#131A24] transition-colors"
@@ -288,6 +301,18 @@ export default function Header() {
               <ShieldCheck size={14} /> Admin dashboard
             </Link>
           )}
+          {!authLoading && user && isAdmin && [
+            { href: '/admin/blog', label: 'Manage blog', Icon: FileText },
+            { href: '/admin/glossary', label: 'Manage glossary', Icon: BookOpen },
+          ].map(({ href, label, Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium text-[#56616F] hover:bg-[#F2F4F9] hover:text-[#131A24] mb-1"
+            >
+              <Icon size={14} /> {label}
+            </Link>
+          ))}
           <Link
             href="/pricing"
             className={cn(
