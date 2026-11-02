@@ -64,7 +64,7 @@ export default async function GlossaryTermPage({ params }: { params: Promise<{ s
       about: { '@id': url },
       datePublished: t.publishedAt,
       dateModified: t.updatedAt,
-      author: { '@type': 'Organization', name: t.author },
+      author: { '@type': 'Organization', name: 'Scripwise', url: BASE },
       publisher: { '@type': 'Organization', name: 'Scripwise', url: BASE },
       inLanguage: 'en-IN',
       wordCount: stripHtml(t.contentHtml).split(' ').filter(Boolean).length,

@@ -17,7 +17,7 @@ export default function GlossaryArticle({ term, related }: { term: GlossaryTerm;
           <span className="inline-block rounded-full bg-[#F97316]/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#FB923C]">Glossary · {term.category}</span>
           <h1 className="mt-4 text-3xl font-bold leading-tight text-white md:text-5xl">{term.title}</h1>
           <div className="mt-5 text-sm text-white/60">
-            <span className="font-semibold text-white">{term.author}</span> · {term.readingMinutes} min read
+            {term.readingMinutes} min read
           </div>
         </div>
       </header>
