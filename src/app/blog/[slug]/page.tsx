@@ -11,6 +11,7 @@ import PostAdminActions from '@/components/blog/PostAdminActions';
 import ShareBar from '@/components/blog/ShareBar';
 import { categoryHref } from '@/components/blog/categories';
 import { ld } from '@/components/blog/jsonLd';
+import { liveInternalPaths, pageTitle, unlinkNotLive } from '@/lib/liveLinks';
 
 const BASE = 'https://www.scripwise.co.in';
 
@@ -20,7 +21,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const title = post.metaTitle || post.title;
   const description = post.metaDescription || post.excerpt;
   return {
-    title,
+    title: pageTitle(title),
     description,
     keywords: post.tags,
     authors: [{ name: post.author }],
@@ -42,6 +43,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const post = await getPublishedPost((await params).slug);
   if (!post) notFound();
+  const live = await liveInternalPaths();
+  const contentHtml = unlinkNotLive(post.contentHtml, live);
   const nonce = (await headers()).get('x-nonce') ?? undefined;
   const url = `${BASE}/blog/${post.slug}`;
   const related = (await getPublishedPosts()).filter(p => p.slug !== post.slug).slice(0, 3);
@@ -128,7 +131,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           </section>
         )}
 
-        <div className="blog-prose" dangerouslySetInnerHTML={{ __html: post.contentHtml }} />
+        <div className="blog-prose" dangerouslySetInnerHTML={{ __html: contentHtml }} />
 
         <div className="mt-8 flex flex-wrap gap-2">
           {post.tags.map(t => (

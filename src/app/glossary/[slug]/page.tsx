@@ -6,6 +6,7 @@ import type { GlossaryTerm } from '@/lib/glossary';
 import { stripHtml } from '@/lib/blog';
 import GlossaryArticle from '@/components/glossary/GlossaryArticle';
 import { ld } from '@/components/blog/jsonLd';
+import { liveInternalPaths, pageTitle, unlinkNotLive } from '@/lib/liveLinks';
 
 const BASE = 'https://www.scripwise.co.in';
 
@@ -14,7 +15,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!t) return { title: 'Term not found', robots: { index: false } };
   const description = t.metaDescription || t.definition;
   return {
-    title: t.title,
+    title: pageTitle(t.title),
     description,
     keywords: t.tags,
     alternates: { canonical: `/glossary/${t.slug}` },
@@ -92,7 +93,7 @@ export default async function GlossaryTermPage({ params }: { params: Promise<{ s
       {jsonLd.map((d, i) => (
         <script key={i} type="application/ld+json" nonce={nonce} dangerouslySetInnerHTML={{ __html: ld(d) }} />
       ))}
-      <GlossaryArticle term={t} related={related} />
+      <GlossaryArticle term={{ ...t, contentHtml: unlinkNotLive(t.contentHtml, await liveInternalPaths()) }} related={related} />
     </>
   );
 }

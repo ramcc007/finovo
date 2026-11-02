@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { getPublishedPosts } from '@/lib/blogDb';
+import { getPublishedTerms } from '@/lib/glossaryDb';
 
 const base = 'https://www.scripwise.co.in';
 
@@ -27,6 +28,10 @@ Scripwise is not a SEBI-registered investment adviser. All data is for informati
 
 - [Blog](${base}/blog): Plain-language Indian stock market articles (FPI flows, SIPs, index funds, screening). RSS: ${base}/blog/feed.xml
 
+## Glossary
+
+- [Glossary](${base}/glossary): Indian stock market and investing terms explained in plain words, A to Z.
+
 ## Legal
 
 - [Disclaimer](${base}/disclaimer)
@@ -50,6 +55,11 @@ export async function GET() {
   const posts = await getPublishedPosts();
   if (posts.length > 0) {
     body = body.replace('## Legal', `### Latest articles\n\n${posts.map(p => `- [${p.title}](${base}/blog/${p.slug}): ${p.metaDescription || p.excerpt}`).join('\n')}\n\n## Legal`);
+  }
+
+  const terms = await getPublishedTerms();
+  if (terms.length > 0) {
+    body = body.replace('## Legal', `### Glossary terms\n\n${terms.map(t => `- [${t.term}](${base}/glossary/${t.slug}): ${t.definition}`).join('\n')}\n\n## Legal`);
   }
 
   try {
