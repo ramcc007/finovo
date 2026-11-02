@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Enhanced } from '@/lib/enhance';
-import { ArticleToc, NumbersBox } from '@/components/blog/ReadingAids';
+import { ArticleToc } from '@/components/blog/ReadingAids';
 import ReadingProgress from '@/components/blog/ReadingProgress';
 import ShareBar from '@/components/blog/ShareBar';
 import ContentDisclaimer from '@/components/blog/ContentDisclaimer';
@@ -26,7 +26,6 @@ export default function GlossaryArticle({ term, related, aids }: { term: Glossar
 
       <article className="mx-auto max-w-3xl px-4 py-10 md:px-6 md:py-12">
         {aids && <ArticleToc items={aids.toc} />}
-        {aids && <NumbersBox items={aids.numbers} />}
         <ReadingProgress targetId="article-body" />
         <div id="article-body" className="blog-prose" dangerouslySetInnerHTML={{ __html: aids?.html ?? term.contentHtml }} />
 

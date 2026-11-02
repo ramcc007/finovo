@@ -14,7 +14,7 @@ import { ld } from '@/components/blog/jsonLd';
 import { liveInternalPaths, pageTitle, unlinkNotLive } from '@/lib/liveLinks';
 import { enhanceContent } from '@/lib/enhance';
 import { getPublishedTerms } from '@/lib/glossaryDb';
-import { ArticleToc, NumbersBox } from '@/components/blog/ReadingAids';
+import { ArticleToc } from '@/components/blog/ReadingAids';
 import ReadingProgress from '@/components/blog/ReadingProgress';
 
 const BASE = 'https://www.scripwise.co.in';
@@ -131,7 +131,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       <article className="mx-auto max-w-3xl px-4 py-10 md:px-6 md:py-12">
         {post.keyTakeaways.length > 0 && (
           <section aria-labelledby="key-takeaways" className="mb-10 rounded-2xl border border-[#FFEDD5] border-l-4 border-l-[#F97316] bg-[#FFF7ED] p-5 md:p-6">
-            <h2 id="key-takeaways" className="mb-3 font-bold text-[#0D1117]">Key takeaways</h2>
+            <h2 id="key-takeaways" className="mb-3 font-bold text-[#0D1117]">In short</h2>
             <ul className="list-disc space-y-2 pl-5 text-[15px] leading-relaxed text-[#4A5568]">
               {post.keyTakeaways.map((k, i) => <li key={i}><Inline text={k} /></li>)}
             </ul>
@@ -139,7 +139,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         )}
 
         <ArticleToc items={aids.toc} />
-        <NumbersBox items={aids.numbers} />
         <ReadingProgress targetId="article-body" />
         <div id="article-body" className="blog-prose" dangerouslySetInnerHTML={{ __html: aids.html }} />
 
