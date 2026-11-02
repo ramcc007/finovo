@@ -12,6 +12,10 @@ import ContentDisclaimer from '@/components/blog/ContentDisclaimer';
 import { categoryHref } from '@/components/blog/categories';
 import { ld } from '@/components/blog/jsonLd';
 import { liveInternalPaths, pageTitle, unlinkNotLive } from '@/lib/liveLinks';
+import { enhanceContent } from '@/lib/enhance';
+import { getPublishedTerms } from '@/lib/glossaryDb';
+import { ArticleToc, NumbersBox } from '@/components/blog/ReadingAids';
+import ReadingProgress from '@/components/blog/ReadingProgress';
 
 const BASE = 'https://www.scripwise.co.in';
 
@@ -44,7 +48,10 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const post = await getPublishedPost((await params).slug);
   if (!post) notFound();
   const live = await liveInternalPaths();
-  const contentHtml = unlinkNotLive(post.contentHtml, live);
+  const terms = await getPublishedTerms();
+  const aids = enhanceContent(unlinkNotLive(post.contentHtml, live), {
+    glossary: terms.map(t => ({ slug: t.slug, term: t.term, definition: t.definition })),
+  });
   const nonce = (await headers()).get('x-nonce') ?? undefined;
   const url = `${BASE}/blog/${post.slug}`;
   const related = (await getPublishedPosts()).filter(p => p.slug !== post.slug).slice(0, 3);
@@ -131,7 +138,10 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           </section>
         )}
 
-        <div className="blog-prose" dangerouslySetInnerHTML={{ __html: contentHtml }} />
+        <ArticleToc items={aids.toc} />
+        <NumbersBox items={aids.numbers} />
+        <ReadingProgress targetId="article-body" />
+        <div id="article-body" className="blog-prose" dangerouslySetInnerHTML={{ __html: aids.html }} />
 
         <div className="mt-8 flex flex-wrap gap-2">
           {post.tags.map(t => (

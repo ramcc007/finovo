@@ -1,10 +1,13 @@
 import Link from 'next/link';
+import type { Enhanced } from '@/lib/enhance';
+import { ArticleToc, NumbersBox } from '@/components/blog/ReadingAids';
+import ReadingProgress from '@/components/blog/ReadingProgress';
 import ShareBar from '@/components/blog/ShareBar';
 import ContentDisclaimer from '@/components/blog/ContentDisclaimer';
 import type { GlossaryTerm } from '@/lib/glossary';
 
 /** The body of a glossary term page. Pure markup, so the public page and the admin preview share it. */
-export default function GlossaryArticle({ term, related }: { term: GlossaryTerm; related: { slug: string; term: string }[] }) {
+export default function GlossaryArticle({ term, related, aids }: { term: GlossaryTerm; related: { slug: string; term: string }[]; aids?: Enhanced }) {
   return (
     <div>
       <header className="hero-dark relative overflow-hidden">
@@ -22,7 +25,10 @@ export default function GlossaryArticle({ term, related }: { term: GlossaryTerm;
       </header>
 
       <article className="mx-auto max-w-3xl px-4 py-10 md:px-6 md:py-12">
-        <div className="blog-prose" dangerouslySetInnerHTML={{ __html: term.contentHtml }} />
+        {aids && <ArticleToc items={aids.toc} />}
+        {aids && <NumbersBox items={aids.numbers} />}
+        <ReadingProgress targetId="article-body" />
+        <div id="article-body" className="blog-prose" dangerouslySetInnerHTML={{ __html: aids?.html ?? term.contentHtml }} />
 
         {term.faq.length > 0 && (
           <section aria-labelledby="faq" className="mt-12">

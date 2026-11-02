@@ -7,6 +7,7 @@ import { stripHtml } from '@/lib/blog';
 import GlossaryArticle from '@/components/glossary/GlossaryArticle';
 import { ld } from '@/components/blog/jsonLd';
 import { liveInternalPaths, pageTitle, unlinkNotLive } from '@/lib/liveLinks';
+import { enhanceContent } from '@/lib/enhance';
 
 const BASE = 'https://www.scripwise.co.in';
 
@@ -93,7 +94,15 @@ export default async function GlossaryTermPage({ params }: { params: Promise<{ s
       {jsonLd.map((d, i) => (
         <script key={i} type="application/ld+json" nonce={nonce} dangerouslySetInnerHTML={{ __html: ld(d) }} />
       ))}
-      <GlossaryArticle term={{ ...t, contentHtml: unlinkNotLive(t.contentHtml, await liveInternalPaths()) }} related={related} />
+      <GlossaryArticle
+        term={t}
+        aids={enhanceContent(unlinkNotLive(t.contentHtml, await liveInternalPaths()), {
+          glossary: (await getPublishedTerms()).map(x => ({ slug: x.slug, term: x.term, definition: x.definition })),
+          selfSlug: t.slug,
+          maxTerms: 3,
+        })}
+        related={related}
+      />
     </>
   );
 }
