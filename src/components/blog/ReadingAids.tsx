@@ -1,11 +1,11 @@
 import type { NumberItem, TocItem } from '@/lib/enhance';
 
-/** "In this article": the page's own headings as jump links. */
+/** "Jump to a section": the page's own headings as jump links. */
 export function ArticleToc({ items }: { items: TocItem[] }) {
   if (items.length < 2) return null;
   return (
-    <nav aria-label="In this article" className="mb-8 rounded-2xl border border-[#E5E7EB] bg-white p-5">
-      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-[#6B7280]">In this article</h2>
+    <nav aria-label="Jump to a section" className="mb-8 rounded-2xl border border-[#E5E7EB] bg-white p-5">
+      <h2 className="mb-2 text-sm font-bold uppercase tracking-wide text-[#6B7280]">Jump to a section</h2>
       <ol className="list-decimal space-y-1.5 pl-5 text-[15px] text-[#0D1117]">
         {items.map(i => (
           <li key={i.id}>
