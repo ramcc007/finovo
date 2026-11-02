@@ -1,7 +1,8 @@
+import { revalidateTag } from 'next/cache';
 import { NextRequest, NextResponse, after } from 'next/server';
 import { requireAdmin, isValidUserId } from '@/lib/adminAuth';
 import { getServiceClient } from '@/lib/supabase';
-import { GLOSSARY_COLS, toTerm, type GlossaryRow } from '@/lib/glossaryDb';
+import { GLOSSARY_COLS, toTerm, type GlossaryRow, GLOSSARY_TAG } from '@/lib/glossaryDb';
 import { parseTermInput, toTermRow } from '@/lib/glossarySanitize';
 import { pingIndexNow } from '@/lib/indexNow';
 
@@ -30,6 +31,7 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
     return NextResponse.json({ error: 'Failed to save term.' }, { status: 500 });
   }
   if (!data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  revalidateTag(GLOSSARY_TAG, { expire: 0 });
   if (parsed.value.status === 'published') after(() => pingIndexNow([`/glossary/${data.slug}`, '/glossary', '/sitemap.xml']));
   return NextResponse.json({ data });
 }
@@ -40,5 +42,6 @@ export async function DELETE(req: NextRequest, { params }: Ctx) {
   if (!isValidUserId(id)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   const { error } = await getServiceClient().from('glossary_terms').delete().eq('id', id);
   if (error) return NextResponse.json({ error: 'Failed to delete term.' }, { status: 500 });
+  revalidateTag(GLOSSARY_TAG, { expire: 0 });
   return NextResponse.json({ ok: true });
 }

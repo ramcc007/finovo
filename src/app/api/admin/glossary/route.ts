@@ -1,4 +1,6 @@
+import { revalidateTag } from 'next/cache';
 import { NextRequest, NextResponse, after } from 'next/server';
+import { GLOSSARY_TAG } from '@/lib/glossaryDb';
 import { requireAdmin } from '@/lib/adminAuth';
 import { getServiceClient } from '@/lib/supabase';
 import { parseTermInput, toTermRow } from '@/lib/glossarySanitize';
@@ -26,5 +28,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to create term.' }, { status: 500 });
   }
   if (parsed.value.status === 'published') after(() => pingIndexNow([`/glossary/${data.slug}`, '/glossary', '/sitemap.xml']));
+  revalidateTag(GLOSSARY_TAG, { expire: 0 });
   return NextResponse.json({ data }, { status: 201 });
 }

@@ -1,10 +1,11 @@
+import { revalidateTag } from 'next/cache';
 import { NextRequest, NextResponse, after } from 'next/server';
 import { pingIndexNow } from '@/lib/indexNow';
 import { requireAdmin } from '@/lib/adminAuth';
 import { isValidUserId } from '@/lib/adminAuth';
 import { getServiceClient } from '@/lib/supabase';
 import { parsePostInput, toRow } from '@/lib/blogSanitize';
-import { COLS, toPost, type Row } from '@/lib/blogDb';
+import { COLS, toPost, type Row, BLOG_TAG } from '@/lib/blogDb';
 import { getStaticPosts } from '@/lib/staticBlog';
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -32,6 +33,7 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
     return NextResponse.json({ error: 'Failed to save post.' }, { status: 500 });
   }
   if (!data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  revalidateTag(BLOG_TAG, { expire: 0 });
   if (parsed.value.status === 'published') after(() => pingIndexNow([`/blog/${data.slug}`, '/blog', '/sitemap.xml']));
   return NextResponse.json({ data });
 }
@@ -48,5 +50,6 @@ export async function DELETE(req: NextRequest, { params }: Ctx) {
     await client.from('blog_hidden_slugs').upsert({ slug: row.slug });
   }
   if (error) return NextResponse.json({ error: 'Failed to delete post.' }, { status: 500 });
+  revalidateTag(BLOG_TAG, { expire: 0 });
   return NextResponse.json({ ok: true });
 }

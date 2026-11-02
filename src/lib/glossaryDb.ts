@@ -1,3 +1,5 @@
+import { cache } from 'react';
+import { unstable_cache } from 'next/cache';
 import { getServiceClient } from '@/lib/supabase';
 import { sanitizeContent } from '@/lib/blogSanitize';
 import type { GlossaryTerm } from '@/lib/glossary';
@@ -26,27 +28,36 @@ export function toTerm(r: GlossaryRow): GlossaryTerm {
   };
 }
 
-/** Published terms whose publish time has arrived, A-Z. Scheduled terms stay hidden. */
-export async function getPublishedTerms(): Promise<GlossaryTerm[]> {
-  try {
-    const { data } = await getServiceClient()
+/** Cache tag for published glossary data; admin saves invalidate it. */
+export const GLOSSARY_TAG = 'glossary-terms';
+
+// Every published term (scheduled ones included), already mapped and
+// sanitised, cached across requests for up to 5 minutes. The publish-time
+// filter runs per request, so scheduled terms still go live on time.
+const loadPublished = unstable_cache(
+  async (): Promise<GlossaryTerm[]> => {
+    const { data, error } = await getServiceClient()
       .from('glossary_terms').select(GLOSSARY_COLS)
-      .eq('status', 'published').lte('published_at', new Date().toISOString())
+      .eq('status', 'published')
       .order('term', { ascending: true });
+    if (error) throw error;
     return ((data ?? []) as GlossaryRow[]).map(toTerm);
+  },
+  ['glossary-published-v1'],
+  { revalidate: 300, tags: [GLOSSARY_TAG] },
+);
+
+/** Published terms whose publish time has arrived, A-Z. Scheduled terms stay hidden.
+ *  Deduplicated per request with React cache(). */
+export const getPublishedTerms = cache(async (): Promise<GlossaryTerm[]> => {
+  const now = Date.now();
+  try {
+    return (await loadPublished()).filter(t => t.publishedAt && Date.parse(t.publishedAt) <= now);
   } catch {
     return [];
   }
-}
+});
 
-export async function getPublishedTerm(slug: string): Promise<GlossaryTerm | null> {
-  try {
-    const { data } = await getServiceClient()
-      .from('glossary_terms').select(GLOSSARY_COLS).eq('slug', slug)
-      .eq('status', 'published').lte('published_at', new Date().toISOString())
-      .maybeSingle();
-    return data ? toTerm(data as GlossaryRow) : null;
-  } catch {
-    return null;
-  }
-}
+export const getPublishedTerm = cache(async (slug: string): Promise<GlossaryTerm | null> =>
+  (await getPublishedTerms()).find(t => t.slug === slug) ?? null,
+);

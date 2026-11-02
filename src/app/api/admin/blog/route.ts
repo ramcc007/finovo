@@ -1,5 +1,7 @@
+import { revalidateTag } from 'next/cache';
 import { NextRequest, NextResponse, after } from 'next/server';
 import { pingIndexNow } from '@/lib/indexNow';
+import { BLOG_TAG } from '@/lib/blogDb';
 import { requireAdmin } from '@/lib/adminAuth';
 import { getServiceClient } from '@/lib/supabase';
 import { parsePostInput, toRow } from '@/lib/blogSanitize';
@@ -26,5 +28,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to create post.' }, { status: 500 });
   }
   if (parsed.value.status === 'published') after(() => pingIndexNow([`/blog/${data.slug}`, '/blog', '/sitemap.xml']));
+  revalidateTag(BLOG_TAG, { expire: 0 });
   return NextResponse.json({ data }, { status: 201 });
 }

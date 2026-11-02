@@ -1,3 +1,5 @@
+import { cache } from 'react';
+import { unstable_cache } from 'next/cache';
 import { getServiceClient } from '@/lib/supabase';
 import type { Post } from '@/lib/blog';
 import { getStaticPosts } from '@/lib/staticBlog';
@@ -29,29 +31,57 @@ function toPost(r: Row): Post {
   };
 }
 
-/** Published posts whose publish date has arrived (scheduled posts stay hidden). */
-export async function getPublishedPosts(): Promise<Post[]> {
-  try {
-    const { data } = await getServiceClient()
+/** Cache tag for published blog data; admin saves invalidate it. */
+export const BLOG_TAG = 'blog-posts';
+
+// Every published post (scheduled ones included), cached across requests for
+// up to 5 minutes so article and listing pages don't hit the database on each
+// view. The "has its publish time arrived" filter runs per request below, so
+// scheduled posts still go live on time. Admin saves call revalidateTag.
+const loadPublished = unstable_cache(
+  async (): Promise<Post[]> => {
+    const { data, error } = await getServiceClient()
       .from('blog_posts').select(COLS)
-      .eq('status', 'published').lte('published_at', new Date().toISOString())
+      .eq('status', 'published')
       .order('published_at', { ascending: false });
-    const db = ((data ?? []) as Row[]).map(toPost);
-    return mergeStatic(db, await getHiddenSlugs());
-  } catch {
-    return mergeStatic([], new Set());
-  }
-}
+    if (error) throw error;
+    return ((data ?? []) as Row[]).map(toPost);
+  },
+  ['blog-published-v1'],
+  { revalidate: 300, tags: [BLOG_TAG] },
+);
+
+const loadHidden = unstable_cache(
+  async (): Promise<string[]> => {
+    const { data, error } = await getServiceClient().from('blog_hidden_slugs').select('slug');
+    if (error) throw error;
+    return (data ?? []).map((r: { slug: string }) => r.slug);
+  },
+  ['blog-hidden-v1'],
+  { revalidate: 300, tags: [BLOG_TAG] },
+);
 
 /** Slugs of file-based posts the admin has deleted. */
-export async function getHiddenSlugs(): Promise<Set<string>> {
+export const getHiddenSlugs = cache(async (): Promise<Set<string>> => {
   try {
-    const { data } = await getServiceClient().from('blog_hidden_slugs').select('slug');
-    return new Set((data ?? []).map((r: { slug: string }) => r.slug));
+    return new Set(await loadHidden());
   } catch {
     return new Set();
   }
-}
+});
+
+/** Published posts whose publish date has arrived (scheduled posts stay hidden).
+ *  Deduplicated per request with React cache(). */
+export const getPublishedPosts = cache(async (): Promise<Post[]> => {
+  const now = Date.now();
+  let db: Post[] = [];
+  try {
+    db = (await loadPublished()).filter(p => p.publishedAt && Date.parse(p.publishedAt) <= now);
+  } catch {
+    // DB unreachable: fall back to file-based posts only.
+  }
+  return mergeStatic(db, await getHiddenSlugs());
+});
 
 /** File-based posts fill in any slug the database doesn't override. */
 function mergeStatic(db: Post[], hidden: Set<string>): Post[] {
@@ -60,23 +90,12 @@ function mergeStatic(db: Post[], hidden: Set<string>): Post[] {
     .sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''));
 }
 
-export async function getPublishedPost(slug: string): Promise<Post | null> {
-  try {
-    const { data } = await getServiceClient()
-      .from('blog_posts').select(COLS).eq('slug', slug)
-      .eq('status', 'published').lte('published_at', new Date().toISOString())
-      .maybeSingle();
-    if (data) {
-      const post = toPost(data as Row);
-      // Posts are text-only: strips any <img> left in older content.
-      return { ...post, contentHtml: sanitizeContent(post.contentHtml) };
-    }
-  } catch {
-    // fall through to file-based posts
-  }
-  const hidden = await getHiddenSlugs();
-  return getStaticPosts().find(p => p.slug === slug && !hidden.has(slug)) ?? null;
-}
+export const getPublishedPost = cache(async (slug: string): Promise<Post | null> => {
+  const post = (await getPublishedPosts()).find(p => p.slug === slug);
+  if (!post) return null;
+  // Posts are text-only: strips any <img> left in older content.
+  return post.id.startsWith('static:') ? post : { ...post, contentHtml: sanitizeContent(post.contentHtml) };
+});
 
 export { toPost, COLS };
 export type { Row };
