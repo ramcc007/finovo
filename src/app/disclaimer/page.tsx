@@ -9,7 +9,7 @@ export default function DisclaimerPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 md:px-6 py-12">
       <h1 className="text-3xl font-bold text-[#0D1117] mb-2">Disclaimer</h1>
-      <p className="text-sm text-[#8A96A8] mb-8">Last updated: June 2026</p>
+      <p className="text-sm text-[#8A96A8] mb-8">Last updated: November 2026</p>
 
       <div className="bg-[#FFF7ED] border border-[#FFEDD5] border-l-4 border-l-[#F97316] rounded-lg p-4 mb-8">
         <p className="text-sm font-semibold text-[#C45A00]">
@@ -25,6 +25,39 @@ export default function DisclaimerPage() {
           </p>
         </section>
 
+        <section>
+          <h2 className="text-lg font-semibold text-[#0D1117] mb-3">Articles and Glossary</h2>
+          <p className="text-sm">
+            Blog articles and glossary pages on Scripwise are general information written for a wide audience. They do not consider any
+            reader&apos;s income, goals, risk profile or tax position. Companies, funds, indices and products named in them are examples used to
+            explain a point and are not recommendations to buy, sell or hold. Scripwise does not publish target prices, buy or sell calls or
+            model portfolios. Figures, rules and tax rates are taken from public sources as of the date of writing and may have changed since.
+          </p>
+        </section>
+        <section>
+          <h2 className="text-lg font-semibold text-[#0D1117] mb-3">Registration and Independence</h2>
+          <p className="text-sm">
+            Scripwise is not registered with SEBI as an investment adviser or research analyst, is not a stock broker, is not an AMFI-registered
+            mutual fund distributor and is not regulated by the RBI. Scripwise and its writers do not receive payment from any broker, fund house
+            or company mentioned on the site, and no content is sponsored. Mutual fund investments are subject to market risks, read all scheme
+            related documents carefully.
+          </p>
+        </section>
+        <section>
+          <h2 className="text-lg font-semibold text-[#0D1117] mb-3">Tax Information</h2>
+          <p className="text-sm">
+            Tax rules and rates in India change from time to time, including the move to the Income-tax Act, 2025 from 1 April 2026. Tax
+            information on Scripwise is general and may not apply to your situation. Please check the current rules with a qualified tax
+            professional before acting on them.
+          </p>
+        </section>
+        <section>
+          <h2 className="text-lg font-semibold text-[#0D1117] mb-3">Corrections</h2>
+          <p className="text-sm">
+            If you find an error on Scripwise, please write to us through the <a href="/contact" className="text-[#EA580C] underline">contact page</a>.
+            We review every report and correct confirmed errors.
+          </p>
+        </section>
         <section>
           <h2 className="text-lg font-semibold text-[#0D1117] mb-3">Data Accuracy</h2>
           <p className="text-sm">
@@ -49,7 +82,7 @@ export default function DisclaimerPage() {
         <section>
           <h2 className="text-lg font-semibold text-[#0D1117] mb-3">Third-Party Data</h2>
           <p className="text-sm">
-            Data on Scripwise is sourced from publicly available sources including NSE, BSE, and financial data providers. Scripwise is not affiliated with NSE, BSE, SEBI, or any data vendor. All trademarks and logos belong to their respective owners.
+            Data on Scripwise is sourced from publicly available sources including NSE, BSE, and financial data providers. Scripwise is not affiliated with NSE, BSE, SEBI, RBI, AMFI or any data vendor. All trademarks and logos belong to their respective owners.
           </p>
         </section>
       </div>

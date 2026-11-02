@@ -1,7 +1,6 @@
 import Link from 'next/link';
-import { ShieldAlert } from 'lucide-react';
 import ShareBar from '@/components/blog/ShareBar';
-import { DEFAULT_DISCLAIMER } from '@/lib/blog';
+import ContentDisclaimer from '@/components/blog/ContentDisclaimer';
 import type { GlossaryTerm } from '@/lib/glossary';
 
 /** The body of a glossary term page. Pure markup, so the public page and the admin preview share it. */
@@ -54,15 +53,7 @@ export default function GlossaryArticle({ term, related }: { term: GlossaryTerm;
           </section>
         )}
 
-        <aside aria-labelledby="disclaimer" className="mt-12 rounded-2xl border border-[#FED7AA] border-l-4 border-l-[#F97316] bg-[#FFF7ED] p-5 md:p-6">
-          <h2 id="disclaimer" className="mb-2 flex items-center gap-2 text-lg font-bold text-[#9A3412]">
-            <ShieldAlert size={20} aria-hidden /> Disclaimer
-          </h2>
-          <p className="text-base leading-relaxed text-[#7C2D12]">{DEFAULT_DISCLAIMER}</p>
-          <p className="mt-2 text-sm leading-relaxed text-[#9A3412]">
-            Scripwise is not registered with SEBI as an investment adviser or research analyst. Rules, rates and figures mentioned here can change; please verify them before acting on them.
-          </p>
-        </aside>
+        <ContentDisclaimer />
 
         <ShareBar url={`https://www.scripwise.co.in/glossary/${term.slug}`} title={term.title} />
 

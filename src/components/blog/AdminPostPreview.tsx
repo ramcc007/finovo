@@ -6,7 +6,8 @@ import { useEffect, useState } from 'react';
 import { Eye, Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthProvider';
 import { adminFetch } from '@/lib/adminFetch';
-import { DEFAULT_DISCLAIMER, formatDate, type Post } from '@/lib/blog';
+import { formatDate, type Post } from '@/lib/blog';
+import ContentDisclaimer from '@/components/blog/ContentDisclaimer';
 import Inline from '@/components/blog/Inline';
 
 function istTime(iso: string): string {
@@ -93,7 +94,7 @@ export default function AdminPostPreview() {
             </div>
           </section>
         )}
-        <aside className="mt-12 rounded-2xl border border-[#FED7AA] border-l-4 border-l-[#F97316] bg-[#FFF7ED] p-5 text-[#7C2D12] md:p-6">{DEFAULT_DISCLAIMER}</aside>
+        <ContentDisclaimer />
       </article>
     </div>
   );
