@@ -107,7 +107,7 @@ export default function Header() {
 
         {/* Search */}
         <div ref={ref} className="relative flex-1 max-w-[460px] mx-auto">
-          <div className="flex items-center gap-2.5 bg-[#F2F4F9] hover:bg-[#EDF0F6] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#F97316]/20 focus-within:border-[#F97316]/40 border border-transparent rounded-xl px-3.5 py-2.5 transition-all">
+          <div className="flex items-center gap-2.5 bg-[#F2F4F9] hover:bg-[#EDF0F6] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#F97316]/20 focus-within:border-[#F97316]/40 border border-transparent rounded-xl px-3.5 py-1 transition-all">
             <Search size={15} className="text-[#8A94A4] shrink-0" />
             <input
               type="text"
@@ -116,7 +116,7 @@ export default function Header() {
               onChange={e => { setQuery(e.target.value); setOpen(true); }}
               onFocus={() => setOpen(true)}
               onKeyDown={e => { if (e.key === 'Enter' && results.length > 0) goTo(results[0].symbol); }}
-              className="bg-transparent text-sm text-[#131A24] placeholder:text-[#8A94A4] outline-none w-full"
+              className="bg-transparent text-sm text-[#131A24] placeholder:text-[#8A94A4] outline-none w-full py-1.5"
             />
             {loading && <Loader2 size={14} className="text-[#8A94A4] shrink-0 animate-spin" />}
             {query && !loading && (

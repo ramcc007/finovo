@@ -14,7 +14,7 @@ export default function GlossaryArticle({ term, related, aids }: { term: Glossar
         <div className="hero-grid" />
         <div className="relative mx-auto max-w-3xl px-4 py-12 md:px-6 md:py-14">
           <nav aria-label="Breadcrumb" className="mb-5 text-xs text-white/50">
-            <Link href="/" className="hover:text-white">Home</Link> / <Link href="/glossary" className="hover:text-white">Glossary</Link>
+            <Link href="/" className="inline-block py-1.5 hover:text-white">Home</Link> / <Link href="/glossary" className="inline-block py-1.5 hover:text-white">Glossary</Link>
           </nav>
           <span className="inline-block rounded-full bg-[#F97316]/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#FB923C]">Glossary · {term.category}</span>
           <h1 className="mt-4 text-3xl font-bold leading-tight text-white md:text-5xl">{term.title}</h1>

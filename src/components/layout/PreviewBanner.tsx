@@ -46,7 +46,7 @@ export default function PreviewBanner() {
         <span>
           Everything is unlocked for your first 30 minutes — <span className="font-semibold tabular-nums">{mm}:{ss}</span> left.
         </span>
-        <Link href="/signup" className="font-semibold underline underline-offset-2 hover:text-[#7C2D12]">
+        <Link href="/signup" className="inline-block py-1 font-semibold underline underline-offset-2 hover:text-[#7C2D12]">
           Sign up free to keep going
         </Link>
       </div>

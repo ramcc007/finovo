@@ -107,7 +107,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         <div className="relative mx-auto max-w-3xl px-4 py-12 md:px-6 md:py-16">
           <div className="mb-5 flex items-center justify-between gap-3">
             <nav aria-label="Breadcrumb" className="text-xs text-white/50">
-              <Link href="/" className="hover:text-white">Home</Link> / <Link href="/blog" className="hover:text-white">Blog</Link>
+              <Link href="/" className="inline-block py-1.5 hover:text-white">Home</Link> / <Link href="/blog" className="inline-block py-1.5 hover:text-white">Blog</Link>
             </nav>
             <PostAdminActions id={post.id} title={post.title} redirectTo="/blog" />
           </div>

@@ -65,7 +65,7 @@ export default async function CategoryPage({ params }: Props) {
         <div className="hero-grid" />
         <div className="relative mx-auto max-w-6xl px-4 py-12 md:px-6 md:py-16">
           <nav aria-label="Breadcrumb" className="mb-4 text-xs text-white/50">
-            <Link href="/" className="hover:text-white">Home</Link> / <Link href="/blog" className="hover:text-white">Blog</Link>
+            <Link href="/" className="inline-block py-1.5 hover:text-white">Home</Link> / <Link href="/blog" className="inline-block py-1.5 hover:text-white">Blog</Link>
           </nav>
           <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-[#FB923C]">Category</p>
           <h1 className="text-3xl font-bold text-white md:text-5xl">{name}</h1>

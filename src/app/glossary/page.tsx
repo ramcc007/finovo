@@ -43,7 +43,7 @@ export default async function GlossaryHub() {
         <div className="hero-grid" />
         <div className="relative mx-auto max-w-5xl px-4 py-12 md:px-6 md:py-16">
           <nav aria-label="Breadcrumb" className="mb-5 text-xs text-white/50">
-            <Link href="/" className="hover:text-white">Home</Link> / Glossary
+            <Link href="/" className="inline-block py-1.5 hover:text-white">Home</Link> / Glossary
           </nav>
           <h1 className="text-3xl font-bold text-white md:text-5xl">Stock market glossary</h1>
           <p className="mt-4 max-w-2xl text-white/70">
