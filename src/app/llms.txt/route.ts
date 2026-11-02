@@ -1,4 +1,3 @@
-import { supabase } from '@/lib/supabase';
 import { getPublishedPosts } from '@/lib/blogDb';
 import { getPublishedTerms } from '@/lib/glossaryDb';
 
@@ -43,10 +42,6 @@ Scripwise is not a SEBI-registered investment adviser. All data is for informati
 - The Explorer (\`/screener\`) is the only research tool that does not require authentication; Markets, Screens, Compare, and Watchlist require a free Scripwise account.
 - Data is NSE/BSE end-of-day; treat it as informational, not real-time trading data or investment advice.
 - \`/api/*\` routes are internal application endpoints, not a public API, and are disallowed in robots.txt.
-
-## Stocks
-
-Every listed company has a research page at \`/stocks/{SYMBOL}\` with company profile, live quote, financial ratios, Scripwise Score with history, and multi-year financial statements.
 `;
 
 export async function GET() {
@@ -60,21 +55,6 @@ export async function GET() {
   const terms = await getPublishedTerms();
   if (terms.length > 0) {
     body = body.replace('## Legal', `### Glossary terms\n\n${terms.map(t => `- [${t.term}](${base}/glossary/${t.slug}): ${t.definition}`).join('\n')}\n\n## Legal`);
-  }
-
-  try {
-    const { data } = await supabase
-      .from('companies')
-      .select('symbol, name')
-      .eq('is_active', true)
-      .order('symbol');
-
-    if (data && data.length > 0) {
-      const lines = data.map(c => `- [${c.symbol} — ${c.name}](${base}/stocks/${encodeURIComponent(c.symbol)})`);
-      body += '\n' + lines.join('\n') + '\n';
-    }
-  } catch {
-    // DB unreachable — ship the header-only version rather than fail the route.
   }
 
   return new Response(body, {

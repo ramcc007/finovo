@@ -5,22 +5,13 @@ import { getPublishedTerms } from '@/lib/glossaryDb';
 
 const base = 'https://www.scripwise.co.in';
 
-const POSTS_PER_PAGE = 9; // keep in step with BlogListing
-
-// No <lastmod> is emitted: the sitemap lists URLs only.
+// No <lastmod> is emitted: the sitemap lists URLs only. Paginated blog
+// listings (/blog/page/N) and stock pages are deliberately not listed.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const blogPosts = await getPublishedPosts(); // newest publish date first
 
   const blogRoutes: MetadataRoute.Sitemap = [
     { url: `${base}/blog`, changeFrequency: 'daily', priority: 0.8 },
-    ...Array.from({ length: Math.max(0, Math.ceil(blogPosts.length / POSTS_PER_PAGE) - 1) }, (_, i) => {
-      const pageNo = i + 2;
-      return {
-        url: `${base}/blog/page/${pageNo}`,
-        changeFrequency: 'weekly' as const,
-        priority: 0.4,
-      };
-    }),
     ...[...new Set(blogPosts.map(p => slugify(p.category)))].map(cat => ({
       url: `${base}/blog/category/${cat}`,
       changeFrequency: 'weekly' as const,
