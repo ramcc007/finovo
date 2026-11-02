@@ -1,5 +1,4 @@
 import { MetadataRoute } from 'next';
-import { supabase } from '@/lib/supabase';
 import { getPublishedPosts } from '@/lib/blogDb';
 import { slugify } from '@/lib/blog';
 import { getPublishedTerms } from '@/lib/glossaryDb';
@@ -56,20 +55,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/terms`, changeFrequency: 'monthly', priority: 0.3 },
   ];
 
-  try {
-    const { data } = await supabase.from('companies').select('symbol').eq('is_active', true).order('symbol');
-
-    const stockRoutes: MetadataRoute.Sitemap = (data ?? []).map(c => ({
-      // NSE symbols can contain characters like "&" (e.g. M&M) that are
-      // invalid unescaped in XML — encode the path segment.
-      url: `${base}/stocks/${encodeURIComponent(c.symbol)}`,
-      changeFrequency: 'daily',
-      priority: 0.6,
-    }));
-
-    return [...staticRoutes, ...blogRoutes, ...glossaryRoutes, ...stockRoutes];
-  } catch {
-    // DB unreachable at build/request time — ship the static routes rather than fail the sitemap entirely.
-    return [...staticRoutes, ...blogRoutes, ...glossaryRoutes];
-  }
+  // Stock pages (/stocks/[symbol]) are deliberately left out: thousands of
+  // thin, data-only pages dilute the sitemap. They stay reachable by links.
+  return [...staticRoutes, ...blogRoutes, ...glossaryRoutes];
 }
