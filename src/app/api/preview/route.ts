@@ -26,11 +26,15 @@ export async function GET(req: NextRequest) {
   });
 }
 
-// Restart of the window, once per 7 days. The "used" marker outlives the
+// Restart of the window once it has ended, at most once per 7 days. The "used" marker outlives the
 // session-scoped window cookie, so it survives a browser restart.
 export async function POST(req: NextRequest) {
   if (resetUsed(req)) {
     return NextResponse.json({ error: 'Reset already used.' }, { status: 409 });
+  }
+  // Only once the current 30 minutes have run out.
+  if (anonPreviewRemainingMs(req) > 0) {
+    return NextResponse.json({ error: 'Your free preview is still running.' }, { status: 409 });
   }
   const now = Date.now();
   const res = NextResponse.json({ remainingMs: ANON_PREVIEW_MS, canReset: false });

@@ -8,7 +8,8 @@ import { usePreview, resetPreview } from '@/lib/usePreview';
 
 /** Slim bar for anonymous visitors: a countdown while their free full-access
  *  window is open, and, once it has ended, the one-time offer to restart it.
- *  Both states carry the one-time Reset button until it has been used. */
+ *  The Reset button is offered only once the window has ended (and only if
+ *  the reset hasn't been used in the last 7 days). */
 export default function PreviewBanner() {
   const pathname = usePathname();
   const { active, expiresAt, anon, resolved, canReset } = usePreview();
@@ -45,7 +46,6 @@ export default function PreviewBanner() {
         <span>
           Everything is unlocked for your first 30 minutes — <span className="font-semibold tabular-nums">{mm}:{ss}</span> left.
         </span>
-        {resetButton}
         <Link href="/signup" className="font-semibold underline underline-offset-2 hover:text-[#7C2D12]">
           Sign up free to keep going
         </Link>
