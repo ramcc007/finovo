@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
-  Loader2, PenSquare, Pencil, Trash2, ExternalLink, Search, X, CalendarClock, CheckCircle2, FileText, Layers,
+  Loader2, PenSquare, Pencil, Trash2, ExternalLink, Eye, Search, X, CalendarClock, CheckCircle2, FileText, Layers,
 } from 'lucide-react';
 import { adminFetch } from '@/lib/adminFetch';
 import { formatDate } from '@/lib/blog';
@@ -141,12 +141,12 @@ export function BlogAdminListView() {
 
   const actions = (r: Row) => (
     <div className="flex items-center gap-1.5">
-      {kindOf(r) === 'published' && (
-        <Link href={`/blog/${r.slug}`} target="_blank" title="View live" aria-label={`View ${r.title}`}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#E5E7EB] text-[#4A5568] hover:border-[#F97316] hover:text-[#EA580C]">
-          <ExternalLink size={14} />
-        </Link>
-      )}
+      {/* Live posts open publicly; scheduled and drafts open the admin preview at the same URL. */}
+      <Link href={`/blog/${r.slug}`} target="_blank"
+        title={kindOf(r) === 'published' ? 'View live' : 'Preview'} aria-label={`${kindOf(r) === 'published' ? 'View' : 'Preview'} ${r.title}`}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#E5E7EB] text-[#4A5568] hover:border-[#F97316] hover:text-[#EA580C]">
+        {kindOf(r) === 'published' ? <ExternalLink size={14} /> : <Eye size={14} />}
+      </Link>
       <Link href={`/admin/blog/${r.id}`} title="Edit" aria-label={`Edit ${r.title}`}
         className="inline-flex h-8 items-center gap-1 rounded-md border border-[#E5E7EB] px-2.5 text-xs font-semibold text-[#0D1117] hover:border-[#F97316]">
         <Pencil size={13} /> Edit
