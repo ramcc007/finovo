@@ -83,12 +83,14 @@ const SITE_JSON_LD = JSON.stringify([
 ]).replace(/</g, '\\u003c');
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const nonce = (await headers()).get('x-nonce') ?? undefined;
+  const h = await headers();
+  const nonce = h.get('x-nonce') ?? undefined;
+  const pathname = h.get('x-pathname') ?? '/';
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
       <body>
         <script type="application/ld+json" nonce={nonce} dangerouslySetInnerHTML={{ __html: SITE_JSON_LD }} />
-        <GoogleAnalytics nonce={nonce} />
+        <GoogleAnalytics nonce={nonce} pathname={pathname} />
         <AuthProvider>
           <PreviewBanner />
           <Header />

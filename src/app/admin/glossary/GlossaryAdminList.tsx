@@ -8,6 +8,9 @@ const CONFIG: ContentListConfig = {
   noun: 'term',
   apiPath: '/api/admin/glossary',
   publicPath: '/glossary',
+  newHref: '/admin/glossary/new',
+  newLabel: 'Add new term',
+  editHref: id => `/admin/glossary/${id}`,
   searchPlaceholder: 'Search term, URL or category',
   titleLabel: 'Term',
   defaultSort: 'title', // a glossary reads best A–Z
