@@ -13,9 +13,7 @@ interface Realtime {
   locations: { country: string; city: string; users: number }[];
 }
 
-const POLL_MS = 60_000;
-
-/** Live GA4 data for the last 30 minutes, polled every minute while the tab is visible. */
+/** Live GA4 data for the last 30 minutes. Fetched on page load and on refresh only (no polling). */
 export default function RightNowPanel() {
   const [data, setData] = useState<Realtime | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -36,12 +34,10 @@ export default function RightNowPanel() {
     }
   }, []);
 
+  // Load once when the dashboard opens; after that only on the refresh button.
   useEffect(() => {
-    const tick = () => { if (document.visibilityState === 'visible') void load(); };
-    const first = setTimeout(tick, 0);
-    const id = setInterval(tick, POLL_MS);
-    document.addEventListener('visibilitychange', tick);
-    return () => { clearTimeout(first); clearInterval(id); document.removeEventListener('visibilitychange', tick); };
+    const first = setTimeout(() => void load(), 0);
+    return () => clearTimeout(first);
   }, [load]);
 
   if (error === 'GA4 analytics not configured') return null; // the snapshot card already explains this
@@ -57,7 +53,7 @@ export default function RightNowPanel() {
             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-500" />
           </span>
           <h2 className="text-sm font-semibold text-[#0D1117]">Right now</h2>
-          <span className="text-xs text-[#8A96A8]">last 30 minutes · updates every minute</span>
+          <span className="text-xs text-[#8A96A8]">last 30 minutes</span>
         </div>
         <div className="flex items-center gap-2">
           {fetchedAt && (
@@ -65,9 +61,10 @@ export default function RightNowPanel() {
               Updated {new Date(fetchedAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}
             </span>
           )}
-          <button type="button" onClick={() => void load()} disabled={loading} title="Refresh now" aria-label="Refresh realtime data"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#E5E7EB] bg-white text-[#4A5568] hover:border-[#F97316] hover:text-[#EA580C] disabled:opacity-60">
+          <button type="button" onClick={() => void load()} disabled={loading} title="Refresh realtime data" aria-label="Refresh realtime data"
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold border border-[#E5E7EB] bg-white text-[#4A5568] hover:border-[#F97316] hover:text-[#EA580C] disabled:opacity-60">
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+            {loading ? 'Refreshing' : 'Refresh'}
           </button>
         </div>
       </div>
