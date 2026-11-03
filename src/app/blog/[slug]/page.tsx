@@ -10,6 +10,7 @@ import { formatDate, modifiedAt, relatedPosts, stripHtml } from '@/lib/blog';
 import Inline from '@/components/blog/Inline';
 import PostAdminActions from '@/components/blog/PostAdminActions';
 import ShareBar from '@/components/blog/ShareBar';
+import AuthorBox from '@/components/blog/AuthorBox';
 import ContentDisclaimer from '@/components/blog/ContentDisclaimer';
 import { categoryHref } from '@/components/blog/categories';
 import { ld } from '@/components/blog/jsonLd';
@@ -198,6 +199,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         <ContentDisclaimer sourced={post.sources.length > 0} />
 
         <ShareBar url={url} title={post.title} />
+
+        <AuthorBox name={post.author} />
 
         <section className="mt-12 rounded-2xl bg-[#0B0E14] p-6 text-white md:p-8">
           <h2 className="text-xl font-bold">Screen stocks yourself</h2>

@@ -3,25 +3,31 @@ import { ArrowUpRight, Clock } from 'lucide-react';
 import { formatDate, type Post } from '@/lib/blog';
 import PostAdminActions from './PostAdminActions';
 import { categoryHref } from './categories';
-import { authorHref } from '@/lib/authors';
+import { authorHref, initials } from '@/lib/authors';
+import { getAuthorByName } from '@/lib/authorsDb';
 
 // Text-only design: hierarchy comes from type, colour accents and spacing.
 
-function Initials({ name, dark }: { name: string; dark?: boolean }) {
-  const letters = name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+function Avatar({ name, photoUrl, dark }: { name: string; photoUrl: string | null; dark?: boolean }) {
+  if (photoUrl) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={photoUrl} alt="" width={32} height={32} loading="lazy" className={`h-8 w-8 shrink-0 rounded-full object-cover ${dark ? 'ring-1 ring-white/20' : 'ring-1 ring-black/5'}`} />;
+  }
   return (
     <span aria-hidden className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${dark ? 'bg-white/10 text-white' : 'bg-[#FFF7ED] text-[#C2410C]'}`}>
-      {letters}
+      {initials(name)}
     </span>
   );
 }
 
-function ByLine({ post, dark }: { post: Post; dark?: boolean }) {
+// Server component: the author lookup is cached, so cards on a listing share one read.
+async function ByLine({ post, dark }: { post: Post; dark?: boolean }) {
+  const author = await getAuthorByName(post.author);
   return (
     <div className="flex items-center gap-2.5">
-      <Initials name={post.author} dark={dark} />
+      <Link href={authorHref(post.author)} aria-label={`More articles by ${post.author}`} className="relative z-10 shrink-0"><Avatar name={post.author} photoUrl={author?.photoUrl ?? null} dark={dark} /></Link>
       <div className={`text-xs leading-tight ${dark ? 'text-white/55' : 'text-[#8A96A8]'}`}>
-        <Link href={authorHref(post.author)} className={`font-semibold hover:underline ${dark ? 'text-white/90' : 'text-[#0D1117]'}`}>{post.author}</Link>
+        <Link href={authorHref(post.author)} className={`relative z-10 font-semibold hover:underline ${dark ? 'text-white/90' : 'text-[#0D1117]'}`}>{post.author}</Link>
         <div className="flex items-center gap-1.5">
           {post.publishedAt && <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>}
           <span aria-hidden>·</span>
