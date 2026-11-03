@@ -99,7 +99,7 @@ export default function ElectionAdmin() {
             className={`inline-flex h-9 items-center rounded-lg px-4 text-sm font-semibold ${meta.coverageEnded ? 'border border-[#E5E7EB] bg-white' : 'bg-[#0D1117] text-white'} disabled:opacity-60`}>
             {meta.coverageEnded ? 'Resume coverage' : 'End coverage'}
           </button>
-          <span className="text-xs text-[#8A96A8]">Collection runs every 10 minutes from GitHub Actions and stops by itself after the end date.</span>
+          <span className="text-xs text-[#8A96A8]">Collection runs every 5 minutes from GitHub Actions and stops by itself after the end date.</span>
         </div>
       </section>
 

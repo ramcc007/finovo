@@ -4,7 +4,7 @@ name: Election updates
 #
 # GitHub runs frequent cron schedules very irregularly (often only a few times
 # a day), which is too slow for a live page. So one job stays running and calls
-# the site's protected ingest endpoint every 10 minutes itself. Shortly before
+# the site's protected ingest endpoint every 5 minutes itself. Shortly before
 # GitHub's 6 hour job limit it starts its own replacement; the hourly cron below
 # only restarts the chain if it ever breaks. Public repository, so no minutes
 # are charged.
@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 345
     steps:
-      - name: Check every 10 minutes
+      - name: Check every 5 minutes
         env:
           SITE_URL: ${{ secrets.SITE_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
@@ -48,7 +48,7 @@ jobs:
             if grep -q -E '"skipped":"(coverage ended|past the end date)"' response.json 2>/dev/null; then
               echo "Coverage has ended. Stopping."; stop=1; break
             fi
-            sleep 540
+            sleep 270
           done
           echo "stop=${stop}" >> "$GITHUB_ENV"
 
