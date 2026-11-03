@@ -28,7 +28,7 @@ function set(next: PreviewState) {
 function refreshPage() {
   if (typeof window === 'undefined') return;
   const path = window.location.pathname;
-  if (path === '/blog' || path.startsWith('/blog/')) return;
+  if (path === '/blog' || path.startsWith('/blog/') || path === '/glossary' || path.startsWith('/glossary/') || path === '/us-midterm-elections' || path.startsWith('/us-midterm-elections/')) return;
   window.location.reload();
 }
 

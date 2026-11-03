@@ -64,7 +64,7 @@ export default function PreviewBanner() {
   );
 
   // Blog pages are public reading content — no preview banner there.
-  if (pathname === '/blog' || pathname?.startsWith('/blog/') || pathname === '/glossary' || pathname?.startsWith('/glossary/')) return null;
+  if (pathname === '/blog' || pathname?.startsWith('/blog/') || pathname === '/glossary' || pathname?.startsWith('/glossary/') || pathname === '/us-midterm-elections' || pathname?.startsWith('/us-midterm-elections/')) return null;
 
   if (active) {
     const left = Math.max(0, Math.ceil((expiresAt - now) / 1000));

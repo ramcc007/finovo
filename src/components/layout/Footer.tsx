@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import Logo from './Logo';
+import { ELECTION_PATH } from '@/lib/election/nav';
 
-export default function Footer() {
+export default function Footer({ showElection = false }: { showElection?: boolean }) {
   return (
     <footer className="bg-[#0B0E14] text-white mt-16">
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-10">
@@ -28,6 +29,7 @@ export default function Footer() {
                 { href: '/pricing', label: 'Pricing' },
                 { href: '/blog', label: 'Blog' },
                 { href: '/glossary', label: 'Glossary' },
+                ...(showElection ? [{ href: ELECTION_PATH, label: 'US Midterm Elections: Live' }] : []),
               ].map(l => (
                 <li key={l.href}>
                   <Link href={l.href} className="text-sm text-white/60 hover:text-[#F97316] transition-colors">

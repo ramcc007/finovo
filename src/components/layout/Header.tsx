@@ -9,8 +9,9 @@ import { useAuth } from '@/lib/AuthProvider';
 import { useEntitlement } from '@/lib/useEntitlement';
 import { adminFetch } from '@/lib/adminFetch';
 import Logo from './Logo';
+import { ELECTION_PATH } from '@/lib/election/nav';
 
-const NAV = [
+const BASE_NAV = [
   { href: '/screener', label: 'Explorer' },
   { href: '/markets', label: 'Markets' },
   { href: '/pulse', label: 'Pulse' },
@@ -19,10 +20,12 @@ const NAV = [
   { href: '/watchlist', label: 'Watchlist' },
   { href: '/blog', label: 'Blog' },
 ];
+const ELECTION_NAV = { href: ELECTION_PATH, label: 'US Elections' };
 
 interface SearchHit { symbol: string; name: string; sector: string }
 
-export default function Header() {
+export default function Header({ showElection = false }: { showElection?: boolean }) {
+  const NAV = showElection ? [...BASE_NAV, ELECTION_NAV] : BASE_NAV;
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -163,12 +166,15 @@ export default function Header() {
                 href={item.href}
                 className={cn(
                   'text-sm font-medium px-3.5 py-2 rounded-lg transition-colors',
+                  // Only wide screens have room for one more desktop link; smaller ones get it in the menu and footer.
+                  item.href === ELECTION_PATH && 'max-xl:hidden',
                   active
                     ? 'text-[#EA580C] bg-[#FFF3E8]'
                     : 'text-[#56616F] hover:text-[#131A24] hover:bg-[#F2F4F9]'
                 )}
               >
                 {item.label}
+                {item.href === ELECTION_PATH && <span aria-hidden className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-red-500 align-middle" />}
               </Link>
             );
           })}
@@ -294,6 +300,7 @@ export default function Header() {
                 )}
               >
                 {item.label}
+                {item.href === ELECTION_PATH && <span aria-hidden className="ml-2 inline-block h-1.5 w-1.5 rounded-full bg-red-500" />}
               </Link>
             );
           })}
