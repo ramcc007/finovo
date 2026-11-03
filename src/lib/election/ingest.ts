@@ -64,6 +64,26 @@ function parseJson<T>(text: string): T {
   try { return JSON.parse(body) as T; } catch { return JSON.parse(repairJson(body)) as T; }
 }
 
+/** Parses the AI's array item by item, so one malformed entry does not lose the rest of the batch. */
+function parseItems(text: string): { items: AiItem[]; bad: number; snippet: string } {
+  try {
+    const all = parseJson<AiItem[]>(text);
+    if (Array.isArray(all)) return { items: all, bad: 0, snippet: '' };
+  } catch { /* fall through to per-item parsing */ }
+  const chunks = text.split(/\{\s*"id"\s*:/).slice(1);
+  const items: AiItem[] = [];
+  let bad = 0, snippet = '';
+  for (const chunk of chunks) {
+    const body = '{"id":' + chunk.replace(/[\s,\]`]*$/, '');
+    const end = body.lastIndexOf('}');
+    const obj = end > 0 ? body.slice(0, end + 1) : body;
+    try { items.push(JSON.parse(obj) as AiItem); } catch {
+      try { items.push(JSON.parse(repairJson(obj)) as AiItem); } catch (e) { bad++; if (!snippet) snippet = `${e instanceof Error ? e.message : ''} | ${obj.slice(0, 160)}`; }
+    }
+  }
+  return { items, bad, snippet };
+}
+
 const int = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 1000 ? v : null);
 
 export async function runIngest(): Promise<IngestResult> {
@@ -126,10 +146,13 @@ export async function runIngest(): Promise<IngestResult> {
     id: g.id, source: g.items[0].source, published: g.items[0].publishedAt, title: g.items[0].title, snippet: g.items[0].snippet,
   })))}`;
   let ai: AiItem[];
+  let parseNote: string | null = null;
   try {
     calls++;
-    ai = parseJson<AiItem[]>(await callClaude(SYSTEM_PROMPT, prompt, 4000));
-    if (!Array.isArray(ai)) throw new Error('AI reply was not a list');
+    const parsed = parseItems(await callClaude(SYSTEM_PROMPT, prompt, 4000));
+    if (parsed.items.length === 0) throw new Error(`AI reply could not be read. ${parsed.snippet}`.slice(0, 400));
+    ai = parsed.items;
+    if (parsed.bad) parseNote = `${parsed.bad} item(s) in the AI reply could not be read and will be retried. ${parsed.snippet}`.slice(0, 400);
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'AI error';
     await finish({ last_error: `AI step failed: ${msg}` }); // items stay unseen and are retried next run
@@ -145,9 +168,9 @@ export async function runIngest(): Promise<IngestResult> {
   const pending: Scoreboard = {};
 
   for (const g of batch) {
-    for (const it of g.items) toSeen.push({ hash: urlHash(it.url), title: it.title });
     const a = byId.get(g.id);
-    if (!a) continue;
+    if (!a) continue; // no usable AI result: leave unseen so the next run retries it
+    for (const it of g.items) toSeen.push({ hash: urlHash(it.url), title: it.title });
     const importance = Math.min(5, Math.max(1, Math.round(Number(a.importance) || 1)));
     if (importance < MIN_IMPORTANCE_TO_PUBLISH) continue;
     const headline = cleanText(String(a.headline ?? '')).slice(0, 160);
@@ -211,7 +234,7 @@ export async function runIngest(): Promise<IngestResult> {
     } catch { /* keep the old takeaways */ }
   }
 
-  const patch: Record<string, unknown> = { last_error: null };
+  const patch: Record<string, unknown> = { last_error: parseNote };
   if (takeaways) patch.takeaways = takeaways;
   if (Object.keys(pending).length) patch.pending_scoreboard = { ...meta.pendingScoreboard, ...pending };
   await finish(patch);
