@@ -26,7 +26,7 @@ export interface IngestResult {
   ok: boolean; skipped?: string; fetched?: number; fresh?: number; sent?: number; published?: number; merged?: number; feeds?: string; error?: string;
 }
 
-async function callClaude(system: string, user: string, maxTokens: number): Promise<string> {
+async function callClaude(system: string, user: string, maxTokens: number): Promise<{ text: string; stop: string }> {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) throw new Error('ANTHROPIC_API_KEY is not set');
   const r = await fetch('https://api.anthropic.com/v1/messages', {
@@ -36,8 +36,8 @@ async function callClaude(system: string, user: string, maxTokens: number): Prom
     signal: AbortSignal.timeout(50_000),
   });
   if (!r.ok) throw new Error(`AI request failed (${r.status})`);
-  const d = await r.json() as { content?: { type: string; text?: string }[] };
-  return (d.content ?? []).filter(c => c.type === 'text').map(c => c.text ?? '').join('');
+  const d = await r.json() as { content?: { type: string; text?: string }[]; stop_reason?: string };
+  return { text: (d.content ?? []).filter(c => c.type === 'text').map(c => c.text ?? '').join(''), stop: d.stop_reason ?? '' };
 }
 
 /** Escapes stray double quotes inside JSON strings (a quote only closes a string if a , } ] or : follows). */
@@ -65,22 +65,43 @@ function parseJson<T>(text: string): T {
   try { return JSON.parse(body) as T; } catch { return JSON.parse(repairJson(body)) as T; }
 }
 
-/** Parses the AI's array item by item, so one malformed entry does not lose the rest of the batch. */
+/** Finds every top-level {...} in a text, ignoring braces inside strings. */
+function topLevelObjects(text: string): string[] {
+  const out: string[] = [];
+  let depth = 0, start = -1, inStr = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inStr) {
+      if (c === '\\') i++;
+      else if (c === '"') inStr = false;
+      continue;
+    }
+    if (c === '"') inStr = true;
+    else if (c === '{') { if (depth === 0) start = i; depth++; }
+    else if (c === '}' && depth > 0) { depth--; if (depth === 0 && start >= 0) { out.push(text.slice(start, i + 1)); start = -1; } }
+  }
+  return out;
+}
+
+const asItems = (v: unknown): AiItem[] | null => {
+  if (Array.isArray(v)) return v as AiItem[];
+  if (v && typeof v === 'object') for (const x of Object.values(v)) if (Array.isArray(x)) return x as AiItem[];
+  return null;
+};
+
+/** Parses the AI's reply, whatever shape it comes in: a clean array, an object holding an array, or loose objects. */
 function parseItems(text: string): { items: AiItem[]; bad: number; snippet: string; complete: boolean } {
   try {
-    const all = parseJson<AiItem[]>(text);
-    if (Array.isArray(all)) return { items: all, bad: 0, snippet: '', complete: true };
+    const whole = asItems(parseJson<unknown>(text));
+    if (whole) return { items: whole, bad: 0, snippet: '', complete: true };
   } catch { /* fall through to per-item parsing */ }
-  const chunks = text.split(/\{\s*"id"\s*:/).slice(1);
   const items: AiItem[] = [];
   let bad = 0, snippet = '';
-  for (const chunk of chunks) {
-    const body = '{"id":' + chunk.replace(/[\s,\]`]*$/, '');
-    const end = body.lastIndexOf('}');
-    const obj = end > 0 ? body.slice(0, end + 1) : body;
-    try { items.push(JSON.parse(obj) as AiItem); } catch {
-      try { items.push(JSON.parse(repairJson(obj)) as AiItem); } catch (e) { bad++; if (!snippet) snippet = `${e instanceof Error ? e.message : ''} | ${obj.slice(0, 160)}`; }
-    }
+  for (const obj of topLevelObjects(repairJson(text))) {
+    try {
+      const o = JSON.parse(obj) as AiItem;
+      if (o && typeof o === 'object' && typeof o.id === 'string') items.push(o);
+    } catch (e) { bad++; if (!snippet) snippet = `${e instanceof Error ? e.message : ''} | ${obj.slice(0, 160)}`; }
   }
   return { items, bad, snippet, complete: false };
 }
@@ -148,21 +169,33 @@ export async function runIngest(): Promise<IngestResult> {
   if (batch.length === 0) { await finish({ last_error: null }); return { ok: true, fetched: fetched.length, fresh: 0, sent: 0, published: 0 }; }
   if (calls >= MAX_AI_CALLS_PER_DAY) { await finish({ last_error: 'Daily AI call limit reached; waiting for tomorrow.' }); return { ok: false, error: 'daily AI cap' }; }
 
-  // 3. One AI call for the whole batch
+  // 3. Ask the model. One call for the whole batch; if the reply cannot be read, split it in two and retry once.
   const { data: recentRows } = await db.from('election_updates').select('cluster_key, headline').order('published_at', { ascending: false }).limit(15);
-  const prompt = `${USER_RULES}\n\nrecent: ${JSON.stringify(recentRows ?? [])}\n\nitems: ${JSON.stringify(batch.map(g => ({
-    id: g.id, source: g.items[0].source, published: g.items[0].publishedAt, title: g.items[0].title, snippet: g.items[0].snippet,
-  })))}`;
+  const recentJson = JSON.stringify(recentRows ?? []);
+  const ask = async (slice: Group[]) => {
+    calls++;
+    const prompt = `${USER_RULES}\n\nrecent: ${recentJson}\n\nitems: ${JSON.stringify(slice.map(g => ({
+      id: g.id, source: g.items[0].source, published: g.items[0].publishedAt, title: g.items[0].title, snippet: g.items[0].snippet,
+    })))}`;
+    const { text, stop } = await callClaude(SYSTEM_PROMPT, prompt, 7000);
+    const parsed = parseItems(text);
+    const peek = `stop=${stop || '?'}, ${text.length} chars, starts: ${text.slice(0, 120).replace(/\s+/g, ' ')} ... ends: ${text.slice(-80).replace(/\s+/g, ' ')}`;
+    return { ...parsed, peek };
+  };
   let ai: AiItem[];
   let parseNote: string | null = null;
   let replyComplete = false;
   try {
-    calls++;
-    const parsed = parseItems(await callClaude(SYSTEM_PROMPT, prompt, 7000));
-    if (parsed.items.length === 0 && !parsed.complete) throw new Error(`AI reply could not be read. ${parsed.snippet}`.slice(0, 400));
-    ai = parsed.items;
-    replyComplete = parsed.complete;
-    if (parsed.bad) parseNote = `${parsed.bad} item(s) in the AI reply could not be read and will be retried. ${parsed.snippet}`.slice(0, 400);
+    let res = await ask(batch);
+    if (res.items.length === 0 && !res.complete && batch.length >= 8 && calls < MAX_AI_CALLS_PER_DAY - 1) {
+      const mid = Math.ceil(batch.length / 2);
+      const [x, y] = [await ask(batch.slice(0, mid)), await ask(batch.slice(mid))];
+      res = { items: [...x.items, ...y.items], bad: x.bad + y.bad, snippet: x.snippet || y.snippet, complete: x.complete && y.complete, peek: `${x.peek} || ${y.peek}` };
+    }
+    if (res.items.length === 0 && !res.complete) throw new Error(`AI reply could not be read. ${res.peek}`.slice(0, 500));
+    ai = res.items;
+    replyComplete = res.complete;
+    if (res.bad) parseNote = `${res.bad} item(s) in the AI reply could not be read and will be retried. ${res.snippet}`.slice(0, 400);
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'AI error';
     await finish({ last_error: `AI step failed: ${msg}` }); // items stay unseen and are retried next run
@@ -266,7 +299,7 @@ export async function runIngest(): Promise<IngestResult> {
     try {
       const { data: top } = await db.from('election_updates').select('headline, summary').eq('hidden', false).order('published_at', { ascending: false }).limit(12);
       calls++;
-      const txt = await callClaude(
+      const { text: txt } = await callClaude(
         SYSTEM_PROMPT,
         `Using only these updates, write 3 to 5 plain sentences describing where the election stands right now. Each sentence is one string. Do not use bullet characters. Return only a JSON array of strings.\n${JSON.stringify(top ?? [])}`,
         700,
