@@ -1,7 +1,7 @@
 import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
 import { getServiceClient } from '@/lib/supabaseServer';
-import type { ElectionMeta, ElectionUpdate, FeedStat, LiveVideo, Media, Region, Scoreboard, SourceLink, Tag } from './types';
+import type { ElectionMeta, ElectionUpdate, FeedStat, LiveVideo, Media, Projection, Region, Scoreboard, SourceLink, Tag } from './types';
 
 export const ELECTION_TAG = 'election-updates';
 
@@ -23,16 +23,16 @@ export function toUpdate(r: UpdateRow): ElectionUpdate {
 }
 
 interface MetaRow {
-  scoreboard: Scoreboard; pending_scoreboard: Scoreboard; takeaways: string[]; videos: LiveVideo[] | null; feed_stats: FeedStat[] | null; coverage_ended: boolean;
+  scoreboard: Scoreboard; pending_scoreboard: Scoreboard; takeaways: string[]; videos: LiveVideo[] | null; feed_stats: FeedStat[] | null; projections: Projection[] | null; auto_publish: boolean; coverage_ended: boolean;
   ended_at: string | null; started_at: string; last_ingest_at: string | null; last_error: string | null;
   llm_calls_today: number; items_today: number;
 }
-export const META_COLS = 'scoreboard, pending_scoreboard, takeaways, videos, feed_stats, coverage_ended, ended_at, started_at, last_ingest_at, last_error, llm_calls_today, items_today';
+export const META_COLS = 'scoreboard, pending_scoreboard, takeaways, videos, feed_stats, projections, auto_publish, coverage_ended, ended_at, started_at, last_ingest_at, last_error, llm_calls_today, items_today';
 
 export function toMeta(r: MetaRow): ElectionMeta {
   return {
     scoreboard: r.scoreboard ?? {}, pendingScoreboard: r.pending_scoreboard ?? {},
-    takeaways: Array.isArray(r.takeaways) ? r.takeaways : [], videos: Array.isArray(r.videos) ? r.videos : [], feedStats: Array.isArray(r.feed_stats) ? r.feed_stats : [], coverageEnded: r.coverage_ended,
+    takeaways: Array.isArray(r.takeaways) ? r.takeaways : [], videos: Array.isArray(r.videos) ? r.videos : [], feedStats: Array.isArray(r.feed_stats) ? r.feed_stats : [], projections: Array.isArray(r.projections) ? r.projections : [], autoPublish: r.auto_publish !== false, coverageEnded: r.coverage_ended,
     endedAt: r.ended_at, startedAt: r.started_at, lastIngestAt: r.last_ingest_at, lastError: r.last_error,
     llmCallsToday: r.llm_calls_today, itemsToday: r.items_today,
   };
@@ -53,7 +53,7 @@ const loadMeta = unstable_cache(
     const { data } = await getServiceClient().from('election_meta').select(META_COLS).eq('id', 1).maybeSingle();
     return data ? toMeta(data as MetaRow) : null;
   },
-  ['election-meta-v3'], { tags: [ELECTION_TAG], revalidate: 300 },
+  ['election-meta-v4'], { tags: [ELECTION_TAG], revalidate: 300 },
 );
 
 export const getUpdates = cache(loadUpdates);

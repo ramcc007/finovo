@@ -104,10 +104,50 @@ export default function ElectionAdmin() {
       </section>
 
       <section className={card}>
-        <h2 className="mb-1 font-bold text-[#0D1117]">Seat counts</h2>
-        <p className="mb-4 text-sm text-[#4A5568]">Counts read from the news are held here until you approve them. Nothing reaches the page automatically.</p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-bold text-[#0D1117]">Seat counts and projections</h2>
+            <p className="mt-1 text-sm text-[#4A5568]">Filled in automatically. Only reports from top outlets (AP, Reuters, NPR, BBC, CNN, NBC, CBS, ABC, Politico, The Hill, NYT, Washington Post, Bloomberg and similar) can change them, and counts that look wrong are held back. Nothing here needs approval.</p>
+          </div>
+          <label className="inline-flex shrink-0 items-center gap-2 text-sm font-semibold text-[#0D1117]">
+            <input type="checkbox" checked={meta.autoPublish} disabled={busy} onChange={e => void act({ action: 'set_auto', enabled: e.target.checked })} className="h-4 w-4 accent-[#F97316]" />
+            Automatic
+          </label>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          {CHAMBERS.map(c => {
+            const e = meta.scoreboard[c.id];
+            return (
+              <div key={c.id} className="rounded-lg bg-[#F4F6FA] p-3">
+                <div className="text-xs font-semibold text-[#8A96A8]">{c.label}</div>
+                {e ? (
+                  <>
+                    <div className="mt-1 text-sm font-bold text-[#0D1117]">D {e.d} · R {e.r} · Other {e.other ?? '-'} · Not called {e.uncalled ?? '-'}</div>
+                    <div className="text-[11px] text-[#8A96A8]">as per {e.source}, {fmt(e.updatedAt ?? null)}</div>
+                  </>
+                ) : <div className="mt-1 text-sm text-[#8A96A8]">Waiting for a top source to report counts</div>}
+              </div>
+            );
+          })}
+        </div>
+
+        <h3 className="mb-2 mt-5 text-sm font-bold text-[#0D1117]">Projections on the page ({meta.projections.length})</h3>
+        {meta.projections.length === 0 ? <p className="text-sm text-[#8A96A8]">None yet. Calls and forecasts appear as soon as a top source reports one.</p> : (
+          <ul className="divide-y divide-[#F1F3F9] text-sm">
+            {meta.projections.map(p => (
+              <li key={`${p.chamber}-${p.kind}-${p.by}`} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <span className="text-[#0D1117]">
+                  <strong>{p.chamber}</strong>: {p.kind === 'called' ? `called for ${p.party === 'R' ? 'Republicans' : 'Democrats'}` : `${p.party === 'R' ? 'Republicans' : 'Democrats'} ${p.probability}% to win`} <span className="text-[#8A96A8]">by {p.by}, via {p.source}, {fmt(p.at)}</span>
+                </span>
+                <button disabled={busy} onClick={() => void act({ action: 'remove_projection', chamber: p.chamber, kind: p.kind, by: p.by })} className="h-8 rounded-md border border-[#E5E7EB] px-3 text-xs font-semibold hover:border-red-300 hover:text-red-600 disabled:opacity-60">Remove</button>
+              </li>
+            ))}
+          </ul>
+        )}
+
         {pendingKeys.length > 0 && (
-          <div className="mb-5 space-y-2 rounded-lg border border-[#FED7AA] bg-[#FFF7ED] p-4">
+          <div className="mt-5 space-y-2 rounded-lg border border-[#FED7AA] bg-[#FFF7ED] p-4"><p className="text-xs font-semibold text-[#9A3412]">Held back because the numbers looked wrong. Approve only if they are right.</p>
             {pendingKeys.map(c => {
               const p = meta.pendingScoreboard[c.id]!;
               return (
@@ -124,6 +164,9 @@ export default function ElectionAdmin() {
             })}
           </div>
         )}
+        <details className="mt-5">
+          <summary className="cursor-pointer text-sm font-semibold text-[#4A5568]">Override a count by hand</summary>
+          <div className="mt-3">
         <div className="space-y-3">
           {CHAMBERS.map(c => {
             const b = board[c.id] ?? { d: '', r: '', other: '', uncalled: '', source: '' };
@@ -144,6 +187,8 @@ export default function ElectionAdmin() {
             );
           })}
         </div>
+          </div>
+        </details>
       </section>
 
       <section className={card}>

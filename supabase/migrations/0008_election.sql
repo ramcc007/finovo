@@ -55,3 +55,7 @@ alter table public.election_meta add column if not exists videos jsonb not null 
 
 -- 0010: per-feed health from the latest run (shown in the admin page).
 alter table public.election_meta add column if not exists feed_stats jsonb not null default '[]'::jsonb;
+
+-- 0011: projections and forecasts picked up from top sources, and the auto-publish switch for seat counts.
+alter table public.election_meta add column if not exists projections jsonb not null default '[]'::jsonb;
+alter table public.election_meta add column if not exists auto_publish boolean not null default true;

@@ -1,5 +1,5 @@
 import PtTime from './PtTime';
-import type { Chamber, ScoreEntry, Scoreboard } from '@/lib/election/types';
+import type { Chamber, Projection, ScoreEntry, Scoreboard } from '@/lib/election/types';
 
 const ROWS: { id: Chamber; label: string; sub: string }[] = [
   { id: 'senate', label: 'Senate', sub: '100 seats' },
@@ -25,7 +25,7 @@ function Bar({ e }: { e: ScoreEntry }) {
 }
 
 /** Seat counts as three large cards, for the dark page header. Values come only from admin-approved numbers. */
-export default function ScoreCards({ board }: { board: Scoreboard }) {
+export default function ScoreCards({ board, projections = [] }: { board: Scoreboard; projections?: Projection[] }) {
   const sources = [...new Set(ROWS.map(r => board[r.id]?.source).filter(Boolean))];
   const updated = ROWS.map(r => board[r.id]?.updatedAt).filter(Boolean).sort().at(-1);
   return (
@@ -34,6 +34,7 @@ export default function ScoreCards({ board }: { board: Scoreboard }) {
       <div className="grid gap-3 sm:grid-cols-3">
         {ROWS.map(r => {
           const e = board[r.id];
+          const call = projections.filter(p => p.chamber === r.id && p.kind === 'called').sort((a, b) => b.at.localeCompare(a.at))[0];
           return (
             <div key={r.id} className="rounded-2xl bg-white/[0.06] p-4 ring-1 ring-white/10 backdrop-blur">
               <div className="flex items-baseline justify-between">
@@ -48,11 +49,13 @@ export default function ScoreCards({ board }: { board: Scoreboard }) {
                   </div>
                   <Bar e={e} />
                   <div className="mt-2 flex justify-between text-[11px] text-white/50"><span>Others {n(e.other)}</span><span>Not called {n(e.uncalled)}</span></div>
+                  {call && <p className="mt-2 text-xs font-semibold text-white/90">Called for <span className={call.party === 'R' ? 'text-[#F87171]' : 'text-[#60A5FA]'}>{call.party === 'R' ? 'Republicans' : 'Democrats'}</span> by {call.by}</p>}
                 </>
               ) : (
                 <>
-                  <div className="mt-2 text-sm text-white/50">Awaiting confirmed counts</div>
+                  <div className="mt-2 text-sm text-white/50">Counts appear here as top news sources report them</div>
                   <div className="mt-3 h-2.5 rounded-full bg-white/10" />
+                  {call && <p className="mt-2 text-xs font-semibold text-white/90">Called for <span className={call.party === 'R' ? 'text-[#F87171]' : 'text-[#60A5FA]'}>{call.party === 'R' ? 'Republicans' : 'Democrats'}</span> by {call.by}</p>}
                 </>
               )}
             </div>

@@ -4,12 +4,12 @@ import { isGovUrl } from '@/lib/blogSanitize';
 import { pingIndexNow, pingWebSub } from '@/lib/indexNow';
 import {
   AI_MODEL, DEFAULT_END_DATE, FEEDS, MAX_AI_CALLS_PER_DAY, MAX_ITEMS_PER_RUN, MAX_ITEM_AGE_HOURS,
-  MIN_IMPORTANCE_TO_PUBLISH, RELEVANCE_RE,
+  MIN_IMPORTANCE_TO_PUBLISH, RELEVANCE_RE, TOP_SOURCE_RE, CHAMBER_MAX,
 } from './config';
 import { ELECTION_TAG, META_COLS, toMeta } from './db';
 import { fetchFeed, jaccard, titleNorm, titleTokens, urlHash, type RawItem } from './rss';
 import { SYSTEM_PROMPT, USER_RULES, cleanText, hasBanned } from './style';
-import { PAGE_PATH, type Chamber, type Scoreboard, type SourceLink, type Tag } from './types';
+import { PAGE_PATH, type Chamber, type Projection, type ScoreEntry, type Scoreboard, type SourceLink, type Tag } from './types';
 
 const TAGS: Tag[] = ['senate', 'house', 'governor', 'markets', 'other'];
 const CHAMBERS: Chamber[] = ['senate', 'house', 'governors'];
@@ -19,6 +19,7 @@ interface Group { id: string; items: RawItem[] }
 interface AiItem {
   id: string; importance: number; tag: string; headline: string; summary: string; cluster_key: string;
   market_impact: string | null; market_regions: string[]; seats: { chamber: string; d: number; r: number; other: number | null; uncalled: number | null } | null;
+  projection: { chamber: string; kind: string; party: string | null; probability: number | null; by: string } | null;
 }
 
 export interface IngestResult {
@@ -174,7 +175,10 @@ export async function runIngest(): Promise<IngestResult> {
   const created: { id: string; importance: number }[] = [];
   let merged = 0;
   let sawFive = false;
-  const pending: Scoreboard = {};
+  const pending: Scoreboard = { ...meta.pendingScoreboard };
+  const board: Scoreboard = { ...meta.scoreboard };
+  const projections: Projection[] = [...meta.projections];
+  let boardChanged = false, projectionsChanged = false;
 
   for (const g of batch) {
     const a = byId.get(g.id);
@@ -220,12 +224,38 @@ export async function runIngest(): Promise<IngestResult> {
       if (row) { created.push({ id: row.id as string, importance }); if (importance === 5) sawFive = true; itemsToday++; }
     }
 
-    const s = a.seats;
-    if (s && CHAMBERS.includes(s.chamber as Chamber) && int(s.d) !== null && int(s.r) !== null) {
-      pending[s.chamber as Chamber] = {
-        d: int(s.d), r: int(s.r), other: int(s.other), uncalled: int(s.uncalled),
-        source: sources[0].name, updatedAt: new Date().toISOString(),
-      };
+    // Seat counts and projections from top outlets are applied automatically, after sanity checks.
+    const top = TOP_SOURCE_RE.test(sources[0].name);
+    const at = new Date(Math.min(Date.parse(g.items[0].publishedAt), Date.now())).toISOString();
+    const st = a.seats;
+    if (top && st && CHAMBERS.includes(st.chamber as Chamber) && int(st.d) !== null && int(st.r) !== null) {
+      const c = st.chamber as Chamber;
+      const entry: ScoreEntry = { d: int(st.d), r: int(st.r), other: int(st.other), uncalled: int(st.uncalled), source: sources[0].name, updatedAt: at };
+      const prev = board[c];
+      const called = (entry.d ?? 0) + (entry.r ?? 0) + (entry.other ?? 0);
+      const prevCalled = prev ? (prev.d ?? 0) + (prev.r ?? 0) + (prev.other ?? 0) : -1;
+      const inRange = called <= CHAMBER_MAX[c] && (entry.uncalled ?? 0) <= CHAMBER_MAX[c];
+      const newer = !prev?.updatedAt || Date.parse(at) >= Date.parse(prev.updatedAt);
+      if (inRange && called >= prevCalled && newer) {
+        if (meta.autoPublish) board[c] = entry; else pending[c] = entry;
+        boardChanged = true;
+      } else if (!inRange) {
+        pending[c] = entry; // implausible numbers wait for a person to look at them
+      }
+    }
+    const pj = a.projection;
+    if (top && pj && CHAMBERS.includes(pj.chamber as Chamber) && (pj.kind === 'called' || pj.kind === 'forecast') && (pj.party === 'D' || pj.party === 'R')) {
+      const prob = typeof pj.probability === 'number' && pj.probability >= 0 && pj.probability <= 100 ? Math.round(pj.probability) : null;
+      if (pj.kind === 'called' || prob !== null) {
+        const p: Projection = {
+          chamber: pj.chamber as Chamber, kind: pj.kind, party: pj.party, probability: pj.kind === 'forecast' ? prob : null,
+          by: cleanText(String(pj.by || sources[0].name)).slice(0, 60), source: sources[0].name, url: sources[0].url, at,
+        };
+        const k = (x: Projection) => `${x.chamber}|${x.kind}|${x.by.toLowerCase()}`;
+        const idx = projections.findIndex(x => k(x) === k(p));
+        if (idx === -1) { projections.push(p); projectionsChanged = true; }
+        else if (Date.parse(p.at) >= Date.parse(projections[idx].at)) { projections[idx] = p; projectionsChanged = true; }
+      }
     }
   }
   await markSeen(toSeen);
@@ -248,11 +278,16 @@ export async function runIngest(): Promise<IngestResult> {
 
   const patch: Record<string, unknown> = { last_error: parseNote };
   if (takeaways) patch.takeaways = takeaways;
-  if (Object.keys(pending).length) patch.pending_scoreboard = { ...meta.pendingScoreboard, ...pending };
+  if (boardChanged) patch.scoreboard = board;
+  if (projectionsChanged) {
+    const cutoff = Date.now() - 72 * 3_600_000;
+    patch.projections = projections.filter(x => Date.parse(x.at) >= cutoff).sort((a, b) => b.at.localeCompare(a.at)).slice(0, 12);
+  }
+  if (JSON.stringify(pending) !== JSON.stringify(meta.pendingScoreboard)) patch.pending_scoreboard = pending;
   await finish(patch);
 
   revalidateTag(ELECTION_TAG, { expire: 0 }); // keeps the "Checked" time on the page accurate
-  if (created.length || merged || takeaways) {
+  if (created.length || merged || takeaways || boardChanged || projectionsChanged) {
     await pingWebSub([`${PAGE_PATH}/feed.xml`, `${PAGE_PATH}/feed.json`]);
     const last = (metaRow as { last_indexnow_at: string | null }).last_indexnow_at;
     if (created.length > 0 && (!last || Date.now() - Date.parse(last) > 600_000)) {

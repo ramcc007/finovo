@@ -93,6 +93,17 @@ export async function PATCH(req: NextRequest) {
       await db.from('election_meta').update({ takeaways: list }).eq('id', 1);
       return done();
     }
+    case 'set_auto': {
+      await db.from('election_meta').update({ auto_publish: body.enabled !== false }).eq('id', 1);
+      return done();
+    }
+    case 'remove_projection': {
+      const { data } = await db.from('election_meta').select('projections').eq('id', 1).single();
+      const list = Array.isArray(data?.projections) ? data.projections as { chamber: string; kind: string; by: string }[] : [];
+      const next = list.filter(p => !(p.chamber === body.chamber && p.kind === body.kind && p.by === body.by));
+      await db.from('election_meta').update({ projections: next }).eq('id', 1);
+      return done();
+    }
     case 'set_videos': {
       const v = parseVideoLines(body.lines);
       if (!v.ok) return NextResponse.json({ error: v.error }, { status: 400 });

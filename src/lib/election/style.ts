@@ -29,9 +29,10 @@ export const USER_RULES = `Importance: 5 = control of a chamber is projected or 
 Tag is one of: senate, house, governor, markets, other.
 "market_impact": one plain sentence on how the news bears on US, European or Indian markets, ONLY if importance is 4 or 5 and the link is real and direct and stated in the supplied text; otherwise null. Never speculative. "market_regions" lists the regions it concerns, from "US", "EU", "India"; empty when market_impact is null.
 "cluster_key": a short lowercase slug naming the story (for example "senate-control-called"). If the item is about the same story as one in "recent", reuse that exact cluster_key.
-"seats": only when the text states current seat counts for a chamber: {"chamber":"senate"|"house"|"governors","d":int,"r":int,"other":int|null,"uncalled":int|null}; otherwise null.
+"seats": only when the text states how many seats each party has won or holds so far in a chamber (not how many it needs): {"chamber":"senate"|"house"|"governors","d":int,"r":int,"other":int|null,"uncalled":int|null}; otherwise null.
+"projection": only when the text reports a race call for control of a chamber by a named organisation ("called"), or a forecast probability from a named model or organisation ("forecast"): {"chamber":"senate"|"house"|"governors","kind":"called"|"forecast","party":"D"|"R","probability":int 0-100 or null,"by":"the organisation or model that made it"}; otherwise null. Never make a projection of your own.
 Return a JSON array, one object per item, in this shape:
-[{"id":"<id>","importance":3,"tag":"house","headline":"...","summary":"...","cluster_key":"...","market_impact":null,"market_regions":[],"seats":null}]`;
+[{"id":"<id>","importance":3,"tag":"house","headline":"...","summary":"...","cluster_key":"...","market_impact":null,"market_regions":[],"seats":null,"projection":null}]`;
 
 const CONTRACTIONS: [RegExp, string][] = [
   [/\bcan't\b/gi, 'cannot'], [/\bwon't\b/gi, 'will not'], [/\bdon't\b/gi, 'do not'], [/\bdoesn't\b/gi, 'does not'],

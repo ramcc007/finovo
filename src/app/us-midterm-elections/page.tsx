@@ -9,6 +9,7 @@ import LiveTimeline from '@/components/election/LiveTimeline';
 import PtTime from '@/components/election/PtTime';
 import ScoreCards from '@/components/election/ScoreCards';
 import YouTubeLite from '@/components/election/YouTubeLite';
+import Projections from '@/components/election/Projections';
 import LiveRefresh from '@/components/election/LiveRefresh';
 import BookmarkButton from '@/components/election/BookmarkButton';
 import { getElectionData } from '@/lib/election/db';
@@ -120,13 +121,14 @@ export default async function ElectionPage({ searchParams }: { searchParams: Pro
           </h1>
           <p className="mt-4 max-w-3xl text-base leading-relaxed text-white/70 md:text-lg">{INTRO}</p>
 
-          <div className="mt-7"><ScoreCards board={meta?.scoreboard ?? {}} /></div>
+          <div className="mt-7"><ScoreCards board={meta?.scoreboard ?? {}} projections={meta?.projections ?? []} /></div>
 
           <div className="mt-6 flex flex-wrap items-start gap-x-6 gap-y-4">
             <ShareBar compact url={PAGE_URL} title={PAGE_TITLE} />
             <BookmarkButton dark url={PAGE_URL} title={PAGE_TITLE} />
           </div>
           <nav aria-label="On this page" className="mt-5 flex flex-wrap gap-x-5 gap-y-1 text-sm font-semibold text-white/70">
+            {(meta?.projections.length ?? 0) > 0 && <a href="#proj-h" className="inline-flex min-h-8 items-center hover:text-white">Projections</a>}
             <a href="#timeline" className="inline-flex min-h-8 items-center hover:text-white">Timeline</a>
             {(meta?.videos.length ?? 0) > 0 && <a href="#watch" className="inline-flex min-h-8 items-center hover:text-white">Watch live</a>}
             <a href="#faq" className="inline-flex min-h-8 items-center hover:text-white">FAQ</a>
@@ -148,6 +150,8 @@ export default async function ElectionPage({ searchParams }: { searchParams: Pro
                 </div>
               </section>
             )}
+
+            <Projections items={meta?.projections ?? []} />
 
             <section id="timeline" aria-labelledby="timeline-h" className="scroll-mt-24">
               <h2 id="timeline-h" className="mb-5 text-2xl font-extrabold tracking-tight text-[#0D1117]">Timeline of updates</h2>

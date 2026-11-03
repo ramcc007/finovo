@@ -57,3 +57,10 @@ export const DEFAULT_END_DATE = '2026-11-25';
 // Never credited: crypto outlets, brokers, trading apps and similar. Matched against the publisher name and domain.
 export const BLOCKED_SOURCE_RE =
   /coin|crypto|bitcoin|blockchain|token|zerodha|groww|upstox|angel one|5paisa|robinhood|webull|moomoo|etoro|tipranks|seeking ?alpha|benzinga|stocktwits|substack|medium\.com|reddit/i;
+
+// Only these outlets may set seat counts and projections automatically. Everything else can still
+// become a timeline update, but never changes the numbers.
+export const TOP_SOURCE_RE =
+  /\b(AP|Associated Press|Reuters|NPR|BBC|CNN|NBC|CBS|ABC|PBS|Politico|The Hill|Guardian|New York Times|NYT|Washington Post|Bloomberg|Financial Times|FT|CNBC|Wall Street Journal|WSJ|Axios|Sky News|Al Jazeera|DW|France 24|MarketWatch|Decision Desk)\b/i;
+
+export const CHAMBER_MAX = { senate: 100, house: 435, governors: 50 } as const;

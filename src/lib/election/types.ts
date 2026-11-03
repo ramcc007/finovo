@@ -37,6 +37,18 @@ export type Chamber = 'senate' | 'house' | 'governors';
 export interface ScoreEntry extends Tally { source?: string; updatedAt?: string }
 export type Scoreboard = Partial<Record<Chamber, ScoreEntry>>;
 
+/** A race call or a forecast reported by a named organisation (not our own prediction). */
+export interface Projection {
+  chamber: Chamber;
+  kind: 'called' | 'forecast';
+  party: 'D' | 'R' | null;
+  probability: number | null; // forecasts only, 0 to 100
+  by: string; // who made the call or forecast
+  source: string; // outlet that reported it
+  url: string;
+  at: string; // ISO time of the report
+}
+
 export interface FeedStat { name: string; status: string; total: number; relevant: number }
 
 export interface ElectionMeta {
@@ -45,6 +57,8 @@ export interface ElectionMeta {
   takeaways: string[];
   videos: LiveVideo[];
   feedStats: FeedStat[];
+  projections: Projection[];
+  autoPublish: boolean;
   coverageEnded: boolean;
   endedAt: string | null;
   startedAt: string;
