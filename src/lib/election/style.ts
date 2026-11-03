@@ -23,7 +23,7 @@ NEUTRALITY AND COMPLIANCE
 - Never tell the reader what to do. No buy, sell or hold calls, no target prices, no return projections, no rankings of named stocks or funds.
 - Scripwise is not a registered investment adviser.
 
-For each item return: a plain headline (at most 14 words), a summary of one or two sentences, an importance score and the other fields below. Return ONLY valid JSON, no markdown.`;
+For each item return: a plain headline (at most 14 words), a summary of one or two sentences, an importance score and the other fields below. Return ONLY valid JSON, no markdown. Inside text fields never use double quotation marks; use single quotation marks instead.`;
 
 export const USER_RULES = `Importance: 5 = control of a chamber is projected or called, or final overall results; 4 = a major race is called, or a market move is directly linked to the election; 3 = a notable development such as turnout, polls closing, a key race or a result in a state; 2 = commentary, analysis or minor news; 1 = not about the midterm elections.
 Tag is one of: senate, house, governor, markets, other.

@@ -39,10 +39,29 @@ async function callClaude(system: string, user: string, maxTokens: number): Prom
   return (d.content ?? []).filter(c => c.type === 'text').map(c => c.text ?? '').join('');
 }
 
+/** Escapes stray double quotes inside JSON strings (a quote only closes a string if a , } ] or : follows). */
+function repairJson(raw: string): string {
+  let out = '';
+  let inStr = false;
+  for (let i = 0; i < raw.length; i++) {
+    const c = raw[i];
+    if (c === '\\' && inStr) { out += c + (raw[i + 1] ?? ''); i++; continue; }
+    if (c === '"') {
+      if (!inStr) { inStr = true; out += c; continue; }
+      const next = raw.slice(i + 1).match(/^\s*(.)/)?.[1];
+      if (next === undefined || ',}]:'.includes(next)) { inStr = false; out += c; } else out += '\\"';
+      continue;
+    }
+    out += c === '\n' && inStr ? ' ' : c;
+  }
+  return out;
+}
+
 function parseJson<T>(text: string): T {
   const start = text.search(/[[{]/);
   const end = Math.max(text.lastIndexOf(']'), text.lastIndexOf('}'));
-  return JSON.parse(text.slice(start, end + 1)) as T;
+  const body = text.slice(start, end + 1);
+  try { return JSON.parse(body) as T; } catch { return JSON.parse(repairJson(body)) as T; }
 }
 
 const int = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 1000 ? v : null);
