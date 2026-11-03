@@ -4,12 +4,13 @@ import { headers } from 'next/headers';
 import ShareBar from '@/components/blog/ShareBar';
 import ContentDisclaimer from '@/components/blog/ContentDisclaimer';
 import { ld } from '@/components/blog/jsonLd';
-import LiveTimeline, { anchorOf } from '@/components/election/LiveTimeline';
+import LiveTimeline from '@/components/election/LiveTimeline';
 import LocalTime from '@/components/election/LocalTime';
 import Scoreboard from '@/components/election/Scoreboard';
 import { getElectionData } from '@/lib/election/db';
 import { BASE, FAQ, HOW_IT_WORKS, INTRO, PAGE_DESCRIPTION, PAGE_TITLE, PAGE_URL } from '@/lib/election/content';
 import { pageTitle } from '@/lib/liveLinks';
+import { anchorOf } from '@/lib/election/types';
 
 const STEP = 50;
 

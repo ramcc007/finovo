@@ -1,7 +1,6 @@
 import { getElectionData } from '@/lib/election/db';
-import { anchorOf } from '@/components/election/LiveTimeline';
 import { PAGE_DESCRIPTION, PAGE_TITLE, PAGE_URL } from '@/lib/election/content';
-import { TAG_LABEL } from '@/lib/election/types';
+import { TAG_LABEL, anchorOf } from '@/lib/election/types';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 

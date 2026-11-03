@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Link2, Star } from 'lucide-react';
 import LocalTime from './LocalTime';
-import { TAG_LABEL, type ElectionUpdate } from '@/lib/election/types';
+import { TAG_LABEL, anchorOf, type ElectionUpdate } from '@/lib/election/types';
 
 type Filter = 'all' | 'key' | 'senate' | 'house' | 'governor' | 'markets';
 const FILTERS: { id: Filter; label: string }[] = [
@@ -13,8 +13,6 @@ const FILTERS: { id: Filter; label: string }[] = [
 
 const matches = (u: ElectionUpdate, f: Filter) =>
   f === 'all' ? true : f === 'key' ? u.importance === 5 : f === 'markets' ? u.tag === 'markets' || !!u.marketImpact : u.tag === f;
-
-export const anchorOf = (id: string) => `u-${id.slice(0, 8)}`;
 
 export default function LiveTimeline({ updates }: { updates: ElectionUpdate[] }) {
   const [filter, setFilter] = useState<Filter>('all');

@@ -37,3 +37,6 @@ export interface ElectionMeta {
 
 export const PAGE_PATH = '/us-midterm-elections';
 export const TAG_LABEL: Record<Tag, string> = { senate: 'Senate', house: 'House', governor: 'Governors', markets: 'Markets', other: 'Other' };
+
+/** Stable in-page anchor for one update (used by links, feeds and structured data). */
+export const anchorOf = (id: string) => `u-${id.slice(0, 8)}`;
