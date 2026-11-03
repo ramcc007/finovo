@@ -1,13 +1,25 @@
 name: Election updates
 
-# Collects US midterm election news every 15 minutes and asks the website to
-# rewrite and publish it. Free on GitHub Actions; Vercel's free plan only
-# allows cron once a day. Needs repository secrets: CRON_SECRET and SITE_URL.
+# Keeps the US midterm elections page up to date.
+#
+# GitHub runs frequent cron schedules very irregularly (often only a few times
+# a day), which is too slow for a live page. So one job stays running and calls
+# the site's protected ingest endpoint every 15 minutes itself. Shortly before
+# GitHub's 6 hour job limit it starts its own replacement; the hourly cron below
+# only restarts the chain if it ever breaks. Public repository, so no minutes
+# are charged.
+#
+# Needs repository secrets: CRON_SECRET and SITE_URL.
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '17 * * * *'
   workflow_dispatch:
 
+permissions:
+  actions: write
+  contents: read
+
+# One running + one waiting job at most; a new run never cancels the active one.
 concurrency:
   group: election-ingest
   cancel-in-progress: false
@@ -15,21 +27,33 @@ concurrency:
 jobs:
   ingest:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
-    # Safety stop. The website also stops by itself after ELECTION_END_DATE.
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.schedule != '' }}
+    timeout-minutes: 345
     steps:
-      - name: Call the ingest endpoint
+      - name: Check every 15 minutes
         env:
           SITE_URL: ${{ secrets.SITE_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           if [ -z "${SITE_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
             echo "SITE_URL and CRON_SECRET repository secrets are required"; exit 1
           fi
-          status=$(curl -sS -o response.json -w '%{http_code}' -X POST \
-            -H "Authorization: Bearer ${CRON_SECRET}" \
-            --max-time 120 "${SITE_URL%/}/api/election/ingest")
-          cat response.json; echo
-          [ "$status" = "200" ]
+          end=$(( $(date +%s) + 5*3600 + 20*60 ))
+          stop=0
+          while [ "$(date +%s)" -lt "$end" ]; do
+            status=$(curl -sS -o response.json -w '%{http_code}' -X POST \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              --max-time 120 "${SITE_URL%/}/api/election/ingest" || echo "000")
+            echo "$(date -u +%H:%M:%S) HTTP ${status}: $(head -c 300 response.json 2>/dev/null)"
+            if grep -q -E '"skipped":"(coverage ended|past the end date)"' response.json 2>/dev/null; then
+              echo "Coverage has ended. Stopping."; stop=1; break
+            fi
+            sleep 840
+          done
+          echo "stop=${stop}" >> "$GITHUB_ENV"
+
+      - name: Start the next run
+        if: ${{ env.stop != '1' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run election-ingest.yml --repo "${{ github.repository }}" --ref "${{ github.ref_name }}"
