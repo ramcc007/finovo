@@ -3,6 +3,7 @@ import { ArrowUpRight, Clock } from 'lucide-react';
 import { formatDate, type Post } from '@/lib/blog';
 import PostAdminActions from './PostAdminActions';
 import { categoryHref } from './categories';
+import { authorHref } from '@/lib/authors';
 
 // Text-only design: hierarchy comes from type, colour accents and spacing.
 
@@ -20,7 +21,7 @@ function ByLine({ post, dark }: { post: Post; dark?: boolean }) {
     <div className="flex items-center gap-2.5">
       <Initials name={post.author} dark={dark} />
       <div className={`text-xs leading-tight ${dark ? 'text-white/55' : 'text-[#8A96A8]'}`}>
-        <div className={`font-semibold ${dark ? 'text-white/90' : 'text-[#0D1117]'}`}>{post.author}</div>
+        <Link href={authorHref(post.author)} className={`font-semibold hover:underline ${dark ? 'text-white/90' : 'text-[#0D1117]'}`}>{post.author}</Link>
         <div className="flex items-center gap-1.5">
           {post.publishedAt && <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>}
           <span aria-hidden>·</span>

@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { getPublishedPost, getPublishedPosts } from '@/lib/blogDb';
+import { getAuthorByName } from '@/lib/authorsDb';
+import { authorHref, initials } from '@/lib/authors';
 import { PostCard } from '@/components/blog/PostCard';
 import { formatDate, modifiedAt, relatedPosts, stripHtml } from '@/lib/blog';
 import Inline from '@/components/blog/Inline';
@@ -52,6 +54,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const post = await getPublishedPost((await params).slug);
   if (!post) notFound();
+  const author = await getAuthorByName(post.author);
+  const authorUrl = `${BASE}${authorHref(post.author)}`;
   const live = await liveInternalPaths();
   const terms = await getPublishedTerms();
   const aids = enhanceContent(unlinkNotLive(post.contentHtml, live), {
@@ -74,7 +78,9 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       dateCreated: post.createdAt,
       ...(post.sources.length ? { citation: post.sources.map(s => ({ '@type': 'CreativeWork', name: s.name, url: s.url })) } : {}),
       dateModified: modifiedAt(post.publishedAt, post.updatedAt),
-      author: { '@type': 'Organization', name: post.author },
+      author: author
+        ? { '@type': 'Person', '@id': `${authorUrl}#person`, name: author.name, url: authorUrl, ...(author.role ? { jobTitle: author.role } : {}), ...(author.photoUrl ? { image: author.photoUrl } : {}) }
+        : { '@type': 'Organization', name: post.author },
       publisher: { '@type': 'Organization', name: 'Scripwise', url: BASE },
       articleSection: post.category,
       keywords: post.tags.join(', '),
@@ -120,11 +126,15 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           <Link href={categoryHref(post.category)} className="inline-flex min-h-11 items-center rounded-full bg-[#F97316]/15 px-4 text-xs font-semibold uppercase tracking-wide text-[#FB923C] hover:bg-[#F97316]/25">{post.category}</Link>
           <h1 className="mt-4 text-3xl font-bold leading-tight text-white md:text-5xl">{post.title}</h1>
           <div className="mt-6 flex items-center gap-3 text-sm text-white/60">
-            <span aria-hidden className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#FB923C] to-[#EA580C] text-sm font-bold text-white">
-              {post.author.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
-            </span>
+            {author?.photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={author.photoUrl} alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-full object-cover ring-2 ring-white/15" />
+            ) : (
+              <span aria-hidden className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#FB923C] to-[#EA580C] text-sm font-bold text-white">{initials(post.author)}</span>
+            )}
             <div className="leading-tight">
-              <div className="font-semibold text-white">{post.author}</div>
+              <Link href={authorHref(post.author)} className="font-semibold text-white hover:underline">{post.author}</Link>
+              {author?.role && <span className="text-xs text-white/50"> · {author.role}</span>}
               <div className="text-xs">
                 {post.publishedAt && <>Published <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time> · </>}
                 {post.readingMinutes} min read

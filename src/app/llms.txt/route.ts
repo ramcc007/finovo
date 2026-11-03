@@ -1,5 +1,6 @@
 import { getPublishedPosts } from '@/lib/blogDb';
 import { getPublishedTerms } from '@/lib/glossaryDb';
+import { getAuthors } from '@/lib/authorsDb';
 
 const base = 'https://www.scripwise.co.in';
 
@@ -54,6 +55,11 @@ export async function GET() {
   const posts = await getPublishedPosts();
   if (posts.length > 0) {
     body = body.replace('## Legal', `### Latest articles\n\n${posts.map(p => `- [${p.title}](${base}/blog/${p.slug}): ${p.metaDescription || p.excerpt}`).join('\n')}\n\n## Legal`);
+  }
+
+  const authors = (await getAuthors()).filter(a => posts.some(p => p.author === a.name));
+  if (authors.length > 0) {
+    body = body.replace('## Legal', `### Authors\n\n${authors.map(a => `- [${a.name}](${base}/blog/author/${a.slug})${a.role ? `: ${a.role}` : ''}${a.beats.length ? ` (${a.beats.join(', ')})` : ''}`).join('\n')}\n\n## Legal`);
   }
 
   const terms = await getPublishedTerms();

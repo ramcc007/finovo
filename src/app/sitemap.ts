@@ -3,6 +3,7 @@ import { getPublishedPosts } from '@/lib/blogDb';
 import { slugify } from '@/lib/blog';
 import { getPublishedTerms } from '@/lib/glossaryDb';
 import { getElectionData } from '@/lib/election/db';
+import { getAuthors } from '@/lib/authorsDb';
 import { MIN_UPDATES_TO_INDEX, SECTION_IDS, SECTIONS, listRaces, racePath, sectionUpdates } from '@/lib/election/sections';
 
 const base = 'https://www.scripwise.co.in';
@@ -27,6 +28,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
     ...blogPosts.map(p => ({ url: `${base}/blog/${p.slug}`, changeFrequency: 'weekly' as const, priority: 0.7 })),
   ];
+
+  // Author pages, for authors with at least one live post.
+  const liveAuthors = new Set(blogPosts.map(p => p.author));
+  const authorRoutes: MetadataRoute.Sitemap = (await getAuthors()).filter(a => liveAuthors.has(a.name))
+    .map(a => ({ url: `${base}/blog/author/${a.slug}`, changeFrequency: 'weekly' as const, priority: 0.5 }));
 
   const glossaryTerms = await getPublishedTerms();
   const glossaryRoutes: MetadataRoute.Sitemap = [
@@ -62,5 +68,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .map(r => ({ url: `${base}${racePath(r.slug)}`, changeFrequency: 'hourly' as const, priority: 0.7 })),
   ];
 
-  return [...staticRoutes, ...electionRoutes, ...blogRoutes, ...glossaryRoutes];
+  return [...staticRoutes, ...electionRoutes, ...blogRoutes, ...authorRoutes, ...glossaryRoutes];
 }
