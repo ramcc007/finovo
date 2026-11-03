@@ -47,3 +47,8 @@ alter table public.election_seen_items enable row level security;
 alter table public.election_meta enable row level security;
 
 alter table public.election_meta add column if not exists last_indexnow_at timestamptz;
+
+-- 0009: optional media on an update (image or YouTube video, always credited) and
+-- the "Watch live" videos shown on the page.
+alter table public.election_updates add column if not exists media jsonb;
+alter table public.election_meta add column if not exists videos jsonb not null default '[]'::jsonb;

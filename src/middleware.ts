@@ -58,10 +58,12 @@ export function middleware(request: NextRequest) {
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://challenges.cloudflare.com https://www.googletagmanager.com https://checkout.razorpay.com`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https://www.google-analytics.com https://*.razorpay.com",
+    // upload.wikimedia.org, images.unsplash.com and images.pexels.com: credited free-licence pictures on the
+    // election page. i.ytimg.com: video thumbnails for the click-to-play YouTube player.
+    "img-src 'self' data: blob: https://www.google-analytics.com https://*.razorpay.com https://upload.wikimedia.org https://images.unsplash.com https://images.pexels.com https://i.ytimg.com",
     "font-src 'self' data:",
     "connect-src 'self' https://*.supabase.co https://challenges.cloudflare.com https://www.google-analytics.com https://www.googletagmanager.com https://region1.google-analytics.com https://*.razorpay.com https://lumberjack.razorpay.com",
-    "frame-src https://challenges.cloudflare.com https://api.razorpay.com https://checkout.razorpay.com",
+    "frame-src https://challenges.cloudflare.com https://api.razorpay.com https://checkout.razorpay.com https://www.youtube-nocookie.com",
     "worker-src 'self' blob:",
     "frame-ancestors 'none'",
     "base-uri 'self'",

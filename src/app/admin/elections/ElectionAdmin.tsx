@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ExternalLink, EyeOff, Eye, Loader2, Pencil, RefreshCw, Trash2 } from 'lucide-react';
 import { adminFetch } from '@/lib/adminFetch';
 import { PAGE_PATH, TAG_LABEL, type Chamber, type ElectionMeta, type ElectionUpdate, type ScoreEntry } from '@/lib/election/types';
+import { IMAGE_HOSTS, youtubeWatchUrl } from '@/lib/election/media';
 
 const CHAMBERS: { id: Chamber; label: string }[] = [{ id: 'senate', label: 'Senate' }, { id: 'house', label: 'House' }, { id: 'governors', label: 'Governors' }];
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : 'never');
@@ -18,7 +19,8 @@ export default function ElectionAdmin() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
-  const [draft, setDraft] = useState({ headline: '', summary: '', marketImpact: '' });
+  const [draft, setDraft] = useState({ headline: '', summary: '', marketImpact: '', mediaType: 'none', mediaUrl: '', mediaCredit: '', mediaCreditUrl: '', mediaAlt: '' });
+  const [videoLines, setVideoLines] = useState('');
   const [takeaways, setTakeaways] = useState('');
   const [board, setBoard] = useState<Record<string, { d: string; r: string; other: string; uncalled: string; source: string }>>({});
 
@@ -30,6 +32,7 @@ export default function ElectionAdmin() {
       if (!r.ok) throw new Error(d.error ?? 'Failed to load');
       setData(d); setError(null);
       setTakeaways((d.meta?.takeaways ?? []).join('\n'));
+      setVideoLines((d.meta?.videos ?? []).map((v: { kind: 'video' | 'live'; id: string; title: string; credit: string }) => `${youtubeWatchUrl(v.kind, v.id)} | ${v.title} | ${v.credit}`).join('\n'));
       const b: typeof board = {};
       for (const c of CHAMBERS) {
         const e: ScoreEntry | undefined = d.meta?.scoreboard?.[c.id];
@@ -129,6 +132,13 @@ export default function ElectionAdmin() {
       </section>
 
       <section className={card}>
+        <h2 className="mb-1 font-bold text-[#0D1117]">Watch live videos</h2>
+        <p className="mb-3 text-sm text-[#4A5568]">Up to three lines, each: <code>YouTube link | title | credit</code>. A YouTube channel link (youtube.com/channel/UC...) plays that channel&apos;s current live stream. Players load only when a reader presses play.</p>
+        <textarea value={videoLines} onChange={e => setVideoLines(e.target.value)} rows={3} placeholder="https://www.youtube.com/watch?v=... | Election night coverage | Channel name" className="w-full rounded-md border border-[#E5E7EB] p-2 font-mono text-xs focus:border-[#F97316] focus:outline-none" />
+        <button disabled={busy} onClick={() => void act({ action: 'set_videos', lines: videoLines.split('\n') })} className="mt-2 h-9 rounded-md bg-[#0D1117] px-4 text-sm font-semibold text-white disabled:opacity-60">Save videos</button>
+      </section>
+
+      <section className={card}>
         <h2 className="mb-1 font-bold text-[#0D1117]">Where things stand</h2>
         <p className="mb-3 text-sm text-[#4A5568]">One sentence per line, three to five lines. Rewritten automatically only when a top-importance update arrives.</p>
         <textarea value={takeaways} onChange={e => setTakeaways(e.target.value)} rows={5} className="w-full rounded-md border border-[#E5E7EB] p-2 text-sm focus:border-[#F97316] focus:outline-none" />
@@ -151,7 +161,7 @@ export default function ElectionAdmin() {
                     {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </label>
-                <button title="Edit" onClick={() => { setEditing(editing === u.id ? null : u.id); setDraft({ headline: u.headline, summary: u.summary, marketImpact: u.marketImpact ?? '' }); }} className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#E5E7EB]"><Pencil size={14} /></button>
+                <button title="Edit" onClick={() => { setEditing(editing === u.id ? null : u.id); setDraft({ headline: u.headline, summary: u.summary, marketImpact: u.marketImpact ?? '', mediaType: u.media?.type ?? 'none', mediaUrl: u.media?.url ?? '', mediaCredit: u.media?.credit ?? '', mediaCreditUrl: u.media?.creditUrl ?? '', mediaAlt: u.media?.alt ?? '' }); }} className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#E5E7EB]"><Pencil size={14} /></button>
                 <button title={u.hidden ? 'Show on page' : 'Hide from page'} disabled={busy} onClick={() => void act({ action: 'update_item', id: u.id, hidden: !u.hidden })} className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#E5E7EB]">{u.hidden ? <Eye size={14} /> : <EyeOff size={14} />}</button>
                 <button title="Delete" disabled={busy} onClick={() => { if (window.confirm('Delete this update permanently?')) void act({}, 'DELETE', `/api/admin/elections?id=${u.id}`); }} className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-200 text-red-600"><Trash2 size={14} /></button>
               </div>
@@ -160,7 +170,20 @@ export default function ElectionAdmin() {
                   <input value={draft.headline} onChange={e => setDraft({ ...draft, headline: e.target.value })} className={input} aria-label="Headline" />
                   <textarea value={draft.summary} onChange={e => setDraft({ ...draft, summary: e.target.value })} rows={3} className="w-full rounded-md border border-[#E5E7EB] p-2 text-sm" aria-label="Summary" />
                   <textarea value={draft.marketImpact} onChange={e => setDraft({ ...draft, marketImpact: e.target.value })} rows={2} placeholder="Market impact (leave empty to remove)" className="w-full rounded-md border border-[#E5E7EB] p-2 text-sm" aria-label="Market impact" />
-                  <button disabled={busy} onClick={async () => { if (await act({ action: 'update_item', id: u.id, ...draft })) setEditing(null); }} className="h-9 rounded-md bg-[#F97316] px-4 text-sm font-semibold text-white disabled:opacity-60">Save changes</button>
+                  <div className="rounded-md border border-[#E5E7EB] bg-white p-3">
+                    <div className="mb-2 text-xs font-semibold text-[#4A5568]">Picture or video (optional, always credited, never stored by Scripwise)</div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <select value={draft.mediaType} onChange={e => setDraft({ ...draft, mediaType: e.target.value })} className={input} aria-label="Media type">
+                        <option value="none">No media</option><option value="image">Picture</option><option value="video">YouTube video</option>
+                      </select>
+                      <input value={draft.mediaUrl} onChange={e => setDraft({ ...draft, mediaUrl: e.target.value })} placeholder={draft.mediaType === 'video' ? 'YouTube video link' : 'Image link'} className={input} aria-label="Media link" />
+                      <input value={draft.mediaCredit} onChange={e => setDraft({ ...draft, mediaCredit: e.target.value })} placeholder="Credit, for example: Name / Wikimedia Commons" className={input} aria-label="Credit" />
+                      <input value={draft.mediaCreditUrl} onChange={e => setDraft({ ...draft, mediaCreditUrl: e.target.value })} placeholder="Link to the credit or licence page (optional)" className={input} aria-label="Credit link" />
+                      {draft.mediaType === 'image' && <input value={draft.mediaAlt} onChange={e => setDraft({ ...draft, mediaAlt: e.target.value })} placeholder="Describe the picture (for screen readers)" className={`${input} sm:col-span-2`} aria-label="Picture description" />}
+                    </div>
+                    {draft.mediaType === 'image' && <p className="mt-2 text-[11px] text-[#8A96A8]">Pictures can come from: {IMAGE_HOSTS.join(', ')}.</p>}
+                  </div>
+                  <button disabled={busy} onClick={async () => { const { mediaType, mediaUrl, mediaCredit, mediaCreditUrl, mediaAlt, ...rest } = draft; if (await act({ action: 'update_item', id: u.id, ...rest, media: { type: mediaType, url: mediaUrl, credit: mediaCredit, creditUrl: mediaCreditUrl, alt: mediaAlt } })) setEditing(null); }} className="h-9 rounded-md bg-[#F97316] px-4 text-sm font-semibold text-white disabled:opacity-60">Save changes</button>
                 </div>
               )}
             </li>

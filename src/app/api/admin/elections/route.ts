@@ -6,6 +6,7 @@ import { pingIndexNow } from '@/lib/indexNow';
 import { ELECTION_TAG, META_COLS, UPDATE_COLS, toMeta, toUpdate, type UpdateRow } from '@/lib/election/db';
 import { MAX_AI_CALLS_PER_DAY } from '@/lib/election/config';
 import { cleanText } from '@/lib/election/style';
+import { parseMedia, parseVideoLines } from '@/lib/election/media';
 import { PAGE_PATH, type Chamber, type ScoreEntry, type Scoreboard } from '@/lib/election/types';
 
 const CHAMBERS: Chamber[] = ['senate', 'house', 'governors'];
@@ -47,6 +48,11 @@ export async function PATCH(req: NextRequest) {
         patch.market_impact = v || null;
         if (!v) patch.market_regions = [];
       }
+      if ('media' in body) {
+        const m = parseMedia(body.media);
+        if (!m.ok) return NextResponse.json({ error: m.error }, { status: 400 });
+        patch.media = m.media;
+      }
       if (Array.isArray(body.marketRegions)) patch.market_regions = body.marketRegions.filter(r => typeof r === 'string' && REGIONS.includes(r));
       const { error } = await db.from('election_updates').update(patch).eq('id', id);
       return error ? NextResponse.json({ error: 'Could not save.' }, { status: 500 }) : done();
@@ -85,6 +91,12 @@ export async function PATCH(req: NextRequest) {
     case 'set_takeaways': {
       const list = (Array.isArray(body.takeaways) ? body.takeaways : []).map(x => cleanText(String(x))).filter(Boolean).slice(0, 6);
       await db.from('election_meta').update({ takeaways: list }).eq('id', 1);
+      return done();
+    }
+    case 'set_videos': {
+      const v = parseVideoLines(body.lines);
+      if (!v.ok) return NextResponse.json({ error: v.error }, { status: 400 });
+      await db.from('election_meta').update({ videos: v.videos }).eq('id', 1);
       return done();
     }
     case 'set_coverage': {

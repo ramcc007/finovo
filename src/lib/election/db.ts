@@ -1,16 +1,16 @@
 import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
 import { getServiceClient } from '@/lib/supabase';
-import type { ElectionMeta, ElectionUpdate, Region, Scoreboard, SourceLink, Tag } from './types';
+import type { ElectionMeta, ElectionUpdate, LiveVideo, Media, Region, Scoreboard, SourceLink, Tag } from './types';
 
 export const ELECTION_TAG = 'election-updates';
 
 export interface UpdateRow {
   id: string; cluster_key: string; headline: string; summary: string; market_impact: string | null;
-  market_regions: string[] | null; tag: string; importance: number; sources: unknown;
+  market_regions: string[] | null; tag: string; importance: number; sources: unknown; media: Media | null;
   published_at: string; hidden: boolean;
 }
-export const UPDATE_COLS = 'id, cluster_key, headline, summary, market_impact, market_regions, tag, importance, sources, published_at, hidden';
+export const UPDATE_COLS = 'id, cluster_key, headline, summary, market_impact, market_regions, tag, importance, sources, media, published_at, hidden';
 
 export function toUpdate(r: UpdateRow): ElectionUpdate {
   return {
@@ -18,21 +18,21 @@ export function toUpdate(r: UpdateRow): ElectionUpdate {
     marketImpact: r.market_impact, marketRegions: (r.market_regions ?? []) as Region[],
     tag: r.tag as Tag, importance: r.importance,
     sources: (Array.isArray(r.sources) ? r.sources : []) as SourceLink[],
-    publishedAt: r.published_at, hidden: r.hidden,
+    media: r.media ?? null, publishedAt: r.published_at, hidden: r.hidden,
   };
 }
 
 interface MetaRow {
-  scoreboard: Scoreboard; pending_scoreboard: Scoreboard; takeaways: string[]; coverage_ended: boolean;
+  scoreboard: Scoreboard; pending_scoreboard: Scoreboard; takeaways: string[]; videos: LiveVideo[] | null; coverage_ended: boolean;
   ended_at: string | null; started_at: string; last_ingest_at: string | null; last_error: string | null;
   llm_calls_today: number; items_today: number;
 }
-export const META_COLS = 'scoreboard, pending_scoreboard, takeaways, coverage_ended, ended_at, started_at, last_ingest_at, last_error, llm_calls_today, items_today';
+export const META_COLS = 'scoreboard, pending_scoreboard, takeaways, videos, coverage_ended, ended_at, started_at, last_ingest_at, last_error, llm_calls_today, items_today';
 
 export function toMeta(r: MetaRow): ElectionMeta {
   return {
     scoreboard: r.scoreboard ?? {}, pendingScoreboard: r.pending_scoreboard ?? {},
-    takeaways: Array.isArray(r.takeaways) ? r.takeaways : [], coverageEnded: r.coverage_ended,
+    takeaways: Array.isArray(r.takeaways) ? r.takeaways : [], videos: Array.isArray(r.videos) ? r.videos : [], coverageEnded: r.coverage_ended,
     endedAt: r.ended_at, startedAt: r.started_at, lastIngestAt: r.last_ingest_at, lastError: r.last_error,
     llmCallsToday: r.llm_calls_today, itemsToday: r.items_today,
   };
@@ -45,7 +45,7 @@ const loadUpdates = unstable_cache(
       .order('published_at', { ascending: false }).limit(1000);
     return ((data ?? []) as UpdateRow[]).map(toUpdate);
   },
-  ['election-updates-v1'], { tags: [ELECTION_TAG], revalidate: 300 },
+  ['election-updates-v2'], { tags: [ELECTION_TAG], revalidate: 300 },
 );
 
 const loadMeta = unstable_cache(
@@ -53,7 +53,7 @@ const loadMeta = unstable_cache(
     const { data } = await getServiceClient().from('election_meta').select(META_COLS).eq('id', 1).maybeSingle();
     return data ? toMeta(data as MetaRow) : null;
   },
-  ['election-meta-v1'], { tags: [ELECTION_TAG], revalidate: 300 },
+  ['election-meta-v2'], { tags: [ELECTION_TAG], revalidate: 300 },
 );
 
 export const getUpdates = cache(loadUpdates);

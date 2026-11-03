@@ -3,6 +3,20 @@ export type Region = 'US' | 'EU' | 'India';
 
 export interface SourceLink { name: string; url: string }
 
+/** Optional picture or video on an update. Media is never hosted by Scripwise: images load from a
+ *  free-licence host and videos from YouTube's own player, and every item carries a credit. */
+export interface Media {
+  type: 'image' | 'video';
+  url: string; // image URL, or the YouTube link for a video
+  videoId?: string;
+  credit: string;
+  creditUrl?: string;
+  alt?: string;
+}
+
+/** A video in the "Watch live" strip. */
+export interface LiveVideo { kind: 'video' | 'live'; id: string; title: string; credit: string }
+
 export interface ElectionUpdate {
   id: string;
   clusterKey: string;
@@ -13,6 +27,7 @@ export interface ElectionUpdate {
   tag: Tag;
   importance: number;
   sources: SourceLink[];
+  media: Media | null;
   publishedAt: string;
   hidden: boolean;
 }
@@ -26,6 +41,7 @@ export interface ElectionMeta {
   scoreboard: Scoreboard;
   pendingScoreboard: Scoreboard;
   takeaways: string[];
+  videos: LiveVideo[];
   coverageEnded: boolean;
   endedAt: string | null;
   startedAt: string;
