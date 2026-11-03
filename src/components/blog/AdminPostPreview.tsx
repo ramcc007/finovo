@@ -9,6 +9,11 @@ import { adminFetch } from '@/lib/adminFetch';
 import { formatDate, type Post } from '@/lib/blog';
 import ContentDisclaimer from '@/components/blog/ContentDisclaimer';
 import Inline from '@/components/blog/Inline';
+import { ArticleToc } from '@/components/blog/ReadingAids';
+import GlossaryCards from '@/components/blog/GlossaryCards';
+import type { TocItem } from '@/lib/enhance';
+
+type Preview = Post & { toc?: TocItem[] };
 
 function istTime(iso: string): string {
   return new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' });
@@ -28,7 +33,7 @@ function NotFound() {
 export default function AdminPostPreview() {
   const slug = (usePathname() ?? '').split('/').filter(Boolean)[1] ?? '';
   const { user, loading } = useAuth();
-  const [fetched, setState] = useState<'checking' | 'none' | Post>('checking');
+  const [fetched, setState] = useState<'checking' | 'none' | Preview>('checking');
   const state = loading ? 'checking' : !user || !slug ? 'none' : fetched;
 
   useEffect(() => {
@@ -80,7 +85,9 @@ export default function AdminPostPreview() {
             </ul>
           </section>
         )}
-        <div className="blog-prose" dangerouslySetInnerHTML={{ __html: post.contentHtml }} />
+        <ArticleToc items={post.toc ?? []} />
+        <div id="article-body" className="blog-prose" dangerouslySetInnerHTML={{ __html: post.contentHtml }} />
+        <GlossaryCards targetId="article-body" />
         {post.faq.length > 0 && (
           <section className="mt-12">
             <h2 className="mb-4 text-2xl font-bold text-[#0D1117]">Frequently asked questions</h2>

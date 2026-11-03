@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
 import { getServiceClient } from '@/lib/supabaseServer';
-import { GLOSSARY_COLS, toTerm, type GlossaryRow } from '@/lib/glossaryDb';
+import { GLOSSARY_COLS, getPublishedTerms, toTerm, type GlossaryRow } from '@/lib/glossaryDb';
+import { liveInternalPaths, unlinkNotLive } from '@/lib/liveLinks';
+import { enhanceContent } from '@/lib/enhance';
 
 /** Admin-only: a glossary term by slug whatever its status or date, with its related terms that exist. */
 export async function GET(req: NextRequest) {
@@ -15,5 +17,12 @@ export async function GET(req: NextRequest) {
   const { data: rel } = term.related.length
     ? await client.from('glossary_terms').select('slug, term').in('slug', term.related)
     : { data: [] as { slug: string; term: string }[] };
-  return NextResponse.json({ data: { term, related: rel ?? [] } }, { headers: { 'cache-control': 'no-store' } });
+  // The same pipeline as the live page (see glossary/[slug]/page.tsx).
+  const [live, terms] = await Promise.all([liveInternalPaths(), getPublishedTerms()]);
+  const aids = enhanceContent(unlinkNotLive(term.contentHtml, live), {
+    glossary: terms.map(x => ({ slug: x.slug, term: x.term, definition: x.definition })),
+    selfSlug: term.slug,
+    maxTerms: 3,
+  });
+  return NextResponse.json({ data: { term, related: rel ?? [], aids } }, { headers: { 'cache-control': 'no-store' } });
 }

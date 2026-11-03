@@ -8,8 +8,9 @@ import { useAuth } from '@/lib/AuthProvider';
 import { adminFetch } from '@/lib/adminFetch';
 import type { GlossaryTerm } from '@/lib/glossary';
 import GlossaryArticle from '@/components/glossary/GlossaryArticle';
+import type { Enhanced } from '@/lib/enhance';
 
-type Loaded = { term: GlossaryTerm; related: { slug: string; term: string }[] };
+type Loaded = { term: GlossaryTerm; related: { slug: string; term: string }[]; aids?: Enhanced };
 
 function istTime(iso: string): string {
   return new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Kolkata' });
@@ -55,7 +56,7 @@ export default function GlossaryAdminPreview() {
           <span className="flex items-center gap-2"><Eye size={16} aria-hidden /> Admin preview. {when} Visitors see a 404 until then.</span>
         </div>
       </div>
-      <GlossaryArticle term={term} related={state.related} />
+      <GlossaryArticle term={term} related={state.related} aids={state.aids} />
     </div>
   );
 }
