@@ -4,7 +4,7 @@ import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { getPublishedPost, getPublishedPosts } from '@/lib/blogDb';
 import { PostCard } from '@/components/blog/PostCard';
-import { formatDate, stripHtml } from '@/lib/blog';
+import { formatDate, modifiedAt, relatedPosts, stripHtml } from '@/lib/blog';
 import Inline from '@/components/blog/Inline';
 import PostAdminActions from '@/components/blog/PostAdminActions';
 import ShareBar from '@/components/blog/ShareBar';
@@ -16,6 +16,7 @@ import { enhanceContent } from '@/lib/enhance';
 import { getPublishedTerms } from '@/lib/glossaryDb';
 import { ArticleToc } from '@/components/blog/ReadingAids';
 import ReadingProgress from '@/components/blog/ReadingProgress';
+import GlossaryCards from '@/components/blog/GlossaryCards';
 
 const BASE = 'https://www.scripwise.co.in';
 
@@ -29,13 +30,17 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     description,
     keywords: post.tags,
     authors: [{ name: post.author }],
+    // Set here rather than relying on the layout's x-pathname header from middleware.
+    alternates: { canonical: `/blog/${post.slug}` },
     openGraph: {
       type: 'article',
+      siteName: 'Scripwise',
+      locale: 'en_IN',
       url: `${BASE}/blog/${post.slug}`,
       title,
       description,
       publishedTime: post.publishedAt ?? undefined,
-      modifiedTime: post.updatedAt,
+      modifiedTime: modifiedAt(post.publishedAt, post.updatedAt),
       authors: [post.author],
       section: post.category,
       tags: post.tags,
@@ -54,7 +59,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   });
   const nonce = (await headers()).get('x-nonce') ?? undefined;
   const url = `${BASE}/blog/${post.slug}`;
-  const related = (await getPublishedPosts()).filter(p => p.slug !== post.slug).slice(0, 3);
+  const related = relatedPosts(post, await getPublishedPosts());
 
   const jsonLd: unknown[] = [
     {
@@ -64,10 +69,11 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       description: post.metaDescription || post.excerpt,
       url,
       mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+      image: [`${url}/opengraph-image`],
       datePublished: post.publishedAt,
       dateCreated: post.createdAt,
       ...(post.sources.length ? { citation: post.sources.map(s => ({ '@type': 'CreativeWork', name: s.name, url: s.url })) } : {}),
-      dateModified: post.updatedAt,
+      dateModified: modifiedAt(post.publishedAt, post.updatedAt),
       author: { '@type': 'Organization', name: post.author },
       publisher: { '@type': 'Organization', name: 'Scripwise', url: BASE },
       articleSection: post.category,
@@ -107,11 +113,11 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         <div className="relative mx-auto max-w-3xl px-4 py-12 md:px-6 md:py-16">
           <div className="mb-5 flex items-center justify-between gap-3">
             <nav aria-label="Breadcrumb" className="text-xs text-white/50">
-              <Link href="/" className="inline-block py-1.5 hover:text-white">Home</Link> / <Link href="/blog" className="inline-block py-1.5 hover:text-white">Blog</Link>
+              <Link href="/" className="inline-flex min-h-11 items-center hover:text-white">Home</Link> / <Link href="/blog" className="inline-flex min-h-11 items-center hover:text-white">Blog</Link> / <Link href={categoryHref(post.category)} className="inline-flex min-h-11 items-center hover:text-white">{post.category}</Link>
             </nav>
             <PostAdminActions id={post.id} title={post.title} redirectTo="/blog" />
           </div>
-          <Link href={categoryHref(post.category)} className="inline-block rounded-full bg-[#F97316]/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#FB923C] hover:bg-[#F97316]/25">{post.category}</Link>
+          <Link href={categoryHref(post.category)} className="inline-flex min-h-11 items-center rounded-full bg-[#F97316]/15 px-4 text-xs font-semibold uppercase tracking-wide text-[#FB923C] hover:bg-[#F97316]/25">{post.category}</Link>
           <h1 className="mt-4 text-3xl font-bold leading-tight text-white md:text-5xl">{post.title}</h1>
           <div className="mt-6 flex items-center gap-3 text-sm text-white/60">
             <span aria-hidden className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#FB923C] to-[#EA580C] text-sm font-bold text-white">
@@ -141,6 +147,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         <ArticleToc items={aids.toc} />
         <ReadingProgress targetId="article-body" />
         <div id="article-body" className="blog-prose" dangerouslySetInnerHTML={{ __html: aids.html }} />
+        <GlossaryCards targetId="article-body" />
 
         <div className="mt-8 flex flex-wrap gap-2">
           {post.tags.map(t => (
@@ -169,7 +176,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             <ul className="flex flex-wrap gap-2">
               {post.sources.map(s => (
                 <li key={s.url}>
-                  <a href={s.url} target="_blank" rel="noopener noreferrer" className="inline-block rounded-full border border-[#E5E7EB] bg-white px-3.5 py-1.5 text-sm font-semibold text-[#EA580C] hover:border-[#F97316]">
+                  <a href={s.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded-full border border-[#E5E7EB] bg-white px-4 text-sm font-semibold text-[#EA580C] hover:border-[#F97316]">
                     {s.name} ↗
                   </a>
                 </li>
@@ -186,8 +193,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           <h2 className="text-xl font-bold">Screen stocks yourself</h2>
           <p className="mt-1 mb-4 text-sm text-white/60">Run quality filters on 5,000+ NSE &amp; BSE companies with Scripwise, free.</p>
           <div className="flex flex-wrap gap-3 text-sm font-semibold">
-            <Link href="/screens" className="rounded-lg bg-[#F97316] px-4 py-2 text-white hover:bg-[#EA580C]">Open pre-built screens</Link>
-            <Link href="/screener" className="rounded-lg border border-white/20 px-4 py-2 text-white hover:border-[#F97316]">Stock Explorer</Link>
+            <Link href="/screens" className="inline-flex min-h-11 items-center rounded-lg bg-[#F97316] px-4 text-white hover:bg-[#EA580C]">Open pre-built screens</Link>
+            <Link href="/screener" className="inline-flex min-h-11 items-center rounded-lg border border-white/20 px-4 text-white hover:border-[#F97316]">Stock Explorer</Link>
           </div>
         </section>
       </article>
@@ -197,7 +204,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           <div className="mx-auto max-w-6xl px-4 py-12 md:px-6">
             <h2 id="more" className="mb-6 text-2xl font-bold text-[#0D1117]">Keep reading</h2>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {related.map(p => <PostCard key={p.id} post={p} />)}
+              {related.map(p => <PostCard key={p.id} post={p} headingLevel={3} />)}
             </div>
           </div>
         </section>

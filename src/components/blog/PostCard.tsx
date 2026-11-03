@@ -57,14 +57,15 @@ export function FeaturedPostCard({ post }: { post: Post }) {
   );
 }
 
-export function PostCard({ post }: { post: Post }) {
+export function PostCard({ post, headingLevel = 2 }: { post: Post; headingLevel?: 2 | 3 }) {
+  const H = headingLevel === 3 ? 'h3' : 'h2';
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#F97316]/40 hover:shadow-lg">
       <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#FB923C] to-[#EA580C]" />
-      <Link href={categoryHref(post.category)} className="relative z-10 mb-3 self-start text-xs font-semibold uppercase tracking-wide text-[#EA580C] hover:underline">{post.category}</Link>
-      <h2 className="text-xl font-bold leading-snug text-[#0D1117]">
+      <Link href={categoryHref(post.category)} className="relative z-10 mb-1 inline-flex min-h-11 items-center self-start text-xs font-semibold uppercase tracking-wide text-[#EA580C] hover:underline">{post.category}</Link>
+      <H className="text-xl font-bold leading-snug text-[#0D1117]">
         <Link href={`/blog/${post.slug}`} className="after:absolute after:inset-0 hover:text-[#EA580C]">{post.title}</Link>
-      </h2>
+      </H>
       <p className="mt-3 line-clamp-4 text-sm leading-relaxed text-[#4A5568]">{post.excerpt}</p>
       <div className="mt-auto pt-5">
         <div className="mb-3 flex flex-wrap gap-1.5">

@@ -3,7 +3,7 @@ import HomeClient from './HomeClient';
 import HomeSeoSections from './HomeSeoSections';
 
 export const metadata: Metadata = {
-  title: { absolute: 'Scripwise | Free Indian Stocks Screener & Research Tool for NSE & BSE' },
+  title: { absolute: 'Free Indian Stock Screener for NSE & BSE | Scripwise' },
   description:
     'Screen, analyse and research 5,000+ NSE & BSE listed Indian stocks for free. Financial ratios, shareholding, the Scripwise Score and ready-made stock screens.',
   alternates: { canonical: '/' },

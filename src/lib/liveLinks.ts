@@ -8,9 +8,11 @@ export async function liveInternalPaths(): Promise<Set<string>> {
   return new Set([...posts.map(p => `/blog/${p.slug}`), ...terms.map(t => `/glossary/${t.slug}`)]);
 }
 
+// Relative links and absolute links to our own site (https://www.scripwise.co.in/blog/...) are both checked.
 export function unlinkNotLive(html: string, live: Set<string>): string {
-  return html.replace(/<a\b[^>]*\bhref="(\/(?:blog|glossary)\/[^"#?]+)[^"]*"[^>]*>([\s\S]*?)<\/a>/g, (whole, path: string, inner: string) =>
-    live.has(path.replace(/\/$/, '')) ? whole : inner,
+  return html.replace(
+    /<a\b[^>]*\bhref="(?:https?:\/\/(?:www\.)?scripwise\.co\.in)?(\/(?:blog|glossary)\/[^"#?]+)[^"]*"[^>]*>([\s\S]*?)<\/a>/g,
+    (whole, path: string, inner: string) => (live.has(path.replace(/\/$/, '')) ? whole : inner),
   );
 }
 

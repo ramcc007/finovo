@@ -51,3 +51,25 @@ export function readingMinutes(html: string): number {
   const words = stripHtml(html).split(' ').filter(Boolean).length;
   return Math.max(1, Math.round(words / 220));
 }
+
+/** The later of the publish and update times. A scheduled post was last edited before it went live, so
+ *  its updated_at alone would be earlier than its publish date. */
+export function modifiedAt(publishedAt: string | null, updatedAt: string): string {
+  if (!publishedAt) return updatedAt;
+  return Date.parse(publishedAt) > Date.parse(updatedAt) ? publishedAt : updatedAt;
+}
+
+/** Posts related to `post`: same category and shared tags score highest, ties go to the newest. */
+export function relatedPosts(post: Post, all: Post[], n = 3): Post[] {
+  const tags = new Set(post.tags.map(t => t.toLowerCase()));
+  return all
+    .filter(p => p.slug !== post.slug)
+    .map(p => ({
+      p,
+      score: (p.category === post.category ? 2 : 0) + p.tags.filter(t => tags.has(t.toLowerCase())).length,
+      at: Date.parse(p.publishedAt ?? '') || 0,
+    }))
+    .sort((a, b) => b.score - a.score || b.at - a.at)
+    .slice(0, n)
+    .map(x => x.p);
+}

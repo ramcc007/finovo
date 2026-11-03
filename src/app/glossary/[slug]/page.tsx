@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { getPublishedTerm, getPublishedTerms } from '@/lib/glossaryDb';
 import type { GlossaryTerm } from '@/lib/glossary';
-import { stripHtml } from '@/lib/blog';
+import { modifiedAt, stripHtml } from '@/lib/blog';
 import GlossaryArticle from '@/components/glossary/GlossaryArticle';
 import { ld } from '@/components/blog/jsonLd';
 import { liveInternalPaths, pageTitle, unlinkNotLive } from '@/lib/liveLinks';
@@ -20,8 +20,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     description,
     keywords: t.tags,
     alternates: { canonical: `/glossary/${t.slug}` },
-    openGraph: { type: 'article', url: `${BASE}/glossary/${t.slug}`, title: t.title, description, publishedTime: t.publishedAt ?? undefined, modifiedTime: t.updatedAt },
-    twitter: { card: 'summary', title: t.title, description },
+    openGraph: {
+      type: 'article', siteName: 'Scripwise', locale: 'en_IN', url: `${BASE}/glossary/${t.slug}`, title: t.title, description,
+      publishedTime: t.publishedAt ?? undefined, modifiedTime: modifiedAt(t.publishedAt, t.updatedAt),
+    },
+    // twitter-image.tsx renders a large card.
+    twitter: { card: 'summary_large_image', title: t.title, description },
   };
 }
 
@@ -54,7 +58,7 @@ export default async function GlossaryTermPage({ params }: { params: Promise<{ s
       name: t.term,
       description: t.definition,
       url,
-      inDefinedTermSet: { '@type': 'DefinedTermSet', name: 'Scripwise Glossary', url: `${BASE}/glossary` },
+      inDefinedTermSet: { '@type': 'DefinedTermSet', '@id': `${BASE}/glossary`, name: 'Scripwise Glossary', url: `${BASE}/glossary` },
     },
     {
       '@context': 'https://schema.org',
@@ -64,8 +68,9 @@ export default async function GlossaryTermPage({ params }: { params: Promise<{ s
       url,
       mainEntityOfPage: { '@type': 'WebPage', '@id': url },
       about: { '@id': url },
+      image: [`${url}/opengraph-image`],
       datePublished: t.publishedAt,
-      dateModified: t.updatedAt,
+      dateModified: modifiedAt(t.publishedAt, t.updatedAt),
       author: { '@type': 'Organization', name: 'Scripwise', url: BASE },
       publisher: { '@type': 'Organization', name: 'Scripwise', url: BASE },
       inLanguage: 'en-IN',

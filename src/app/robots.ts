@@ -15,6 +15,5 @@ export default function robots(): MetadataRoute.Robots {
       ...AI_CRAWLERS.map(userAgent => ({ userAgent, allow: '/', disallow: PRIVATE })),
     ],
     sitemap: 'https://www.scripwise.co.in/sitemap.xml',
-    host: 'https://www.scripwise.co.in',
   };
 }

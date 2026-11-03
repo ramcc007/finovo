@@ -103,7 +103,7 @@ export default function ShareBar({ url, title, compact = false }: { url: string;
     <section aria-labelledby="share" className="mt-12 rounded-2xl border border-[#E5E7EB] bg-white p-5 md:p-6">
       <div className="mb-4 flex items-center gap-2">
         <Share2 size={18} className="text-[#EA580C]" aria-hidden />
-        <h2 id="share" className="text-lg font-bold text-[#0D1117]">Share this article</h2>
+        <h3 id="share" className="text-lg font-bold text-[#0D1117]">Share this article</h3>
       </div>
       <div className="grid grid-cols-2 gap-2.5 sm:flex sm:flex-wrap">
         {links.map(l => (
