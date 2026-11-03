@@ -21,9 +21,12 @@ export function sanitizeContent(html: string): string {
     allowedTags: [
       'p', 'br', 'h2', 'h3', 'h4', 'strong', 'b', 'em', 'i', 'u', 's', 'a', 'ul', 'ol', 'li',
       'blockquote', 'hr', 'code', 'pre',
+      'table', 'caption', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
     ],
     allowedAttributes: {
       a: ['href', 'title', 'target', 'rel'],
+      th: ['scope', 'colspan', 'rowspan'],
+      td: ['colspan', 'rowspan'],
     },
     allowedSchemes: ['http', 'https', 'mailto'],
     allowProtocolRelative: false,

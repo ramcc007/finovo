@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Enhanced } from '@/lib/enhance';
 import { ArticleToc } from '@/components/blog/ReadingAids';
 import ReadingProgress from '@/components/blog/ReadingProgress';
+import GlossaryCards from '@/components/blog/GlossaryCards';
 import ShareBar from '@/components/blog/ShareBar';
 import ContentDisclaimer from '@/components/blog/ContentDisclaimer';
 import type { GlossaryTerm } from '@/lib/glossary';
@@ -13,8 +14,8 @@ export default function GlossaryArticle({ term, related, aids }: { term: Glossar
       <header className="hero-dark relative overflow-hidden">
         <div className="hero-grid" />
         <div className="relative mx-auto max-w-3xl px-4 py-12 md:px-6 md:py-14">
-          <nav aria-label="Breadcrumb" className="mb-5 text-xs text-white/50">
-            <Link href="/" className="inline-block py-1.5 hover:text-white">Home</Link> / <Link href="/glossary" className="inline-block py-1.5 hover:text-white">Glossary</Link>
+          <nav aria-label="Breadcrumb" className="mb-3 text-xs text-white/50">
+            <Link href="/" className="inline-flex min-h-11 items-center hover:text-white">Home</Link> / <Link href="/glossary" className="inline-flex min-h-11 items-center hover:text-white">Glossary</Link>
           </nav>
           <span className="inline-block rounded-full bg-[#F97316]/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[#FB923C]">Glossary · {term.category}</span>
           <h1 className="mt-4 text-3xl font-bold leading-tight text-white md:text-5xl">{term.title}</h1>
@@ -28,6 +29,7 @@ export default function GlossaryArticle({ term, related, aids }: { term: Glossar
         {aids && <ArticleToc items={aids.toc} />}
         <ReadingProgress targetId="article-body" />
         <div id="article-body" className="blog-prose" dangerouslySetInnerHTML={{ __html: aids?.html ?? term.contentHtml }} />
+        <GlossaryCards targetId="article-body" />
 
         {term.faq.length > 0 && (
           <section aria-labelledby="faq" className="mt-12">
@@ -49,7 +51,7 @@ export default function GlossaryArticle({ term, related, aids }: { term: Glossar
             <ul className="flex flex-wrap gap-2">
               {related.map(r => (
                 <li key={r.slug}>
-                  <Link href={`/glossary/${r.slug}`} className="inline-block rounded-full border border-[#E5E7EB] bg-white px-3.5 py-1.5 text-sm font-semibold text-[#EA580C] hover:border-[#F97316]">
+                  <Link href={`/glossary/${r.slug}`} className="inline-flex min-h-11 items-center rounded-full border border-[#E5E7EB] bg-white px-4 text-sm font-semibold text-[#EA580C] hover:border-[#F97316]">
                     {r.term}
                   </Link>
                 </li>
@@ -63,7 +65,7 @@ export default function GlossaryArticle({ term, related, aids }: { term: Glossar
         <ShareBar url={`https://www.scripwise.co.in/glossary/${term.slug}`} title={term.title} />
 
         <p className="mt-12 text-sm text-[#4A5568]">
-          <Link href="/glossary" className="font-semibold text-[#EA580C] hover:underline">← All glossary terms</Link>
+          <Link href="/glossary" className="inline-flex min-h-11 items-center font-semibold text-[#EA580C] hover:underline">← All glossary terms</Link>
         </p>
       </article>
     </div>
