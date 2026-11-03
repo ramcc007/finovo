@@ -92,10 +92,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <script type="application/ld+json" nonce={nonce} dangerouslySetInnerHTML={{ __html: SITE_JSON_LD }} />
         <AuthProvider>
           <GoogleAnalytics nonce={nonce} pathname={pathname} />
-          <PreviewBanner />
           <Header />
           <main className="min-h-screen">{children}</main>
           <Footer />
+          {/* Fixed to the bottom of the viewport (out of flow), so it can
+              appear after hydration without shifting the page. */}
+          <PreviewBanner />
         </AuthProvider>
       </body>
     </html>

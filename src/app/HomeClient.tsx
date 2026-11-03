@@ -200,6 +200,7 @@ export default function HomeClient() {
                   <Search size={18} className="text-[#8A96A8] shrink-0" />
                   <input
                     type="text"
+                    aria-label="Search any company by name or symbol"
                     placeholder="Search any company — TCS, Reliance, HDFC Bank…"
                     value={query}
                     onChange={e => setQuery(e.target.value)}
@@ -258,10 +259,15 @@ export default function HomeClient() {
                       {/* Live price/change — shown once loaded, on all screen
                           sizes, so mobile (which never sees the animated hero
                           card, hidden lg:block below) still gets live data. */}
-                      {live?.changePct != null && (
+                      {/* Until it loads, an invisible stand-in of the same
+                          width keeps the chip from growing (and the row from
+                          re-wrapping) when the figure arrives. */}
+                      {live?.changePct != null ? (
                         <span className={cn('tnum font-semibold', up ? 'text-[#16A34A]' : 'text-[#DC2626]')}>
                           {up ? '▲' : '▼'} {Math.abs(live.changePct).toFixed(1)}%
                         </span>
+                      ) : (
+                        <span className="tnum font-semibold invisible">▲ 0.0%</span>
                       )}
                     </Link>
                   );
@@ -349,7 +355,9 @@ export default function HomeClient() {
                   </div>
                 );
               })() : (
-                <div className="h-[340px] rounded-2xl border border-[#E9EDF4] bg-white/60 animate-pulse" />
+                // Same height as the loaded card + slider dots (309px), so the
+                // column doesn't resize when the preview arrives.
+                <div className="h-[309px] rounded-2xl border border-[#E9EDF4] bg-white/60 animate-pulse" />
               )}
             </Reveal>
           </div>
@@ -395,7 +403,7 @@ export default function HomeClient() {
                   ))}
                 </div>
               </div>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Market movers table">
               <table className="data-table">
                 <thead>
                   <tr>
@@ -408,10 +416,21 @@ export default function HomeClient() {
                 </thead>
                 <tbody>
                   {!stocks ? (
+                    // Skeleton rows mirror a loaded row's two-line Company cell
+                    // (symbol + name, same text classes) so the table keeps its
+                    // height when the movers arrive.
                     Array(6).fill(0).map((_, i) => (
-                      <tr key={i}>{Array(5).fill(0).map((_, j) => (
-                        <td key={j}><div className="h-4 bg-[#EEF1F7] rounded animate-pulse" /></td>
-                      ))}</tr>
+                      <tr key={i} aria-hidden="true">
+                        <td>
+                          <div className="font-semibold"><span className="inline-block align-middle w-16 h-[0.8em] bg-[#EEF1F7] rounded animate-pulse" />&nbsp;</div>
+                          <div className="text-[11px] font-sans mt-0.5"><span className="inline-block align-middle w-28 h-[0.8em] bg-[#EEF1F7] rounded animate-pulse" />&nbsp;</div>
+                        </td>
+                        {[0, 1].map(j => (
+                          <td key={j}><div className="h-4 bg-[#EEF1F7] rounded animate-pulse" /></td>
+                        ))}
+                        <td className="hidden sm:table-cell"><div className="h-4 bg-[#EEF1F7] rounded animate-pulse" /></td>
+                        <td className="hidden md:table-cell"><div className="h-4 bg-[#EEF1F7] rounded animate-pulse" /></td>
+                      </tr>
                     ))
                   ) : stocks.length === 0 ? (
                     <tr><td colSpan={5} className="text-center py-10 text-[#8A96A8] font-sans">
@@ -478,7 +497,7 @@ export default function HomeClient() {
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-3">
                 {(mkt?.sectors ?? Array(8).fill(null)).slice(0, 8).map((s, i) => {
-                  if (!s) return <div key={i}><div className="h-4 bg-[#EEF1F7] rounded animate-pulse mb-1" /><div className="h-1.5 bg-[#EEF1F7] rounded animate-pulse" /></div>;
+                  if (!s) return <div key={i}><div className="h-5 bg-[#EEF1F7] rounded animate-pulse mb-1" /><div className="h-1.5 bg-[#EEF1F7] rounded animate-pulse" /></div>;
                   const pos = s.change >= 0;
                   const width = Math.min(Math.abs(s.change) / 2 * 100, 100);
                   return (

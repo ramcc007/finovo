@@ -97,7 +97,8 @@ export default function Header() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 shrink-0">
           <Logo className="w-8 h-8 rounded-[9px] shadow-[0_2px_8px_rgba(249,115,22,0.30)]" />
-          <span className="hidden sm:inline font-bold text-[#131A24] text-[18px] tracking-tight">Scripwise</span>
+          {/* Visually hidden (not removed) below sm so the link always has an accessible name. */}
+          <span className="sr-only sm:not-sr-only font-bold text-[#131A24] text-[18px] tracking-tight">Scripwise</span>
           {ent.active && !ent.preview && (
             <span className="hidden sm:inline text-[10px] font-bold text-[#F97316] bg-[#FFF3E8] border border-[#FFEDD5] px-1.5 py-0.5 rounded-md tracking-wide">
               PRO
@@ -111,6 +112,7 @@ export default function Header() {
             <Search size={15} className="text-[#8A94A4] shrink-0" />
             <input
               type="text"
+              aria-label="Search stocks by name or symbol"
               placeholder="Search stocks, symbols…"
               value={query}
               onChange={e => { setQuery(e.target.value); setOpen(true); }}
@@ -120,8 +122,8 @@ export default function Header() {
             />
             {loading && <Loader2 size={14} className="text-[#8A94A4] shrink-0 animate-spin" />}
             {query && !loading && (
-              <button onClick={() => { setQuery(''); setResults([]); setOpen(false); }}>
-                <X size={14} className="text-[#8A94A4] hover:text-[#56616F]" />
+              <button type="button" aria-label="Clear search" onClick={() => { setQuery(''); setResults([]); setOpen(false); }}>
+                <X size={14} aria-hidden="true" className="text-[#8A94A4] hover:text-[#56616F]" />
               </button>
             )}
           </div>
@@ -152,7 +154,7 @@ export default function Header() {
         </div>
 
         {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-1">
+        <nav aria-label="Main" className="hidden md:flex items-center gap-1">
           {NAV.map(item => {
             const active = pathname === item.href;
             return (
@@ -170,7 +172,15 @@ export default function Header() {
               </Link>
             );
           })}
-          {!authLoading && (
+          {/* While auth is resolving, the signed-out links hold their space
+              (invisible: no paint, no focus, not in the accessibility tree)
+              so the nav and search box don't shift when they appear. */}
+          {authLoading ? (
+            <span className="invisible inline-flex items-center gap-1">
+              <span className="text-sm font-medium px-3.5 py-2">Pricing</span>
+              <span className="ml-1 inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2">Sign up free <ArrowRight size={14} /></span>
+            </span>
+          ) : (
             user ? (
               <div ref={accountRef} className="relative ml-1">
                 <button
@@ -261,6 +271,7 @@ export default function Header() {
           className="md:hidden ml-auto text-[#56616F] hover:text-[#131A24] p-2"
           onClick={() => setMobileOpen(v => !v)}
           aria-label="Menu"
+          aria-expanded={mobileOpen}
         >
           {mobileOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
@@ -268,7 +279,7 @@ export default function Header() {
 
       {/* Mobile nav drawer */}
       {mobileOpen && (
-        <div className="md:hidden fixed inset-x-0 top-16 z-40 bg-white border-b border-[#E9EDF4] py-3 px-4 shadow-[0_12px_32px_rgba(16,24,40,0.10)]">
+        <nav aria-label="Mobile" className="md:hidden fixed inset-x-0 top-16 z-40 bg-white border-b border-[#E9EDF4] py-3 px-4 shadow-[0_12px_32px_rgba(16,24,40,0.10)]">
           {NAV.map(item => {
             const active = pathname === item.href;
             return (
@@ -338,7 +349,7 @@ export default function Header() {
           >
             {user ? 'Start screening' : 'Sign up free'} <ArrowRight size={14} />
           </Link>
-        </div>
+        </nav>
       )}
     </>
   );
