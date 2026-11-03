@@ -5,6 +5,7 @@ import { getServiceClient } from '@/lib/supabase';
 import { GLOSSARY_COLS, toTerm, type GlossaryRow, GLOSSARY_TAG } from '@/lib/glossaryDb';
 import { parseTermInput, toTermRow } from '@/lib/glossarySanitize';
 import { pingIndexNow } from '@/lib/indexNow';
+import { publishNow } from '@/lib/publishNow';
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -34,6 +35,20 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
   revalidateTag(GLOSSARY_TAG, { expire: 0 });
   if (parsed.value.status === 'published') after(() => pingIndexNow([`/glossary/${data.slug}`, '/glossary', '/sitemap.xml']));
   return NextResponse.json({ data });
+}
+
+// {"action":"publish_now"} makes a scheduled item live immediately.
+export async function PATCH(req: NextRequest, { params }: Ctx) {
+  if (!(await requireAdmin(req))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const { id } = await params;
+  if (!isValidUserId(id)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  const body = await req.json().catch(() => null);
+  if (body?.action !== 'publish_now') return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
+  const res = await publishNow('glossary_terms', id);
+  if (!res.ok) return NextResponse.json({ error: res.error }, { status: res.status });
+  revalidateTag(GLOSSARY_TAG, { expire: 0 });
+  after(() => pingIndexNow([`/glossary/${res.slug}`, '/glossary', '/sitemap.xml']));
+  return NextResponse.json({ data: { id, slug: res.slug } });
 }
 
 export async function DELETE(req: NextRequest, { params }: Ctx) {

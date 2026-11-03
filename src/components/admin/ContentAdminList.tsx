@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
-  Loader2, PenSquare, Pencil, Trash2, ExternalLink, Eye, Search, X, CalendarClock, CheckCircle2, FileText, Layers,
+  Loader2, PenSquare, Pencil, Trash2, ExternalLink, Eye, Search, X, CalendarClock, CheckCircle2, FileText, Layers, Send,
 } from 'lucide-react';
 import { adminFetch } from '@/lib/adminFetch';
 import { formatDate } from '@/lib/blog';
@@ -108,22 +108,23 @@ export default function ContentAdminList({ config }: { config: ContentListConfig
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(load, []);
 
+  const [forcedLive, setForcedLive] = useState<Set<string>>(() => new Set());
   const kindOf = (r: Row): Kind =>
-    r.status === 'draft' ? 'draft' : r.published_at && new Date(r.published_at).getTime() > now ? 'scheduled' : 'published';
+    r.status === 'draft' ? 'draft' : forcedLive.has(r.id) ? 'published' : r.published_at && new Date(r.published_at).getTime() > now ? 'scheduled' : 'published';
 
   const counts = useMemo(() => {
     const c = { all: 0, published: 0, scheduled: 0, draft: 0 } as Record<Tab, number>;
     for (const r of rows ?? []) { c.all++; c[kindOf(r)]++; }
     return c;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows]);
+  }, [rows, forcedLive]);
 
   const categories = useMemo(() => [...new Set((rows ?? []).map(r => r.category))].sort(), [rows]);
 
   const nextScheduled = useMemo(
     () => (rows ?? []).filter(r => kindOf(r) === 'scheduled').sort((a, b) => (a.published_at ?? '').localeCompare(b.published_at ?? ''))[0],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [rows],
+    [rows, forcedLive],
   );
 
   const visible = useMemo(() => {
@@ -144,7 +145,7 @@ export default function ContentAdminList({ config }: { config: ContentListConfig
     });
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, tab, q, category, sort]);
+  }, [rows, tab, q, category, sort, forcedLive]);
 
   const filtered = !!q || !!category;
 
@@ -155,8 +156,35 @@ export default function ContentAdminList({ config }: { config: ContentListConfig
     load();
   };
 
+  const [publishing, setPublishing] = useState<string | null>(null);
+  const publishNow = async (r: Row) => {
+    if (!window.confirm(`Publish "${r.title}" now instead of on ${formatDate(r.published_at!)}? It goes live immediately with today's date.`)) return;
+    setPublishing(r.id);
+    try {
+      const res = await adminFetch(`${config.apiPath}/${r.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'publish_now' }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { window.alert(d.error ?? `Could not publish the ${config.noun}.`); return; }
+      // Treat it as live straight away (the page's clock was fixed at load),
+      // then refresh from the server.
+      setForcedLive(prev => new Set(prev).add(r.id));
+      load();
+    } finally {
+      setPublishing(null);
+    }
+  };
+
   const actions = (r: Row) => (
     <div className="flex items-center gap-1.5">
+      {kindOf(r) === 'scheduled' && (
+        <button onClick={() => publishNow(r)} disabled={publishing === r.id} title="Publish now" aria-label={`Publish ${r.title} now`}
+          className="inline-flex h-8 items-center gap-1 whitespace-nowrap rounded-md bg-[#F97316] px-2.5 text-xs font-semibold text-white hover:bg-[#EA580C] disabled:opacity-60">
+          {publishing === r.id ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Publish now
+        </button>
+      )}
       {/* Live posts open publicly; scheduled and drafts open the admin preview at the same URL. */}
       <Link href={`${config.publicPath}/${r.slug}`} target="_blank"
         title={kindOf(r) === 'published' ? 'View live' : 'Preview'} aria-label={`${kindOf(r) === 'published' ? 'View' : 'Preview'} ${r.title}`}

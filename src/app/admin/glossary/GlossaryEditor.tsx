@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Trash2, Plus, X, ExternalLink, Eye, Search } from 'lucide-react';
+import { Loader2, Trash2, Plus, X, ExternalLink, Send, Eye, Search } from 'lucide-react';
 import { adminFetch } from '@/lib/adminFetch';
 import { slugify, type FaqItem } from '@/lib/blog';
 import type { GlossaryTerm } from '@/lib/glossary';
@@ -64,7 +64,7 @@ export default function GlossaryEditor({ id }: { id?: string }) {
 
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
-  const [openedAt] = useState(() => Date.now());
+  const [openedAt, setOpenedAt] = useState(() => Date.now());
 
   useEffect(() => {
     let alive = true;
@@ -113,12 +113,12 @@ export default function GlossaryEditor({ id }: { id?: string }) {
     setRelDraft('');
   };
 
-  const save = async (nextStatus: Status) => {
+  const save = async (nextStatus: Status, publishNowAt?: string) => {
     setSaving(true); setMsg(null);
     const body = {
       term, title: title || term, slug: slug || slugify(term), definition, contentHtml: html,
       metaDescription: metaDesc, category, tags, related, faq, status: nextStatus,
-      publishedAt: nextStatus === 'published' && publishAt ? new Date(publishAt).toISOString() : null,
+      publishedAt: publishNowAt ?? (nextStatus === 'published' && publishAt ? new Date(publishAt).toISOString() : null),
     };
     try {
       const r = await adminFetch(termId ? `/api/admin/glossary/${termId}` : '/api/admin/glossary', {
@@ -130,8 +130,11 @@ export default function GlossaryEditor({ id }: { id?: string }) {
       if (!r.ok) throw new Error(d.error ?? 'Save failed');
       setStatus(nextStatus);
       setSlug(d.data.slug);
-      if (nextStatus === 'published' && !publishAt) setPublishAt(toLocalInput(new Date().toISOString()));
-      setMsg({ type: 'ok', text: nextStatus === 'published' ? 'Saved and published.' : 'Draft saved.' });
+      if (publishNowAt) {
+        setPublishAt(toLocalInput(publishNowAt));
+        setOpenedAt(Date.now()); // status now reads Published, not Scheduled
+      } else if (nextStatus === 'published' && !publishAt) setPublishAt(toLocalInput(new Date().toISOString()));
+      setMsg({ type: 'ok', text: publishNowAt ? 'Published now. It is live.' : nextStatus === 'published' ? 'Saved and published.' : 'Draft saved.' });
       if (!termId) { setTermId(d.data.id); router.replace(`/admin/glossary/${d.data.id}`); }
     } catch (e) {
       setMsg({ type: 'err', text: e instanceof Error ? e.message : 'Save failed' });
@@ -223,6 +226,13 @@ export default function GlossaryEditor({ id }: { id?: string }) {
                 {status === 'published' ? 'Update' : 'Publish'}
               </button>
             </div>
+            {scheduled && (
+              <button type="button" disabled={saving || !term.trim()}
+                onClick={() => { if (window.confirm('Publish now instead of on the scheduled date? Your current edits are saved too, and it goes live immediately with today\'s date.')) save('published', new Date().toISOString()); }}
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-[#F97316] px-3 py-2 text-sm font-semibold text-[#EA580C] hover:bg-[#FFF7ED] disabled:opacity-50">
+                <Send size={14} /> Publish now
+              </button>
+            )}
             {termId && slug && (
               <Link href={`/glossary/${slug}`} target="_blank" className="inline-flex items-center gap-1 text-sm font-semibold text-[#EA580C] hover:underline">
                 {live ? <><ExternalLink size={13} /> View term</> : <><Eye size={13} /> Preview</>}

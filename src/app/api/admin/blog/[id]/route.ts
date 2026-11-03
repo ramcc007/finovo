@@ -1,6 +1,7 @@
 import { revalidateTag } from 'next/cache';
 import { NextRequest, NextResponse, after } from 'next/server';
 import { pingIndexNow } from '@/lib/indexNow';
+import { publishNow } from '@/lib/publishNow';
 import { requireAdmin } from '@/lib/adminAuth';
 import { isValidUserId } from '@/lib/adminAuth';
 import { getServiceClient } from '@/lib/supabase';
@@ -36,6 +37,20 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
   revalidateTag(BLOG_TAG, { expire: 0 });
   if (parsed.value.status === 'published') after(() => pingIndexNow([`/blog/${data.slug}`, '/blog', '/sitemap.xml']));
   return NextResponse.json({ data });
+}
+
+// {"action":"publish_now"} makes a scheduled item live immediately.
+export async function PATCH(req: NextRequest, { params }: Ctx) {
+  if (!(await requireAdmin(req))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const { id } = await params;
+  if (!isValidUserId(id)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  const body = await req.json().catch(() => null);
+  if (body?.action !== 'publish_now') return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
+  const res = await publishNow('blog_posts', id);
+  if (!res.ok) return NextResponse.json({ error: res.error }, { status: res.status });
+  revalidateTag(BLOG_TAG, { expire: 0 });
+  after(() => pingIndexNow([`/blog/${res.slug}`, '/blog', '/sitemap.xml']));
+  return NextResponse.json({ data: { id, slug: res.slug } });
 }
 
 export async function DELETE(req: NextRequest, { params }: Ctx) {
