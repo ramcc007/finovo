@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, ShieldAlert, Users, BarChart3, Ban, Trash2, ShieldCheck, Search, KeyRound, IndianRupee } from 'lucide-react';
+import { Loader2, ShieldAlert, Users, BarChart3, Ban, Trash2, ShieldCheck, Search, KeyRound, IndianRupee, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/lib/AuthProvider';
 import { adminFetch } from '@/lib/adminFetch';
 import { validatePassword, MIN_PASSWORD_LENGTH } from '@/lib/passwordPolicy';
@@ -63,6 +63,8 @@ export default function AdminPageClient() {
   const [analyticsByRange, setAnalyticsByRange] = useState<Partial<Record<Range, Analytics>>>({});
   const [analyticsError, setAnalyticsError] = useState<string | null>(null);
   const [range, setRange] = useState<Range>('7d');
+  const [refreshing, setRefreshing] = useState(false);
+  const [fetchedAt, setFetchedAt] = useState<Partial<Record<Range, number>>>({});
   const analytics = analyticsByRange[range] ?? null;
 
   const [users, setUsers] = useState<AdminUserRow[] | null>(null);
@@ -97,20 +99,43 @@ export default function AdminPageClient() {
     loadUsers();
   }, [checked, isAdmin]);
 
+  const fetchAnalytics = async (r: Range): Promise<Analytics> => {
+    const res = await adminFetch(`/api/admin/analytics?range=${r}`, { cache: 'no-store' });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error ?? 'Failed to load analytics');
+    return d;
+  };
+
   // Fetch each range once, when it's first selected.
   const loadedRange = Boolean(analyticsByRange[range]);
   useEffect(() => {
     if (!checked || !isAdmin || loadedRange) return;
     let cancelled = false;
-    adminFetch(`/api/admin/analytics?range=${range}`)
-      .then(async r => {
-        const d = await r.json();
-        if (!r.ok) throw new Error(d.error ?? 'Failed to load analytics');
-        if (!cancelled) setAnalyticsByRange(prev => ({ ...prev, [range]: d }));
+    fetchAnalytics(range)
+      .then(d => {
+        if (cancelled) return;
+        setAnalyticsByRange(prev => ({ ...prev, [range]: d }));
+        setFetchedAt(prev => ({ ...prev, [range]: Date.now() }));
       })
       .catch(e => { if (!cancelled) setAnalyticsError(e.message); });
     return () => { cancelled = true; };
   }, [checked, isAdmin, range, loadedRange]);
+
+  // Re-pull the selected range now; other ranges reload fresh when next opened.
+  // The current numbers stay on screen until the new ones arrive.
+  const refreshAnalytics = async () => {
+    setRefreshing(true);
+    setAnalyticsError(null);
+    try {
+      const d = await fetchAnalytics(range);
+      setAnalyticsByRange({ [range]: d });
+      setFetchedAt({ [range]: Date.now() });
+    } catch (e) {
+      setAnalyticsError(e instanceof Error ? e.message : 'Failed to load analytics');
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleSuspend = async (u: AdminUserRow) => {
     const suspend = !isBanned(u);
@@ -213,6 +238,23 @@ export default function AdminPageClient() {
               <BarChart3 size={16} className="text-[#8A96A8]" />
               <h2 className="text-sm font-semibold text-[#0D1117]">Traffic Snapshot</h2>
             </div>
+            <div className="flex flex-wrap items-center gap-2">
+            {fetchedAt[range] && (
+              <span className="text-[11px] text-[#8A96A8]">
+                Updated {new Date(fetchedAt[range]!).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={refreshAnalytics}
+              disabled={refreshing || !checked || !isAdmin}
+              title="Refresh analytics"
+              aria-label="Refresh analytics"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-white px-2.5 text-xs font-semibold text-[#4A5568] hover:border-[#F97316] hover:text-[#EA580C] disabled:opacity-60"
+            >
+              <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
+              {refreshing ? 'Refreshing' : 'Refresh'}
+            </button>
             <div className="inline-flex items-center gap-0.5 bg-[#EEF1F7] p-0.5 rounded-lg">
               {(Object.keys(RANGE_LABELS) as Range[]).map(r => (
                 <button
@@ -226,6 +268,7 @@ export default function AdminPageClient() {
                   {RANGE_LABELS[r]}
                 </button>
               ))}
+            </div>
             </div>
           </div>
 
