@@ -32,7 +32,9 @@ async function callClaude(system: string, user: string, maxTokens: number, timeo
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify({ model: AI_MODEL, max_tokens: maxTokens, system, messages: [{ role: 'user', content: user }] }),
+    // Extended thinking is switched off: this is a simple rewrite job, and thinking was using up the
+    // whole output budget and leaving no text (stop_reason max_tokens, 0 characters).
+    body: JSON.stringify({ model: AI_MODEL, max_tokens: maxTokens, thinking: { type: 'disabled' }, system, messages: [{ role: 'user', content: user }] }),
     signal: AbortSignal.timeout(timeoutMs),
   });
   if (!r.ok) throw new Error(`AI request failed (${r.status})`);
@@ -182,7 +184,7 @@ export async function runIngest(): Promise<IngestResult> {
     const prompt = `${USER_RULES}\n\nrecent: ${recentJson}\n\nitems: ${JSON.stringify(slice.map(g => ({
       id: g.id, source: g.items[0].source, published: g.items[0].publishedAt, title: g.items[0].title, snippet: g.items[0].snippet,
     })))}`;
-    const { text, stop } = await callClaude(SYSTEM_PROMPT, prompt, 3500, Math.max(8_000, Math.min(38_000, left() - 8_000)));
+    const { text, stop } = await callClaude(SYSTEM_PROMPT, prompt, 5000, Math.max(8_000, Math.min(38_000, left() - 8_000)));
     const parsed = parseItems(text);
     const peek = `stop=${stop || '?'}, ${text.length} chars, starts: ${text.slice(0, 120).replace(/\s+/g, ' ')} ... ends: ${text.slice(-80).replace(/\s+/g, ' ')}`;
     return { ...parsed, peek };
