@@ -16,6 +16,7 @@ export async function pingIndexNow(paths: string[]): Promise<void> {
         keyLocation: `https://${HOST}/${KEY}.txt`,
         urlList: paths.map(p => `https://${HOST}${p}`),
       }),
+      signal: AbortSignal.timeout(4000),
     });
     if (paths.includes('/blog')) await pingWebSub(['/blog/feed.xml', '/blog/feed.json']);
   } catch {

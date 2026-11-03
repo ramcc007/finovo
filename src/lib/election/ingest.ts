@@ -26,14 +26,14 @@ export interface IngestResult {
   ok: boolean; skipped?: string; fetched?: number; fresh?: number; sent?: number; published?: number; merged?: number; feeds?: string; error?: string;
 }
 
-async function callClaude(system: string, user: string, maxTokens: number): Promise<{ text: string; stop: string }> {
+async function callClaude(system: string, user: string, maxTokens: number, timeoutMs = 40_000): Promise<{ text: string; stop: string }> {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) throw new Error('ANTHROPIC_API_KEY is not set');
   const r = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
     body: JSON.stringify({ model: AI_MODEL, max_tokens: maxTokens, system, messages: [{ role: 'user', content: user }] }),
-    signal: AbortSignal.timeout(50_000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!r.ok) throw new Error(`AI request failed (${r.status})`);
   const d = await r.json() as { content?: { type: string; text?: string }[]; stop_reason?: string };
@@ -109,6 +109,8 @@ function parseItems(text: string): { items: AiItem[]; bad: number; snippet: stri
 const int = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 1000 ? v : null);
 
 export async function runIngest(): Promise<IngestResult> {
+  const t0 = Date.now();
+  const left = () => 52_000 - (Date.now() - t0); // the function is limited to 60 s
   const db = getServiceClient();
   const { data: metaRow } = await db.from('election_meta').select(`${META_COLS}, llm_day, last_indexnow_at`).eq('id', 1).maybeSingle();
   if (!metaRow) return { ok: false, error: 'election_meta row missing' };
@@ -126,6 +128,9 @@ export async function runIngest(): Promise<IngestResult> {
   const finish = async (patch: Record<string, unknown>) => {
     await db.from('election_meta').update({ last_ingest_at: new Date().toISOString(), llm_day: today, llm_calls_today: calls, items_today: itemsToday, feed_stats: feedStats, ...patch }).eq('id', 1);
   };
+
+  // If this run is killed by the time limit, this note is what the admin page shows.
+  await db.from('election_meta').update({ last_ingest_at: new Date().toISOString(), last_error: 'The last run did not finish (it may have timed out).' }).eq('id', 1);
 
   // 1. Collect
   const results = await Promise.all(FEEDS.map(async f => {
@@ -169,7 +174,7 @@ export async function runIngest(): Promise<IngestResult> {
   if (batch.length === 0) { await finish({ last_error: null }); return { ok: true, fetched: fetched.length, fresh: 0, sent: 0, published: 0 }; }
   if (calls >= MAX_AI_CALLS_PER_DAY) { await finish({ last_error: 'Daily AI call limit reached; waiting for tomorrow.' }); return { ok: false, error: 'daily AI cap' }; }
 
-  // 3. Ask the model. One call for the whole batch; if the reply cannot be read, split it in two and retry once.
+  // 3. Ask the model in small batches, in parallel, so the whole run stays well inside the time limit.
   const { data: recentRows } = await db.from('election_updates').select('cluster_key, headline').order('published_at', { ascending: false }).limit(15);
   const recentJson = JSON.stringify(recentRows ?? []);
   const ask = async (slice: Group[]) => {
@@ -177,30 +182,42 @@ export async function runIngest(): Promise<IngestResult> {
     const prompt = `${USER_RULES}\n\nrecent: ${recentJson}\n\nitems: ${JSON.stringify(slice.map(g => ({
       id: g.id, source: g.items[0].source, published: g.items[0].publishedAt, title: g.items[0].title, snippet: g.items[0].snippet,
     })))}`;
-    const { text, stop } = await callClaude(SYSTEM_PROMPT, prompt, 7000);
+    const { text, stop } = await callClaude(SYSTEM_PROMPT, prompt, 3500, Math.max(8_000, Math.min(38_000, left() - 8_000)));
     const parsed = parseItems(text);
     const peek = `stop=${stop || '?'}, ${text.length} chars, starts: ${text.slice(0, 120).replace(/\s+/g, ' ')} ... ends: ${text.slice(-80).replace(/\s+/g, ' ')}`;
     return { ...parsed, peek };
   };
-  let ai: AiItem[];
-  let parseNote: string | null = null;
-  let replyComplete = false;
-  try {
-    let res = await ask(batch);
-    if (res.items.length === 0 && !res.complete && batch.length >= 8 && calls < MAX_AI_CALLS_PER_DAY - 1) {
-      const mid = Math.ceil(batch.length / 2);
-      const [x, y] = [await ask(batch.slice(0, mid)), await ask(batch.slice(mid))];
-      res = { items: [...x.items, ...y.items], bad: x.bad + y.bad, snippet: x.snippet || y.snippet, complete: x.complete && y.complete, peek: `${x.peek} || ${y.peek}` };
+  const askChunk = async (slice: Group[]) => {
+    try {
+      let r = await ask(slice);
+      if (r.items.length === 0 && !r.complete && left() > 25_000 && calls < MAX_AI_CALLS_PER_DAY) r = await ask(slice); // one retry
+      return { slice, ...r, error: null as string | null };
+    } catch (e) {
+      return { slice, items: [] as AiItem[], bad: 0, snippet: '', complete: false, peek: '', error: e instanceof Error ? e.message : 'AI error' };
     }
-    if (res.items.length === 0 && !res.complete) throw new Error(`AI reply could not be read. ${res.peek}`.slice(0, 500));
-    ai = res.items;
-    replyComplete = res.complete;
-    if (res.bad) parseNote = `${res.bad} item(s) in the AI reply could not be read and will be retried. ${res.snippet}`.slice(0, 400);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : 'AI error';
+  };
+  const CHUNK = 14;
+  const chunks: Group[][] = [];
+  for (let i = 0; i < batch.length; i += CHUNK) chunks.push(batch.slice(i, i + CHUNK));
+  const answers = await Promise.all(chunks.map(askChunk));
+
+  const completeIds = new Set<string>(); // items in a readable reply that the model left out were judged not worth publishing
+  const ai: AiItem[] = [];
+  let parseNote: string | null = null;
+  const failures: string[] = [];
+  for (const r of answers) {
+    ai.push(...r.items);
+    if (r.complete) r.slice.forEach(g => completeIds.add(g.id));
+    if (r.error) failures.push(r.error);
+    else if (r.items.length === 0 && !r.complete) failures.push(`AI reply could not be read. ${r.peek}`);
+    else if (r.bad) parseNote = `${r.bad} item(s) in the AI reply could not be read and will be retried. ${r.snippet}`.slice(0, 400);
+  }
+  if (ai.length === 0 && completeIds.size === 0) {
+    const msg = (failures[0] ?? 'AI reply could not be read.').slice(0, 500);
     await finish({ last_error: `AI step failed: ${msg}` }); // items stay unseen and are retried next run
     return { ok: false, error: msg };
   }
+  if (failures.length && !parseNote) parseNote = `${failures.length} of ${answers.length} AI batches failed and will be retried. ${failures[0]}`.slice(0, 500);
 
   // 4. Save
   const byId = new Map(ai.map(a => [a.id, a]));
@@ -217,7 +234,7 @@ export async function runIngest(): Promise<IngestResult> {
     const a = byId.get(g.id);
     // A readable reply that leaves an item out means the model chose not to use it: remember it.
     // A partly unreadable reply leaves the item unseen so the next run retries it.
-    if (!a && !replyComplete) continue;
+    if (!a && !completeIds.has(g.id)) continue;
     for (const it of g.items) toSeen.push({ hash: urlHash(it.url), title: it.title });
     if (!a) continue;
     const importance = Math.min(5, Math.max(1, Math.round(Number(a.importance) || 1)));
@@ -295,14 +312,14 @@ export async function runIngest(): Promise<IngestResult> {
 
   // 5. Fresh takeaways, only when something of top importance arrived
   let takeaways: string[] | undefined;
-  if (sawFive && calls < MAX_AI_CALLS_PER_DAY) {
+  if (sawFive && calls < MAX_AI_CALLS_PER_DAY && left() > 16_000) {
     try {
       const { data: top } = await db.from('election_updates').select('headline, summary').eq('hidden', false).order('published_at', { ascending: false }).limit(12);
       calls++;
       const { text: txt } = await callClaude(
         SYSTEM_PROMPT,
         `Using only these updates, write 3 to 5 plain sentences describing where the election stands right now. Each sentence is one string. Do not use bullet characters. Return only a JSON array of strings.\n${JSON.stringify(top ?? [])}`,
-        700,
+        700, Math.max(6_000, Math.min(20_000, left() - 8_000)),
       );
       const arr = parseJson<string[]>(txt).map(x => cleanText(String(x))).filter(x => x && !hasBanned(x)).slice(0, 5);
       if (arr.length >= 3) takeaways = arr;
