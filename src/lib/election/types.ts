@@ -37,11 +37,14 @@ export type Chamber = 'senate' | 'house' | 'governors';
 export interface ScoreEntry extends Tally { source?: string; updatedAt?: string }
 export type Scoreboard = Partial<Record<Chamber, ScoreEntry>>;
 
+export interface FeedStat { name: string; status: string; total: number; relevant: number }
+
 export interface ElectionMeta {
   scoreboard: Scoreboard;
   pendingScoreboard: Scoreboard;
   takeaways: string[];
   videos: LiveVideo[];
+  feedStats: FeedStat[];
   coverageEnded: boolean;
   endedAt: string | null;
   startedAt: string;

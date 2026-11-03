@@ -27,7 +27,7 @@ export async function generateMetadata(): Promise<Metadata> {
     keywords: ['us midterm elections 2026', 'midterm election results', 'senate control', 'house control', 'us election markets', 'midterms impact on nifty'],
     alternates: {
       canonical: '/us-midterm-elections',
-      types: { 'application/rss+xml': '/us-midterm-elections/feed.xml', 'application/feed+json': '/us-midterm-elections/feed.json' },
+      types: { 'application/rss+xml': '/us-midterm-elections/feed.xml', 'application/feed+json': '/us-midterm-elections/feed.json', 'text/markdown': '/us-midterm-elections/index.md' },
     },
     openGraph: { type: 'article', url: PAGE_URL, title: PAGE_TITLE, description: PAGE_DESCRIPTION, section: 'US Elections', ...(modified ? { modifiedTime: modified } : {}) },
     twitter: { card: 'summary_large_image', title: PAGE_TITLE, description: PAGE_DESCRIPTION },
@@ -58,7 +58,11 @@ export default async function ElectionPage({ searchParams }: { searchParams: Pro
       datePublished: meta?.startedAt ?? '2026-11-03T00:00:00Z',
       dateModified: latest ?? meta?.startedAt ?? '2026-11-03T00:00:00Z',
       author: { '@type': 'Organization', name: 'Scripwise Desk', url: BASE },
-      publisher,
+      publisher: { ...publisher, logo: { '@type': 'ImageObject', url: `${BASE}/icon` } },
+      image: [`${PAGE_URL}/opengraph-image`],
+      isAccessibleForFree: true,
+      keywords: 'US midterm elections 2026, midterm election results, Senate, House of Representatives, governors, market impact, Nifty, euro, dollar',
+      copyrightHolder: publisher,
       about: { '@type': 'Event', name: '2026 United States elections', startDate: '2026-11-03', location: { '@type': 'Country', name: 'United States' } },
       liveBlogUpdate: visible.slice(0, 50).map(u => ({
         '@type': 'BlogPosting',
@@ -108,7 +112,8 @@ export default async function ElectionPage({ searchParams }: { searchParams: Pro
                 Live
               </span>
             )}
-            {latest && <span className="text-white/60">Updated <PtTime iso={latest} /></span>}
+            {meta?.lastIngestAt && !ended && <span className="text-white/70">Checked <PtTime iso={meta.lastIngestAt} /></span>}
+            {latest && <span className="text-white/50">Latest update <PtTime iso={latest} /></span>}
           </div>
           <h1 className="mt-4 max-w-4xl text-3xl font-extrabold leading-[1.1] tracking-tight text-white md:text-5xl lg:text-6xl">
             US Midterm Elections 2026: <span className="bg-gradient-to-r from-[#FB923C] to-[#FDBA74] bg-clip-text text-transparent">Live Updates and Results</span>
@@ -204,6 +209,13 @@ export default async function ElectionPage({ searchParams }: { searchParams: Pro
           <p className="mt-3 text-sm text-[#8A96A8]">
             Follow updates by RSS: <a href="/us-midterm-elections/feed.xml" className="font-semibold text-[#EA580C] hover:underline">feed.xml</a> or{' '}
             <a href="/us-midterm-elections/feed.json" className="font-semibold text-[#EA580C] hover:underline">feed.json</a>.
+          </p>
+        </section>
+
+        <section aria-labelledby="cite" className="mt-10">
+          <h2 id="cite" className="mb-2 text-lg font-bold text-[#0D1117]">Cite this page</h2>
+          <p className="rounded-xl bg-white p-4 text-sm leading-relaxed text-[#4A5568] ring-1 ring-[#E5E7EB]">
+            Scripwise Desk. &ldquo;{PAGE_TITLE}.&rdquo; Scripwise, {latest ? new Date(latest).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/Los_Angeles' }) : '3 November 2026'}. {PAGE_URL}
           </p>
         </section>
 

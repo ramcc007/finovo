@@ -78,13 +78,28 @@ export default function ElectionAdmin() {
             ['AI calls today', `${meta.llmCallsToday} of ${aiCap}`],
           ].map(([k, v]) => <div key={k}><div className="text-xs text-[#8A96A8]">{k}</div><div className="font-bold text-[#0D1117]">{v}</div></div>)}
         </div>
+        {meta.feedStats.length > 0 && (
+          <details className="mt-3 text-sm">
+            <summary className="cursor-pointer font-semibold text-[#0D1117]">
+              Sources: {meta.feedStats.filter(f => f.status === 'ok').length} of {meta.feedStats.length} returning stories in the last run
+            </summary>
+            <ul className="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-2">
+              {meta.feedStats.map((f, i) => (
+                <li key={`${f.name}-${i}`} className="flex justify-between gap-3 border-b border-[#F1F3F9] py-1 text-xs">
+                  <span className="truncate text-[#4A5568]">{f.name}</span>
+                  <span className={f.status === 'ok' ? 'text-green-700' : 'text-red-600'}>{f.status === 'ok' ? `${f.relevant} of ${f.total} relevant` : f.status}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
         {meta.lastError && <p className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">Last run problem: {meta.lastError}</p>}
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <button disabled={busy} onClick={() => { if (window.confirm(meta.coverageEnded ? 'Resume live coverage?' : 'End coverage? Collecting stops, the badge changes to "Final results" and the page is frozen as an archive.')) void act({ action: 'set_coverage', ended: !meta.coverageEnded }); }}
             className={`inline-flex h-9 items-center rounded-lg px-4 text-sm font-semibold ${meta.coverageEnded ? 'border border-[#E5E7EB] bg-white' : 'bg-[#0D1117] text-white'} disabled:opacity-60`}>
             {meta.coverageEnded ? 'Resume coverage' : 'End coverage'}
           </button>
-          <span className="text-xs text-[#8A96A8]">Collection runs every 15 minutes from GitHub Actions and stops by itself after the end date.</span>
+          <span className="text-xs text-[#8A96A8]">Collection runs every 10 minutes from GitHub Actions and stops by itself after the end date.</span>
         </div>
       </section>
 

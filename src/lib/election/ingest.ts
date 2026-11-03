@@ -22,7 +22,7 @@ interface AiItem {
 }
 
 export interface IngestResult {
-  ok: boolean; skipped?: string; fetched?: number; fresh?: number; sent?: number; published?: number; merged?: number; error?: string;
+  ok: boolean; skipped?: string; fetched?: number; fresh?: number; sent?: number; published?: number; merged?: number; feeds?: string; error?: string;
 }
 
 async function callClaude(system: string, user: string, maxTokens: number): Promise<string> {
@@ -100,12 +100,19 @@ export async function runIngest(): Promise<IngestResult> {
   const sameDay = (metaRow as { llm_day: string | null }).llm_day === today;
   let calls = sameDay ? meta.llmCallsToday : 0;
   let itemsToday = sameDay ? meta.itemsToday : 0;
+  let feedStats: { name: string; status: string; total: number; relevant: number }[] = [];
   const finish = async (patch: Record<string, unknown>) => {
-    await db.from('election_meta').update({ last_ingest_at: new Date().toISOString(), llm_day: today, llm_calls_today: calls, items_today: itemsToday, ...patch }).eq('id', 1);
+    await db.from('election_meta').update({ last_ingest_at: new Date().toISOString(), llm_day: today, llm_calls_today: calls, items_today: itemsToday, feed_stats: feedStats, ...patch }).eq('id', 1);
   };
 
   // 1. Collect
-  const fetched = (await Promise.all(FEEDS.map(async f => (await fetchFeed(f)).filter(i => f.targeted || RELEVANCE_RE.test(`${i.title} ${i.snippet}`))))).flat();
+  const results = await Promise.all(FEEDS.map(async f => {
+    const r = await fetchFeed(f);
+    const items = r.items.filter(i => f.targeted || RELEVANCE_RE.test(`${i.title} ${i.snippet}`));
+    return { name: f.name, status: r.status, total: r.items.length, relevant: items.length, items };
+  }));
+  feedStats = results.map(({ name, status, total, relevant }) => ({ name, status, total, relevant }));
+  const fetched = results.flatMap(r => r.items);
   const cutoff = Date.now() - MAX_ITEM_AGE_HOURS * 3_600_000;
   const recentItems = fetched.filter(i => Date.parse(i.publishedAt) >= cutoff);
 
@@ -244,14 +251,14 @@ export async function runIngest(): Promise<IngestResult> {
   if (Object.keys(pending).length) patch.pending_scoreboard = { ...meta.pendingScoreboard, ...pending };
   await finish(patch);
 
+  revalidateTag(ELECTION_TAG, { expire: 0 }); // keeps the "Checked" time on the page accurate
   if (created.length || merged || takeaways) {
-    revalidateTag(ELECTION_TAG, { expire: 0 });
     await pingWebSub([`${PAGE_PATH}/feed.xml`, `${PAGE_PATH}/feed.json`]);
     const last = (metaRow as { last_indexnow_at: string | null }).last_indexnow_at;
-    if (created.some(c => c.importance >= 4) && (!last || Date.now() - Date.parse(last) > 3_600_000)) {
+    if (created.length > 0 && (!last || Date.now() - Date.parse(last) > 600_000)) {
       await db.from('election_meta').update({ last_indexnow_at: new Date().toISOString() }).eq('id', 1);
       await pingIndexNow([PAGE_PATH, `${PAGE_PATH}/feed.xml`, '/sitemap.xml']);
     }
   }
-  return { ok: true, fetched: fetched.length, fresh: groups.length, sent: batch.length, published: created.length, merged };
+  return { ok: true, fetched: fetched.length, fresh: groups.length, sent: batch.length, published: created.length, merged, feeds: `${feedStats.filter(f => f.status === 'ok').length}/${feedStats.length} ok` };
 }

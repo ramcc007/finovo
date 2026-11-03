@@ -52,3 +52,6 @@ alter table public.election_meta add column if not exists last_indexnow_at times
 -- the "Watch live" videos shown on the page.
 alter table public.election_updates add column if not exists media jsonb;
 alter table public.election_meta add column if not exists videos jsonb not null default '[]'::jsonb;
+
+-- 0010: per-feed health from the latest run (shown in the admin page).
+alter table public.election_meta add column if not exists feed_stats jsonb not null default '[]'::jsonb;

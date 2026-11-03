@@ -45,17 +45,20 @@ export function parseFeed(xml: string, feed: Feed): RawItem[] {
   return out;
 }
 
-export async function fetchFeed(feed: Feed): Promise<RawItem[]> {
+export interface FeedResult { items: RawItem[]; status: string }
+
+export async function fetchFeed(feed: Feed): Promise<FeedResult> {
   try {
     const r = await fetch(feed.url, {
       headers: { 'User-Agent': 'ScripwiseNewsBot/1.0 (+https://www.scripwise.co.in/us-midterm-elections)', Accept: 'application/rss+xml, application/atom+xml, text/xml' },
       signal: AbortSignal.timeout(8000),
       cache: 'no-store',
     });
-    if (!r.ok) return [];
-    return parseFeed(await r.text(), feed).filter(i => !isGovUrl(i.url));
-  } catch {
-    return [];
+    if (!r.ok) return { items: [], status: `HTTP ${r.status}` };
+    const items = parseFeed(await r.text(), feed).filter(i => !isGovUrl(i.url));
+    return { items, status: items.length ? 'ok' : 'empty' };
+  } catch (e) {
+    return { items: [], status: e instanceof Error && e.name === 'TimeoutError' ? 'timeout' : 'failed' };
   }
 }
 
