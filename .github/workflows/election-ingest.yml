@@ -1,0 +1,35 @@
+name: Election updates
+
+# Collects US midterm election news every 15 minutes and asks the website to
+# rewrite and publish it. Free on GitHub Actions; Vercel's free plan only
+# allows cron once a day. Needs repository secrets: CRON_SECRET and SITE_URL.
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: election-ingest
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    # Safety stop. The website also stops by itself after ELECTION_END_DATE.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.schedule != '' }}
+    steps:
+      - name: Call the ingest endpoint
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SITE_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "SITE_URL and CRON_SECRET repository secrets are required"; exit 1
+          fi
+          status=$(curl -sS -o response.json -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            --max-time 120 "${SITE_URL%/}/api/election/ingest")
+          cat response.json; echo
+          [ "$status" = "200" ]

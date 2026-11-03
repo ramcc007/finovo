@@ -9,7 +9,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: 'Blog: Indian Stock Market Insights & Investing Guides',
     description:
       'Plain-language articles on the Indian stock market: FPI flows, SIPs, index funds, valuation and how to screen NSE & BSE stocks, from the Scripwise team.',
-    alternates: { canonical: '/blog', types: { 'application/rss+xml': '/blog/feed.xml' } },
+    alternates: { canonical: '/blog', types: { 'application/rss+xml': '/blog/feed.xml', 'application/feed+json': '/blog/feed.json' } },
     ...(total > 1 ? { pagination: { next: '/blog/page/2' } } : {}),
     keywords: ['indian stock market blog', 'nifty analysis', 'sip investing', 'stock screening guide', 'fpi flows india'],
     openGraph: {

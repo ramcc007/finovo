@@ -25,7 +25,11 @@ Scripwise is not a SEBI-registered investment adviser. All data is for informati
 
 ## Blog
 
-- [Blog](${base}/blog): Plain-language Indian stock market articles (FPI flows, SIPs, index funds, screening). RSS: ${base}/blog/feed.xml
+- [Blog](${base}/blog): Plain-language Indian stock market articles (FPI flows, SIPs, index funds, screening). RSS: ${base}/blog/feed.xml, JSON Feed: ${base}/blog/feed.json
+
+## Live coverage
+
+- [US Midterm Elections 2026: Live Updates and Results](${base}/us-midterm-elections): A running timeline of the 3 November 2026 US midterm elections for readers in the US, Europe and India, with seat counts, plain-language updates, market-impact notes and a credited source on every update. Feeds: ${base}/us-midterm-elections/feed.xml (RSS), ${base}/us-midterm-elections/feed.json (JSON Feed). Plain-text version: ${base}/us-midterm-elections/index.md
 
 ## Glossary
 

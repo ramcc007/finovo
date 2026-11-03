@@ -39,7 +39,7 @@ const withUtm = (url: string, source: string) =>
  *  official share URLs. Instagram and TikTok have no web share URL, so those
  *  open the device share sheet where available (mobile) and otherwise copy
  *  the link with a short how-to. */
-export default function ShareBar({ url, title }: { url: string; title: string }) {
+export default function ShareBar({ url, title, compact = false }: { url: string; title: string; compact?: boolean }) {
   const [status, setStatus] = useState<string>('');
   const [copied, setCopied] = useState(false);
 
@@ -77,6 +77,27 @@ export default function ShareBar({ url, title }: { url: string; title: string })
     { n: 'whatsapp', label: 'WhatsApp', href: `https://api.whatsapp.com/send?text=${enc(`${title} ${withUtm(url, 'whatsapp')}`)}`, cls: 'bg-[#25D366] text-white hover:bg-[#1fb857]' },
   ];
   const btn = 'inline-flex h-11 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F97316] focus-visible:ring-offset-2';
+
+  if (compact) {
+    const icon = 'inline-flex h-10 w-10 items-center justify-center rounded-full shadow-sm transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F97316]';
+    return (
+      <div>
+        <div role="group" aria-label="Share this page" className="flex flex-wrap items-center gap-2">
+          <span className="mr-1 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-white/60"><Share2 size={14} aria-hidden /> Share</span>
+          {links.map(l => (
+            <a key={l.n} href={l.href} target="_blank" rel="noopener noreferrer" aria-label={`Share on ${l.label}`} title={l.label} className={`${icon} ${l.cls}`} data-share={l.n}><Mark n={l.n} /></a>
+          ))}
+          <button type="button" onClick={() => appShare('instagram')} aria-label="Share on Instagram" title="Instagram" data-share="instagram"
+            className={`${icon} bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] text-white`}><Mark n="instagram" /></button>
+          <button type="button" onClick={() => appShare('tiktok')} aria-label="Share on TikTok" title="TikTok" data-share="tiktok"
+            className={`${icon} bg-[#010101] text-white ring-1 ring-white/20`}><Mark n="tiktok" /></button>
+          <button type="button" onClick={() => copy(withUtm(url, 'copy'), 'Link copied to clipboard.')} aria-label="Copy link" title="Copy link" data-share="copy"
+            className={`${icon} bg-white text-[#0D1117]`}>{copied ? <Check size={18} className="text-[#16A34A]" aria-hidden /> : <Link2 size={18} aria-hidden />}</button>
+        </div>
+        <p role="status" aria-live="polite" className="mt-2 min-h-4 text-xs text-white/70">{status}</p>
+      </div>
+    );
+  }
 
   return (
     <section aria-labelledby="share" className="mt-12 rounded-2xl border border-[#E5E7EB] bg-white p-5 md:p-6">

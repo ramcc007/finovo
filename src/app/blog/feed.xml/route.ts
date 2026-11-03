@@ -21,6 +21,7 @@ export async function GET() {
     <description>Indian stock market insights and investing guides in plain language.</description>
     <language>en-IN</language>
     <atom:link href="${BASE}/blog/feed.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="https://pubsubhubbub.appspot.com/" rel="hub" />
 ${items}
   </channel>
 </rss>

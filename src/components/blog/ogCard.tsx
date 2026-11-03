@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og';
 
 export const OG_SIZE = { width: 1200, height: 630 };
 
-async function loadInterBold(): Promise<ArrayBuffer | null> {
+export async function loadInterBold(): Promise<ArrayBuffer | null> {
   try {
     const css = await (await fetch('https://fonts.googleapis.com/css2?family=Inter:wght@700')).text();
     const url = css.match(/src: url\(([^)]+)\)/)?.[1];

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { Search, X, Menu, Loader2, ArrowRight, User, LogOut, ShieldCheck, UserCog, Sparkles, FileText, BookOpen } from 'lucide-react';
+import { Search, X, Menu, Loader2, ArrowRight, User, LogOut, ShieldCheck, UserCog, Sparkles, FileText, BookOpen, Vote } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/AuthProvider';
 import { useEntitlement } from '@/lib/useEntitlement';
@@ -212,6 +212,7 @@ export default function Header() {
                     {isAdmin && [
                       { href: '/admin/blog', label: 'Manage blog', Icon: FileText },
                       { href: '/admin/glossary', label: 'Manage glossary', Icon: BookOpen },
+                      { href: '/admin/elections', label: 'Manage elections', Icon: Vote },
                     ].map(({ href, label, Icon }) => (
                       <Link
                         key={href}
@@ -304,6 +305,7 @@ export default function Header() {
           {!authLoading && user && isAdmin && [
             { href: '/admin/blog', label: 'Manage blog', Icon: FileText },
             { href: '/admin/glossary', label: 'Manage glossary', Icon: BookOpen },
+            { href: '/admin/elections', label: 'Manage elections', Icon: Vote },
           ].map(({ href, label, Icon }) => (
             <Link
               key={href}

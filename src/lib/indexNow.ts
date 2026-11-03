@@ -17,7 +17,21 @@ export async function pingIndexNow(paths: string[]): Promise<void> {
         urlList: paths.map(p => `https://${HOST}${p}`),
       }),
     });
+    if (paths.includes('/blog')) await pingWebSub(['/blog/feed.xml', '/blog/feed.json']);
   } catch {
     // best-effort; never block a save on a search-engine ping
   }
+}
+
+// WebSub: feed readers and aggregators that subscribe through Google's public hub
+// are told straight away that a feed has new items.
+export async function pingWebSub(feedPaths: string[]): Promise<void> {
+  await Promise.all(feedPaths.map(p =>
+    fetch('https://pubsubhubbub.appspot.com/', {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ 'hub.mode': 'publish', 'hub.url': `https://${HOST}${p}` }),
+      signal: AbortSignal.timeout(5000),
+    }).catch(() => undefined),
+  ));
 }

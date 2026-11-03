@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Loader2, ShieldAlert, Users, BarChart3, Ban, Trash2, ShieldCheck, Search, KeyRound, IndianRupee, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/lib/AuthProvider';
@@ -230,6 +231,14 @@ export default function AdminPageClient() {
         <div className="flex items-center gap-2">
           <ShieldCheck size={20} className="text-[#F97316]" />
           <h1 className="h-section text-[#0D1117]">Admin Dashboard</h1>
+        </div>
+
+        <div className="card-plain flex flex-wrap items-center justify-between gap-3 p-5">
+          <div>
+            <h2 className="text-sm font-semibold text-[#0D1117]">US midterm elections: live page</h2>
+            <p className="text-xs text-[#8A96A8]">Run status, seat counts, hide or edit updates, and end coverage.</p>
+          </div>
+          <Link href="/admin/elections" className="inline-flex h-9 items-center rounded-lg bg-[#0D1117] px-4 text-sm font-semibold text-white hover:bg-[#1F2937]">Manage</Link>
         </div>
 
         {/* GA4 realtime (last 30 min) */}
