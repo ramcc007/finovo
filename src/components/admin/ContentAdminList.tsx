@@ -182,7 +182,7 @@ export default function ContentAdminList({ config }: { config: ContentListConfig
       {kindOf(r) === 'scheduled' && (
         <button onClick={() => publishNow(r)} disabled={publishing === r.id} title="Publish now" aria-label={`Publish ${r.title} now`}
           className="inline-flex h-8 items-center gap-1 whitespace-nowrap rounded-md bg-[#F97316] px-2.5 text-xs font-semibold text-white hover:bg-[#EA580C] disabled:opacity-60">
-          {publishing === r.id ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Publish now
+          {publishing === r.id ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Publish
         </button>
       )}
       {/* Live posts open publicly; scheduled and drafts open the admin preview at the same URL. */}
@@ -193,8 +193,8 @@ export default function ContentAdminList({ config }: { config: ContentListConfig
       </Link>
       {config.editHref && (
         <Link href={config.editHref(r.id)} title="Edit" aria-label={`Edit ${r.title}`}
-          className="inline-flex h-8 items-center gap-1 rounded-md border border-[#E5E7EB] px-2.5 text-xs font-semibold text-[#0D1117] hover:border-[#F97316]">
-          <Pencil size={13} /> Edit
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#E5E7EB] text-[#0D1117] hover:border-[#F97316] hover:text-[#EA580C]">
+          <Pencil size={14} />
         </Link>
       )}
       <button onClick={() => remove(r)} title="Delete" aria-label={`Delete ${r.title}`}
@@ -216,7 +216,7 @@ export default function ContentAdminList({ config }: { config: ContentListConfig
   };
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-10">
+    <div className="mx-auto max-w-7xl px-4 py-8 md:px-6 md:py-10">
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -298,15 +298,15 @@ export default function ContentAdminList({ config }: { config: ContentListConfig
       {rows && visible.length > 0 && (
         <>
           {/* Desktop table */}
-          <div className="hidden overflow-hidden rounded-xl border border-[#E5E7EB] bg-white md:block">
+          <div className="hidden overflow-hidden rounded-xl border border-[#E5E7EB] bg-white lg:block">
             <table className="w-full text-sm">
               <thead className="bg-[#F9FAFB] text-left text-xs uppercase tracking-wide text-[#8A96A8]">
                 <tr>
-                  <th className="px-4 py-3">{config.titleLabel ?? 'Title'}</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Publish date</th>
-                  <th className="px-4 py-3">Last modified</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
+                  <th className="w-full px-4 py-3">{config.titleLabel ?? 'Title'}</th>
+                  <th className="whitespace-nowrap px-4 py-3">Status</th>
+                  <th className="whitespace-nowrap px-4 py-3">Publish date</th>
+                  <th className="hidden px-4 py-3 xl:table-cell">Last modified</th>
+                  <th className="whitespace-nowrap px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#F1F3F9]">
@@ -314,7 +314,7 @@ export default function ContentAdminList({ config }: { config: ContentListConfig
                   const b = BADGE[kindOf(r)];
                   return (
                     <tr key={r.id} className="align-top hover:bg-[#FAFBFD]">
-                      <td className="max-w-md px-4 py-3.5">
+                      <td className="px-4 py-3.5">
                         <Link href={config.editHref ? config.editHref(r.id) : `${config.publicPath}/${r.slug}`} target={config.editHref ? undefined : '_blank'} className="font-semibold leading-snug text-[#0D1117] hover:text-[#EA580C]">{r.title}</Link>
                         <div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-[#8A96A8]">
                           <span className="font-semibold text-[#EA580C]">{r.category}</span>
@@ -322,9 +322,9 @@ export default function ContentAdminList({ config }: { config: ContentListConfig
                           <span className="truncate">{config.publicPath}/{r.slug}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3.5"><span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${b.cls}`}>{b.text}</span></td>
+                      <td className="whitespace-nowrap px-4 py-3.5"><span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${b.cls}`}>{b.text}</span></td>
                       <td className="whitespace-nowrap px-4 py-3.5">{dateCell(r)}</td>
-                      <td className="whitespace-nowrap px-4 py-3.5 text-xs text-[#4A5568]">
+                      <td className="hidden whitespace-nowrap px-4 py-3.5 text-xs text-[#4A5568] xl:table-cell">
                         {formatDate(r.updated_at)}
                         <div className="text-[#8A96A8]">created {formatDate(r.created_at)}</div>
                       </td>
@@ -337,7 +337,7 @@ export default function ContentAdminList({ config }: { config: ContentListConfig
           </div>
 
           {/* Mobile cards */}
-          <ul className="space-y-3 md:hidden">
+          <ul className="space-y-3 lg:hidden">
             {visible.map(r => {
               const b = BADGE[kindOf(r)];
               return (
