@@ -29,3 +29,7 @@ export const AI_MODEL = 'claude-haiku-5-5';
 
 // Coverage stops by itself after this date (override with ELECTION_END_DATE).
 export const DEFAULT_END_DATE = '2026-11-25';
+
+// Never credited: crypto outlets, brokers, trading apps and similar. Matched against the publisher name and domain.
+export const BLOCKED_SOURCE_RE =
+  /coin|crypto|bitcoin|blockchain|token|zerodha|groww|upstox|angel one|5paisa|robinhood|webull|moomoo|etoro|tipranks|seeking ?alpha|benzinga|stocktwits|substack|medium\.com|reddit/i;

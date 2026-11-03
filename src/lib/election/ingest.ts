@@ -149,7 +149,7 @@ export async function runIngest(): Promise<IngestResult> {
   let parseNote: string | null = null;
   try {
     calls++;
-    const parsed = parseItems(await callClaude(SYSTEM_PROMPT, prompt, 4000));
+    const parsed = parseItems(await callClaude(SYSTEM_PROMPT, prompt, 7000));
     if (parsed.items.length === 0) throw new Error(`AI reply could not be read. ${parsed.snippet}`.slice(0, 400));
     ai = parsed.items;
     if (parsed.bad) parseNote = `${parsed.bad} item(s) in the AI reply could not be read and will be retried. ${parsed.snippet}`.slice(0, 400);

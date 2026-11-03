@@ -16,7 +16,7 @@ VOICE
 HONESTY
 - Use only facts present in the supplied headline and snippet. Never invent figures, quotes, names, experts or numbers. If the text does not support a detail, leave it out.
 - Credit facts in simple words, for example "as per AP" or "according to Reuters", using the source name you are given.
-- Never write about the research itself, never say something "could not be found" or "needs to be checked".
+- Never write about the research itself. Never mention the supplied text, the snippet or the headline, and never say something was "not included", "not stated", "could not be found" or "needs to be checked". If a report adds no new fact, give it importance 1.
 
 NEUTRALITY AND COMPLIANCE
 - Stay neutral between parties. No endorsement, no loaded words, no predictions of who will win unless a named source projects it.
@@ -25,7 +25,7 @@ NEUTRALITY AND COMPLIANCE
 
 For each item return: a plain headline (at most 14 words), a summary of one or two sentences, an importance score and the other fields below. Return ONLY valid JSON, no markdown. Inside text fields never use double quotation marks; use single quotation marks instead.`;
 
-export const USER_RULES = `Importance: 5 = control of a chamber is projected or called, or final overall results; 4 = a major race is called, or a market move is directly linked to the election; 3 = a notable development such as turnout, polls closing, a key race or a result in a state; 2 = commentary, analysis or minor news; 1 = not about the midterm elections.
+export const USER_RULES = `Importance: 5 = control of a chamber is projected or called, or final overall results; 4 = a major race is called, or a market move is directly linked to the election; 3 = a notable development such as turnout, polls closing, a key race or a result in a state; 2 = commentary, analysis or minor news, or a link to a live page, map or explainer that states no new fact; 1 = not about the midterm elections.
 Tag is one of: senate, house, governor, markets, other.
 "market_impact": one plain sentence on how the news bears on US, European or Indian markets, ONLY if importance is 4 or 5 and the link is real and direct and stated in the supplied text; otherwise null. Never speculative. "market_regions" lists the regions it concerns, from "US", "EU", "India"; empty when market_impact is null.
 "cluster_key": a short lowercase slug naming the story (for example "senate-control-called"). If the item is about the same story as one in "recent", reuse that exact cluster_key.
@@ -56,5 +56,5 @@ export function cleanText(s: string): string {
   return t;
 }
 
-const BANNED = /\b(delve|landscape|crucial|robust|furthermore|moreover|bullish|bearish|key takeaways)\b/i;
+const BANNED = /\b(delve|landscape|crucial|robust|furthermore|moreover|bullish|bearish|key takeaways)\b|supplied (?:text|snippet)|(?:did|does|do) not (?:include|state|mention|say|contain)|not (?:stated|included|mentioned) in the|could not be found/i;
 export const hasBanned = (s: string) => BANNED.test(s);

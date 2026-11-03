@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { isGovUrl } from '@/lib/blogSanitize';
-import type { Feed } from './config';
+import { BLOCKED_SOURCE_RE, type Feed } from './config';
 
 export interface RawItem {
   feed: string;
@@ -35,6 +35,7 @@ export function parseFeed(xml: string, feed: Feed): RawItem[] {
       const m = title.match(/^(.*\S)\s+-\s+([^-]{2,40})$/);
       if (m) { title = m[1]; source = source || m[2].trim(); }
     }
+    if (BLOCKED_SOURCE_RE.test(source) || BLOCKED_SOURCE_RE.test(url)) continue;
     out.push({
       feed: feed.name, source: source || feed.name, title, url,
       snippet: stripTags(pick(b, 'description') ?? pick(b, 'summary') ?? '').slice(0, 320),
