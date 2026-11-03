@@ -8,6 +8,7 @@ import { adminFetch } from '@/lib/adminFetch';
 import { validatePassword, MIN_PASSWORD_LENGTH } from '@/lib/passwordPolicy';
 import { cn } from '@/lib/utils';
 import RefundModal from './RefundModal';
+import RightNowPanel from './RightNowPanel';
 
 interface AdminUserRow {
   id: string;
@@ -230,6 +231,9 @@ export default function AdminPageClient() {
           <ShieldCheck size={20} className="text-[#F97316]" />
           <h1 className="h-section text-[#0D1117]">Admin Dashboard</h1>
         </div>
+
+        {/* GA4 realtime (last 30 min) */}
+        {checked && isAdmin && <RightNowPanel />}
 
         {/* GA4 snapshot */}
         <div className="card-plain p-6">
