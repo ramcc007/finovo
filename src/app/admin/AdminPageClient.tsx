@@ -28,8 +28,10 @@ interface AdminUserRow {
 interface Overview {
   activeUsers: number; newUsers: number; sessions: number; pageViews: number; avgSessionSec: number;
 }
+type Range = 'today' | 'yesterday' | '7d' | '30d';
+const RANGE_LABELS: Record<Range, string> = { today: 'Today', yesterday: 'Yesterday', '7d': 'Last 7d', '30d': 'Last 30d' };
 interface Analytics {
-  last7d: Overview; last30d: Overview;
+  overview: Overview;
   topPages: { path: string; views: number }[];
   devices: { category: string; users: number }[];
   locations: { country: string; city: string; users: number }[];
@@ -58,9 +60,10 @@ export default function AdminPageClient() {
   const [checked, setChecked] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const [analytics, setAnalytics] = useState<Analytics | null>(null);
+  const [analyticsByRange, setAnalyticsByRange] = useState<Partial<Record<Range, Analytics>>>({});
   const [analyticsError, setAnalyticsError] = useState<string | null>(null);
-  const [range, setRange] = useState<'7d' | '30d'>('7d');
+  const [range, setRange] = useState<Range>('7d');
+  const analytics = analyticsByRange[range] ?? null;
 
   const [users, setUsers] = useState<AdminUserRow[] | null>(null);
   const [usersError, setUsersError] = useState<string | null>(null);
@@ -91,16 +94,23 @@ export default function AdminPageClient() {
   useEffect(() => {
     if (!checked || !isAdmin) return;
 
-    adminFetch('/api/admin/analytics')
+    loadUsers();
+  }, [checked, isAdmin]);
+
+  // Fetch each range once, when it's first selected.
+  const loadedRange = Boolean(analyticsByRange[range]);
+  useEffect(() => {
+    if (!checked || !isAdmin || loadedRange) return;
+    let cancelled = false;
+    adminFetch(`/api/admin/analytics?range=${range}`)
       .then(async r => {
         const d = await r.json();
         if (!r.ok) throw new Error(d.error ?? 'Failed to load analytics');
-        setAnalytics(d);
+        if (!cancelled) setAnalyticsByRange(prev => ({ ...prev, [range]: d }));
       })
-      .catch(e => setAnalyticsError(e.message));
-
-    loadUsers();
-  }, [checked, isAdmin]);
+      .catch(e => { if (!cancelled) setAnalyticsError(e.message); });
+    return () => { cancelled = true; };
+  }, [checked, isAdmin, range, loadedRange]);
 
   const handleSuspend = async (u: AdminUserRow) => {
     const suspend = !isBanned(u);
@@ -186,7 +196,7 @@ export default function AdminPageClient() {
     return [u.email, u.first_name, u.last_name, u.city].some(v => v?.toLowerCase().includes(q));
   }) ?? null;
 
-  const ov = analytics ? (range === '7d' ? analytics.last7d : analytics.last30d) : null;
+  const ov = analytics?.overview ?? null;
 
   return (
     <div className="min-h-screen bg-[#F4F6FA]">
@@ -198,22 +208,22 @@ export default function AdminPageClient() {
 
         {/* GA4 snapshot */}
         <div className="card-plain p-6">
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
             <div className="flex items-center gap-2">
               <BarChart3 size={16} className="text-[#8A96A8]" />
               <h2 className="text-sm font-semibold text-[#0D1117]">Traffic Snapshot</h2>
             </div>
             <div className="inline-flex items-center gap-0.5 bg-[#EEF1F7] p-0.5 rounded-lg">
-              {(['7d', '30d'] as const).map(r => (
+              {(Object.keys(RANGE_LABELS) as Range[]).map(r => (
                 <button
                   key={r}
-                  onClick={() => setRange(r)}
+                  onClick={() => { setAnalyticsError(null); setRange(r); }}
                   className={cn(
                     'text-xs font-semibold px-3 py-1.5 rounded-md transition-all',
                     range === r ? 'bg-white text-[#0D1117] shadow-sm' : 'text-[#4A5568] hover:text-[#0D1117]'
                   )}
                 >
-                  Last {r}
+                  {RANGE_LABELS[r]}
                 </button>
               ))}
             </div>
@@ -248,7 +258,7 @@ export default function AdminPageClient() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <h3 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-2">Top Pages (30d)</h3>
+                  <h3 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-2">Top Pages ({RANGE_LABELS[range].replace('Last ', '')})</h3>
                   <div className="space-y-1.5">
                     {analytics!.topPages.length === 0 ? (
                       <p className="text-sm text-[#8A96A8]">No data yet.</p>
@@ -261,7 +271,7 @@ export default function AdminPageClient() {
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-2">Devices (30d)</h3>
+                  <h3 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-2">Devices ({RANGE_LABELS[range].replace('Last ', '')})</h3>
                   <div className="space-y-1.5">
                     {analytics!.devices.length === 0 ? (
                       <p className="text-sm text-[#8A96A8]">No data yet.</p>
@@ -274,7 +284,7 @@ export default function AdminPageClient() {
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-2">Top Locations (30d)</h3>
+                  <h3 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-2">Top Locations ({RANGE_LABELS[range].replace('Last ', '')})</h3>
                   <div className="space-y-1.5">
                     {analytics!.locations.length === 0 ? (
                       <p className="text-sm text-[#8A96A8]">No data yet.</p>

@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { BetaAnalyticsDataClient } from '@google-analytics/data';
 import { requireAdmin } from '@/lib/adminAuth';
 
+// Dates are in the GA4 property's reporting time zone.
+const RANGES: Record<string, { startDate: string; endDate: string }> = {
+  today: { startDate: 'today', endDate: 'today' },
+  yesterday: { startDate: 'yesterday', endDate: 'yesterday' },
+  '7d': { startDate: '7daysAgo', endDate: 'today' },
+  '30d': { startDate: '30daysAgo', endDate: 'today' },
+};
+
 export async function GET(req: NextRequest) {
   const admin = await requireAdmin(req);
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
@@ -19,54 +27,49 @@ export async function GET(req: NextRequest) {
       credentials: { client_email: clientEmail, private_key: privateKey.replace(/\\n/g, '\n') },
     });
     const property = `properties/${propertyId}`;
-    const overviewMetrics = [
-      { name: 'activeUsers' }, { name: 'newUsers' }, { name: 'sessions' },
-      { name: 'screenPageViews' }, { name: 'averageSessionDuration' },
-    ];
+    const asked = req.nextUrl.searchParams.get('range') ?? '7d';
+    const range = Object.hasOwn(RANGES, asked) ? asked : '7d';
+    const dateRanges = [RANGES[range]];
 
-    const [overview7d] = await analyticsClient.runReport({
-      property,
-      dateRanges: [{ startDate: '7daysAgo', endDate: 'today' }],
-      metrics: overviewMetrics,
-    });
-    const [overview30d] = await analyticsClient.runReport({
-      property,
-      dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
-      metrics: overviewMetrics,
-    });
-    const [topPages] = await analyticsClient.runReport({
-      property,
-      dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
-      dimensions: [{ name: 'pagePath' }],
-      metrics: [{ name: 'screenPageViews' }],
-      orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }],
-      limit: 8,
-    });
-    const [devices] = await analyticsClient.runReport({
-      property,
-      dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
-      dimensions: [{ name: 'deviceCategory' }],
-      metrics: [{ name: 'activeUsers' }],
-      orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
-    });
-    const [locations] = await analyticsClient.runReport({
-      property,
-      dateRanges: [{ startDate: '30daysAgo', endDate: 'today' }],
-      dimensions: [{ name: 'country' }, { name: 'city' }],
-      metrics: [{ name: 'activeUsers' }],
-      orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
-      limit: 8,
-    });
+    const [[overview], [topPages], [devices], [locations]] = await Promise.all([
+      analyticsClient.runReport({
+        property,
+        dateRanges,
+        metrics: [
+          { name: 'activeUsers' }, { name: 'newUsers' }, { name: 'sessions' },
+          { name: 'screenPageViews' }, { name: 'averageSessionDuration' },
+        ],
+      }),
+      analyticsClient.runReport({
+        property,
+        dateRanges,
+        dimensions: [{ name: 'pagePath' }],
+        metrics: [{ name: 'screenPageViews' }],
+        orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }],
+        limit: 8,
+      }),
+      analyticsClient.runReport({
+        property,
+        dateRanges,
+        dimensions: [{ name: 'deviceCategory' }],
+        metrics: [{ name: 'activeUsers' }],
+        orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
+      }),
+      analyticsClient.runReport({
+        property,
+        dateRanges,
+        dimensions: [{ name: 'country' }, { name: 'city' }],
+        metrics: [{ name: 'activeUsers' }],
+        orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
+        limit: 8,
+      }),
+    ]);
 
-    const rowVals = (rows: { metricValues?: { value?: string | null }[] | null }[] | null | undefined) =>
-      (rows?.[0]?.metricValues ?? []).map(v => Number(v.value ?? 0));
-
-    const [u7, n7, s7, p7, d7] = rowVals(overview7d.rows);
-    const [u30, n30, s30, p30, d30] = rowVals(overview30d.rows);
+    const [u, n, s, p, d] = (overview.rows?.[0]?.metricValues ?? []).map(v => Number(v.value ?? 0));
 
     return NextResponse.json({
-      last7d: { activeUsers: u7 || 0, newUsers: n7 || 0, sessions: s7 || 0, pageViews: p7 || 0, avgSessionSec: Math.round(d7 || 0) },
-      last30d: { activeUsers: u30 || 0, newUsers: n30 || 0, sessions: s30 || 0, pageViews: p30 || 0, avgSessionSec: Math.round(d30 || 0) },
+      range,
+      overview: { activeUsers: u || 0, newUsers: n || 0, sessions: s || 0, pageViews: p || 0, avgSessionSec: Math.round(d || 0) },
       topPages: (topPages.rows ?? []).map(r => ({
         path: r.dimensionValues?.[0]?.value ?? '',
         views: Number(r.metricValues?.[0]?.value ?? 0),
