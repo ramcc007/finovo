@@ -57,5 +57,5 @@ export function cleanText(s: string): string {
   return t;
 }
 
-const BANNED = /\b(delve|landscape|crucial|robust|furthermore|moreover|bullish|bearish|key takeaways)\b|supplied (?:text|snippet)|(?:did|does|do) not (?:include|state|mention|say|contain)|not (?:stated|included|mentioned) in the|could not be found/i;
+const BANNED = /\b(delve|landscape|crucial|robust|furthermore|moreover|bullish|bearish|key takeaways)\b|supplied (?:text|snippet)|(?:did|does|do) not (?:include|state|mention|say|contain|give|provide|specify|offer|name|identify|describe|detail)|states? no (?:result|count|figure)|not (?:stated|included|mentioned) in the|could not be found/i;
 export const hasBanned = (s: string) => BANNED.test(s);
