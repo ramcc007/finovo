@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getServiceClient } from '@/lib/supabase';
+import { getServiceClient } from '@/lib/supabaseServer';
 import type { PlanId, FeatureKey } from '@/lib/plans';
 import { PRO_FEATURES } from '@/lib/plans';
 

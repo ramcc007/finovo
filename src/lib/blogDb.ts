@@ -1,6 +1,6 @@
 import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
-import { getServiceClient } from '@/lib/supabase';
+import { getServiceClient } from '@/lib/supabaseServer';
 import type { Post } from '@/lib/blog';
 import { getStaticPosts } from '@/lib/staticBlog';
 import { sanitizeContent } from '@/lib/blogSanitize';

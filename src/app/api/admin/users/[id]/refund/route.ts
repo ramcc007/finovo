@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, isValidUserId } from '@/lib/adminAuth';
-import { getServiceClient } from '@/lib/supabase';
+import { getServiceClient } from '@/lib/supabaseServer';
 import { razorpayAuthHeader } from '@/lib/razorpay';
 
 export const dynamic = 'force-dynamic';

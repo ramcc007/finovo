@@ -1,4 +1,4 @@
-import { getServiceClient } from '@/lib/supabase';
+import { getServiceClient } from '@/lib/supabaseServer';
 
 /**
  * Actively checks Razorpay for a subscription's real status and writes it to

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse, after } from 'next/server';
 import { pingIndexNow } from '@/lib/indexNow';
 import { BLOG_TAG } from '@/lib/blogDb';
 import { requireAdmin } from '@/lib/adminAuth';
-import { getServiceClient } from '@/lib/supabase';
+import { getServiceClient } from '@/lib/supabaseServer';
 import { parsePostInput, toRow } from '@/lib/blogSanitize';
 
 export async function GET(req: NextRequest) {

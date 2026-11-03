@@ -2,7 +2,7 @@ import { revalidateTag } from 'next/cache';
 import { NextRequest, NextResponse, after } from 'next/server';
 import { GLOSSARY_TAG } from '@/lib/glossaryDb';
 import { requireAdmin } from '@/lib/adminAuth';
-import { getServiceClient } from '@/lib/supabase';
+import { getServiceClient } from '@/lib/supabaseServer';
 import { parseTermInput, toTermRow } from '@/lib/glossarySanitize';
 import { pingIndexNow } from '@/lib/indexNow';
 

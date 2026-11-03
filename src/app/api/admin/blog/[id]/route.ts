@@ -4,7 +4,7 @@ import { pingIndexNow } from '@/lib/indexNow';
 import { publishNow } from '@/lib/publishNow';
 import { requireAdmin } from '@/lib/adminAuth';
 import { isValidUserId } from '@/lib/adminAuth';
-import { getServiceClient } from '@/lib/supabase';
+import { getServiceClient } from '@/lib/supabaseServer';
 import { parsePostInput, toRow } from '@/lib/blogSanitize';
 import { COLS, toPost, type Row, BLOG_TAG } from '@/lib/blogDb';
 import { getStaticPosts } from '@/lib/staticBlog';

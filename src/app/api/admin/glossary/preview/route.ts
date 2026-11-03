@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
-import { getServiceClient } from '@/lib/supabase';
+import { getServiceClient } from '@/lib/supabaseServer';
 import { GLOSSARY_COLS, toTerm, type GlossaryRow } from '@/lib/glossaryDb';
 
 /** Admin-only: a glossary term by slug whatever its status or date, with its related terms that exist. */

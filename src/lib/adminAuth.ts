@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getServiceClient } from '@/lib/supabase';
+import { getServiceClient } from '@/lib/supabaseServer';
 
 /**
  * Verifies the request's Bearer token against Supabase and confirms the

@@ -1,7 +1,7 @@
 import { revalidateTag } from 'next/cache';
 import { NextRequest, NextResponse, after } from 'next/server';
 import { requireAdmin, isValidUserId } from '@/lib/adminAuth';
-import { getServiceClient } from '@/lib/supabase';
+import { getServiceClient } from '@/lib/supabaseServer';
 import { GLOSSARY_COLS, toTerm, type GlossaryRow, GLOSSARY_TAG } from '@/lib/glossaryDb';
 import { parseTermInput, toTermRow } from '@/lib/glossarySanitize';
 import { pingIndexNow } from '@/lib/indexNow';

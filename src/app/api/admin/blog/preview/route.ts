@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
-import { getServiceClient } from '@/lib/supabase';
+import { getServiceClient } from '@/lib/supabaseServer';
 import { COLS, toPost, type Row } from '@/lib/blogDb';
 import { sanitizeContent } from '@/lib/blogSanitize';
 

@@ -1,7 +1,7 @@
 import { revalidateTag } from 'next/cache';
 import { NextRequest, NextResponse, after } from 'next/server';
 import { requireAdmin, isValidUserId } from '@/lib/adminAuth';
-import { getServiceClient } from '@/lib/supabase';
+import { getServiceClient } from '@/lib/supabaseServer';
 import { pingIndexNow } from '@/lib/indexNow';
 import { ELECTION_TAG, META_COLS, UPDATE_COLS, toMeta, toUpdate, type UpdateRow } from '@/lib/election/db';
 import { MAX_AI_CALLS_PER_DAY } from '@/lib/election/config';

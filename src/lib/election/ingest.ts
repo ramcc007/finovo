@@ -1,5 +1,5 @@
 import { revalidateTag } from 'next/cache';
-import { getServiceClient } from '@/lib/supabase';
+import { getServiceClient } from '@/lib/supabaseServer';
 import { isGovUrl } from '@/lib/blogSanitize';
 import { pingIndexNow, pingWebSub } from '@/lib/indexNow';
 import {

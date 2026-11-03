@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, isValidUserId } from '@/lib/adminAuth';
-import { getServiceClient } from '@/lib/supabase';
+import { getServiceClient } from '@/lib/supabaseServer';
 
 // Supabase bans are expressed as a duration string, not a boolean — 87600h
 // (10 years) is the conventional "effectively permanent" suspension value;

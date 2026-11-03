@@ -1,4 +1,4 @@
-import { getServiceClient } from '@/lib/supabase';
+import { getServiceClient } from '@/lib/supabaseServer';
 
 export type PublishNowResult =
   | { ok: true; slug: string }

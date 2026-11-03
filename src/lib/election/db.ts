@@ -1,6 +1,6 @@
 import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
-import { getServiceClient } from '@/lib/supabase';
+import { getServiceClient } from '@/lib/supabaseServer';
 import type { ElectionMeta, ElectionUpdate, FeedStat, LiveVideo, Media, Region, Scoreboard, SourceLink, Tag } from './types';
 
 export const ELECTION_TAG = 'election-updates';
