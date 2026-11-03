@@ -7,10 +7,10 @@ export const ELECTION_TAG = 'election-updates';
 
 export interface UpdateRow {
   id: string; cluster_key: string; headline: string; summary: string; market_impact: string | null;
-  market_regions: string[] | null; tag: string; importance: number; sources: unknown; media: Media | null;
+  market_regions: string[] | null; tag: string; importance: number; sources: unknown; media: Media | null; race: string | null;
   published_at: string; hidden: boolean;
 }
-export const UPDATE_COLS = 'id, cluster_key, headline, summary, market_impact, market_regions, tag, importance, sources, media, published_at, hidden';
+export const UPDATE_COLS = 'id, cluster_key, headline, summary, market_impact, market_regions, tag, importance, sources, media, race, published_at, hidden';
 
 export function toUpdate(r: UpdateRow): ElectionUpdate {
   return {
@@ -18,7 +18,7 @@ export function toUpdate(r: UpdateRow): ElectionUpdate {
     marketImpact: r.market_impact, marketRegions: (r.market_regions ?? []) as Region[],
     tag: r.tag as Tag, importance: r.importance,
     sources: (Array.isArray(r.sources) ? r.sources : []) as SourceLink[],
-    media: r.media ?? null, publishedAt: r.published_at, hidden: r.hidden,
+    media: r.media ?? null, race: r.race ?? null, publishedAt: r.published_at, hidden: r.hidden,
   };
 }
 
@@ -45,7 +45,7 @@ const loadUpdates = unstable_cache(
       .order('published_at', { ascending: false }).limit(1000);
     return ((data ?? []) as UpdateRow[]).map(toUpdate);
   },
-  ['election-updates-v2'], { tags: [ELECTION_TAG], revalidate: 300 },
+  ['election-updates-v3'], { tags: [ELECTION_TAG], revalidate: 300 },
 );
 
 const loadMeta = unstable_cache(

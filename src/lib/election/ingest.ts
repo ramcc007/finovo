@@ -9,6 +9,7 @@ import {
 import { ELECTION_TAG, META_COLS, toMeta } from './db';
 import { fetchFeed, jaccard, titleNorm, titleTokens, urlHash, type RawItem } from './rss';
 import { SYSTEM_PROMPT, USER_RULES, cleanText, hasBanned } from './style';
+import { normaliseRace } from './sections';
 import { PAGE_PATH, type Chamber, type Projection, type ScoreEntry, type Scoreboard, type SourceLink, type Tag } from './types';
 
 const TAGS: Tag[] = ['senate', 'house', 'governor', 'markets', 'other'];
@@ -20,6 +21,7 @@ interface AiItem {
   id: string; importance: number; tag: string; headline: string; summary: string; cluster_key: string;
   market_impact: string | null; market_regions: string[]; seats: { chamber: string; d: number; r: number; other: number | null; uncalled: number | null } | null;
   projection: { chamber: string; kind: string; party: string | null; probability: number | null; by: string } | null;
+  race?: string | null;
 }
 
 export interface IngestResult {
@@ -271,7 +273,7 @@ export async function runIngest(): Promise<IngestResult> {
     } else {
       const published = new Date(Math.min(Date.parse(g.items[0].publishedAt), Date.now())).toISOString();
       const { data: row } = await db.from('election_updates').insert({
-        cluster_key: clusterKey, headline, summary, market_impact: impact, market_regions: regions, tag, importance, sources, published_at: published,
+        cluster_key: clusterKey, headline, summary, market_impact: impact, market_regions: regions, tag, importance, sources, race: normaliseRace(a.race), published_at: published,
       }).select('id').single();
       if (row) { created.push({ id: row.id as string, importance }); if (importance === 5) sawFive = true; itemsToday++; }
     }

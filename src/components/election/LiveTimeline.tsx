@@ -20,8 +20,9 @@ const TAG_CLS: Record<Tag, string> = {
 const matches = (u: ElectionUpdate, f: Filter) =>
   f === 'all' ? true : f === 'key' ? u.importance === 5 : f === 'markets' ? u.tag === 'markets' || !!u.marketImpact : u.tag === f;
 
-export default function LiveTimeline({ updates }: { updates: ElectionUpdate[] }) {
+export default function LiveTimeline({ updates, simple = false }: { updates: ElectionUpdate[]; simple?: boolean }) {
   const [filter, setFilter] = useState<Filter>('all');
+  const filters = simple ? FILTERS.filter(f => f.id === 'all' || f.id === 'key') : FILTERS;
   const [copied, setCopied] = useState<string | null>(null);
   const shown = updates.filter(u => matches(u, filter));
 
@@ -33,7 +34,7 @@ export default function LiveTimeline({ updates }: { updates: ElectionUpdate[] })
   return (
     <div>
       <div role="group" aria-label="Filter updates" className="-mx-1 mb-6 flex gap-2 overflow-x-auto px-1 pb-1">
-        {FILTERS.map(f => (
+        {filters.map(f => (
           <button key={f.id} type="button" aria-pressed={filter === f.id} onClick={() => setFilter(f.id)}
             className={`inline-flex min-h-10 shrink-0 items-center rounded-full px-4 text-sm font-semibold transition-all ${filter === f.id
               ? 'bg-[#0D1117] text-white shadow-md' : 'bg-white text-[#4A5568] ring-1 ring-[#E5E7EB] hover:ring-[#F97316]'}`}>

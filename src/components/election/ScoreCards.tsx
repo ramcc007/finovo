@@ -25,14 +25,14 @@ function Bar({ e }: { e: ScoreEntry }) {
 }
 
 /** Seat counts as three large cards, for the dark page header. Values come only from admin-approved numbers. */
-export default function ScoreCards({ board, projections = [] }: { board: Scoreboard; projections?: Projection[] }) {
+export default function ScoreCards({ board, projections = [], only }: { board: Scoreboard; projections?: Projection[]; only?: Chamber[] }) {
   const sources = [...new Set(ROWS.map(r => board[r.id]?.source).filter(Boolean))];
   const updated = ROWS.map(r => board[r.id]?.updatedAt).filter(Boolean).sort().at(-1);
   return (
     <section aria-labelledby="scoreboard">
       <h2 id="scoreboard" className="sr-only">Seat count so far</h2>
-      <div className="grid gap-3 sm:grid-cols-3">
-        {ROWS.map(r => {
+      <div className={`grid gap-3 ${only && only.length === 1 ? 'max-w-md' : 'sm:grid-cols-3'}`}>
+        {ROWS.filter(r => !only || only.includes(r.id)).map(r => {
           const e = board[r.id];
           const call = projections.filter(p => p.chamber === r.id && p.kind === 'called').sort((a, b) => b.at.localeCompare(a.at))[0];
           return (

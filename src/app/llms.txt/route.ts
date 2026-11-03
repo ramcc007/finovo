@@ -29,7 +29,7 @@ Scripwise is not a SEBI-registered investment adviser. All data is for informati
 
 ## Live coverage
 
-- [US Midterm Elections 2026: Live Updates and Results](${base}/us-midterm-elections): A running timeline of the 3 November 2026 US midterm elections for readers in the US, Europe and India, with seat counts, plain-language updates checked every 5 minutes, market-impact notes and a credited source on every update. Feeds: ${base}/us-midterm-elections/feed.xml (RSS), ${base}/us-midterm-elections/feed.json (JSON Feed). Plain-text version: ${base}/us-midterm-elections/index.md
+- [US Midterm Elections 2026: Live Updates and Results](${base}/us-midterm-elections): A running timeline of the 3 November 2026 US midterm elections for readers in the US, Europe and India, with seat counts, plain-language updates checked every 5 minutes, market-impact notes and a credited source on every update. Feeds: ${base}/us-midterm-elections/feed.xml (RSS), ${base}/us-midterm-elections/feed.json (JSON Feed). Plain-text version: ${base}/us-midterm-elections/index.md. Section pages: ${base}/us-midterm-elections/senate, /house, /governors, /markets; individual races at ${base}/us-midterm-elections/races/<state>-senate (for example georgia-senate).
 
 ## Glossary
 

@@ -59,3 +59,7 @@ alter table public.election_meta add column if not exists feed_stats jsonb not n
 -- 0011: projections and forecasts picked up from top sources, and the auto-publish switch for seat counts.
 alter table public.election_meta add column if not exists projections jsonb not null default '[]'::jsonb;
 alter table public.election_meta add column if not exists auto_publish boolean not null default true;
+
+-- 0012: the race an update is about, as a slug such as georgia-senate, new-york-house-17 or michigan-governor.
+alter table public.election_updates add column if not exists race text;
+create index if not exists election_updates_race_idx on public.election_updates (race) where race is not null;

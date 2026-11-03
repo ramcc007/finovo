@@ -9,6 +9,8 @@ import LiveTimeline from '@/components/election/LiveTimeline';
 import PtTime from '@/components/election/PtTime';
 import ScoreCards from '@/components/election/ScoreCards';
 import YouTubeLite from '@/components/election/YouTubeLite';
+import BalanceOfPower from '@/components/election/BalanceOfPower';
+import ExploreLinks from '@/components/election/ExploreLinks';
 import Projections from '@/components/election/Projections';
 import LiveRefresh from '@/components/election/LiveRefresh';
 import BookmarkButton from '@/components/election/BookmarkButton';
@@ -138,6 +140,8 @@ export default async function ElectionPage({ searchParams }: { searchParams: Pro
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-12">
+        <BalanceOfPower board={meta?.scoreboard ?? {}} />
+        <div className="mb-10"><ExploreLinks updates={updates} /></div>
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-10">
           <div className="min-w-0 lg:order-1">
             {(meta?.videos.length ?? 0) > 0 && (

@@ -2,6 +2,8 @@ import { MetadataRoute } from 'next';
 import { getPublishedPosts } from '@/lib/blogDb';
 import { modifiedAt, slugify } from '@/lib/blog';
 import { getPublishedTerms } from '@/lib/glossaryDb';
+import { getElectionData } from '@/lib/election/db';
+import { MIN_UPDATES_TO_INDEX, SECTION_IDS, SECTIONS, listRaces, racePath, sectionUpdates } from '@/lib/election/sections';
 
 const base = 'https://www.scripwise.co.in';
 
@@ -59,5 +61,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Stock pages (/stocks/[symbol]) are deliberately left out: thousands of
   // thin, data-only pages dilute the sitemap. They stay reachable by links.
-  return [...staticRoutes, ...blogRoutes, ...glossaryRoutes];
+  // Election section and race pages: only those with something to say.
+  const { updates: electionUpdates } = await getElectionData();
+  const electionRoutes: MetadataRoute.Sitemap = [
+    ...SECTION_IDS.filter(id => sectionUpdates(SECTIONS[id], electionUpdates).length > 0)
+      .map(id => ({ url: `${base}${SECTIONS[id].path}`, changeFrequency: 'hourly' as const, priority: 0.8 })),
+    ...listRaces(electionUpdates).filter(r => r.count >= MIN_UPDATES_TO_INDEX)
+      .map(r => ({ url: `${base}${racePath(r.slug)}`, changeFrequency: 'hourly' as const, priority: 0.7 })),
+  ];
+
+  return [...staticRoutes, ...electionRoutes, ...blogRoutes, ...glossaryRoutes];
 }

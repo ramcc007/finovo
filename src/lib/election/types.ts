@@ -28,6 +28,7 @@ export interface ElectionUpdate {
   importance: number;
   sources: SourceLink[];
   media: Media | null;
+  race: string | null;
   publishedAt: string;
   hidden: boolean;
 }
