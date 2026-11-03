@@ -65,10 +65,10 @@ function parseJson<T>(text: string): T {
 }
 
 /** Parses the AI's array item by item, so one malformed entry does not lose the rest of the batch. */
-function parseItems(text: string): { items: AiItem[]; bad: number; snippet: string } {
+function parseItems(text: string): { items: AiItem[]; bad: number; snippet: string; complete: boolean } {
   try {
     const all = parseJson<AiItem[]>(text);
-    if (Array.isArray(all)) return { items: all, bad: 0, snippet: '' };
+    if (Array.isArray(all)) return { items: all, bad: 0, snippet: '', complete: true };
   } catch { /* fall through to per-item parsing */ }
   const chunks = text.split(/\{\s*"id"\s*:/).slice(1);
   const items: AiItem[] = [];
@@ -81,7 +81,7 @@ function parseItems(text: string): { items: AiItem[]; bad: number; snippet: stri
       try { items.push(JSON.parse(repairJson(obj)) as AiItem); } catch (e) { bad++; if (!snippet) snippet = `${e instanceof Error ? e.message : ''} | ${obj.slice(0, 160)}`; }
     }
   }
-  return { items, bad, snippet };
+  return { items, bad, snippet, complete: false };
 }
 
 const int = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 1000 ? v : null);
@@ -147,11 +147,13 @@ export async function runIngest(): Promise<IngestResult> {
   })))}`;
   let ai: AiItem[];
   let parseNote: string | null = null;
+  let replyComplete = false;
   try {
     calls++;
     const parsed = parseItems(await callClaude(SYSTEM_PROMPT, prompt, 7000));
-    if (parsed.items.length === 0) throw new Error(`AI reply could not be read. ${parsed.snippet}`.slice(0, 400));
+    if (parsed.items.length === 0 && !parsed.complete) throw new Error(`AI reply could not be read. ${parsed.snippet}`.slice(0, 400));
     ai = parsed.items;
+    replyComplete = parsed.complete;
     if (parsed.bad) parseNote = `${parsed.bad} item(s) in the AI reply could not be read and will be retried. ${parsed.snippet}`.slice(0, 400);
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'AI error';
@@ -169,8 +171,11 @@ export async function runIngest(): Promise<IngestResult> {
 
   for (const g of batch) {
     const a = byId.get(g.id);
-    if (!a) continue; // no usable AI result: leave unseen so the next run retries it
+    // A readable reply that leaves an item out means the model chose not to use it: remember it.
+    // A partly unreadable reply leaves the item unseen so the next run retries it.
+    if (!a && !replyComplete) continue;
     for (const it of g.items) toSeen.push({ hash: urlHash(it.url), title: it.title });
+    if (!a) continue;
     const importance = Math.min(5, Math.max(1, Math.round(Number(a.importance) || 1)));
     if (importance < MIN_IMPORTANCE_TO_PUBLISH) continue;
     const headline = cleanText(String(a.headline ?? '')).slice(0, 160);
