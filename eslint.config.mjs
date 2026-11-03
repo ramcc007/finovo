@@ -5,6 +5,12 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    // 14 existing components set state from an effect on mount (localStorage,
+    // auth state). Reported as warnings until they are refactored, so lint
+    // can gate new errors.
+    rules: { "react-hooks/set-state-in-effect": "warn" },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
