@@ -24,6 +24,8 @@ export const SENATE_STATES = ['AL', 'AK', 'AR', 'CO', 'DE', 'FL', 'GA', 'ID', 'I
 export const GOVERNOR_STATES = ['AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'FL', 'GA', 'HI', 'ID', 'IL', 'IA', 'KS', 'ME', 'MD', 'MA', 'MI', 'MN', 'NE', 'NV', 'NH', 'NM', 'NY', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'VT', 'WI', 'WY'];
 export const RACE_STATES: Record<MapChamber, string[]> = { senate: SENATE_STATES, governor: GOVERNOR_STATES };
 export const MIN_OUTLETS_TO_CALL = 2;
+// AP, Reuters and Decision Desk HQ run their own race calls (most other outlets repeat them), so one of them is enough for a solid call.
+const TRUSTED_CALLERS = new Set(['ap', 'reuters', 'ddhq']);
 
 export const raceKey = (chamber: MapChamber, state: string) => `${chamber}:${state}`;
 export const isRaceState = (chamber: MapChamber, state: string) => RACE_STATES[chamber].includes(state);
@@ -64,7 +66,7 @@ export function resolveRaces(reports: RaceReport[], overrides: Overrides = {}): 
     } else if (calledBy.size === 1) {
       const [[p, outlets]] = [...calledBy];
       party = p;
-      status = outlets.size >= MIN_OUTLETS_TO_CALL ? 'called' : 'leading'; // one outlet only: shown light until a second agrees
+      status = outlets.size >= MIN_OUTLETS_TO_CALL || [...outlets].some(o => TRUSTED_CALLERS.has(o)) ? 'called' : 'leading'; // any other single outlet: shown light until a second agrees
       if (parties.size > 1) { conflict = true; status = 'none'; party = null; } // someone says leading for the other party
     } else if (parties.size === 1) {
       party = [...parties][0]; status = 'leading';

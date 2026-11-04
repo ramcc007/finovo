@@ -23,7 +23,7 @@ export default function MapCallsAdmin({ reports, overrides, busy, act }: {
   return (
     <section className="rounded-xl border border-[#E5E7EB] bg-white p-5">
       <h2 className="text-lg font-bold text-[#0D1117]">Map calls</h2>
-      <p className="mt-1 text-sm text-[#4A5568]">Collected from top outlets. A state turns solid when two different outlets agree. Use the form to set a state yourself if the reports are wrong or still undecided.</p>
+      <p className="mt-1 text-sm text-[#4A5568]">Collected from top outlets. A state turns solid when AP, Reuters or Decision Desk HQ calls it, or when two different outlets agree. Use the form to set a state yourself if the reports are wrong or still undecided.</p>
 
       <div className="mt-4 flex flex-wrap items-end gap-2">
         <label className="text-[11px] text-[#8A96A8]">Chamber<br />

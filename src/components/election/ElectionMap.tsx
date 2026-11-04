@@ -1,7 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { MAP_VIEWBOX, US_STATES } from '@/lib/election/usMap';
+import { US_STATES } from '@/lib/election/usMap';
+import type { ScoreEntry } from '@/lib/election/types';
 import { RACE_STATES, raceKey, tally, type MapChamber, type Party, type RaceResult } from '@/lib/election/raceMap';
 import PtTime from './PtTime';
 
@@ -9,6 +10,18 @@ const PARTY_NAME: Record<Party, string> = { D: 'Democrat', R: 'Republican', I: '
 const SOLID: Record<Party, string> = { D: '#2563EB', R: '#DC2626', I: '#7C3AED' };
 const LIGHT: Record<Party, string> = { D: '#BFDBFE', R: '#FECACA', I: '#DDD6FE' };
 const LABEL: Record<MapChamber, string> = { senate: 'Senate', governor: 'Governors' };
+
+// Wider than the raw map so there is room on the right for the small Northeast states, drawn as labelled pills.
+const VIEWBOX = '-12 0 1070 725';
+const PILLS = ['VT', 'NH', 'MA', 'RI', 'CT', 'NJ', 'DE', 'MD'];
+const PILL_X = 1018, PILL_W = 58, PILL_H = 26, PILL_Y0 = 150, PILL_STEP = 36;
+// Alaska and Hawaii are drawn larger than the source map's insets: scale about a point, then shift.
+const INSETS: Record<string, { s: number; ox: number; oy: number; dx: number; dy: number }> = {
+  AK: { s: 1.15, ox: 102, oy: 593, dx: 30, dy: 85 },
+  HI: { s: 1.35, ox: 241, oy: 611, dx: 95, dy: 105 },
+};
+const inset = (code: string) => { const i = INSETS[code]; return i ? `translate(${i.ox * (1 - i.s) + i.dx} ${i.oy * (1 - i.s) + i.dy}) scale(${i.s})` : undefined; };
+const place = (code: string, x: number, y: number) => { const i = INSETS[code]; return i ? { x: i.ox + (x - i.ox) * i.s + i.dx, y: i.oy + (y - i.oy) * i.s + i.dy } : { x, y }; };
 
 function fillFor(inRace: boolean, r?: RaceResult): string {
   if (!inRace) return 'url(#em-hatch)';
@@ -27,7 +40,7 @@ function describe(chamber: MapChamber, name: string, inRace: boolean, r?: RaceRe
 }
 
 /** Live Senate and governor map. Calls come from reports by top news outlets; the page refreshes itself via LiveRefresh. */
-export default function ElectionMap({ races, updatedAt, initial = 'senate' }: { races: RaceResult[]; updatedAt: string | null; initial?: MapChamber }) {
+export default function ElectionMap({ races, updatedAt, board, initial = 'senate' }: { races: RaceResult[]; updatedAt: string | null; board?: Partial<Record<'senate' | 'governors', ScoreEntry>>; initial?: MapChamber }) {
   const [chamber, setChamber] = useState<MapChamber>(initial);
   const [picked, setPicked] = useState<string | null>(null);
 
@@ -35,8 +48,15 @@ export default function ElectionMap({ races, updatedAt, initial = 'senate' }: { 
   const t = tally(chamber, results);
   const names = useMemo(() => Object.fromEntries(US_STATES.map(s => [s.code, s.name])), []);
   const sel = picked ? { code: picked, inRace: RACE_STATES[chamber].includes(picked), r: results.get(raceKey(chamber, picked)) } : null;
-  const total = t.total;
+  // Full-chamber counts (including seats not up this year) when a top outlet has reported them; otherwise just the races on the map.
+  const sb = board?.[chamber === 'senate' ? 'senate' : 'governors'];
+  const sbCalled = sb ? (sb.d ?? 0) + (sb.r ?? 0) + (sb.other ?? 0) : 0;
+  const full = !!sb && sbCalled > 0;
+  const total = full ? (chamber === 'senate' ? 100 : 50) : t.total;
+  const nd = full ? sb!.d ?? 0 : t.d, nr = full ? sb!.r ?? 0 : t.r, ni = full ? sb!.other ?? 0 : t.i;
+  const undecided = total - nd - nr - ni;
   const pct = (n: number) => `${(n / total) * 100}%`;
+  const majority = full && chamber === 'senate' ? 51 : null;
 
   const lists = (c: MapChamber) => {
     const tl = RACE_STATES[c].map(code => ({ code, r: results.get(raceKey(c, code)) }));
@@ -64,7 +84,10 @@ export default function ElectionMap({ races, updatedAt, initial = 'senate' }: { 
         </div>
       </div>
 
-      <p className="mt-2 text-xs text-[#8A96A8]">
+      <p className="mt-2 text-sm text-[#4A5568]">
+        {full ? <>Seat counts from <strong>{sb!.source}</strong>; state calls from top news outlets.</> : <>From top news outlets: AP, Reuters, NPR, BBC, CNN and others.</>}
+      </p>
+      <p className="mt-1 text-xs text-[#8A96A8]">
         {chamber === 'senate' ? '35 of 100 Senate seats are up this year.' : '36 of 50 governorships are up this year.'}{' '}
         {updatedAt ? <>Updated <PtTime iso={updatedAt} />.</> : 'Waiting for the first result.'} Refreshes about every 10 minutes.
       </p>
@@ -72,21 +95,28 @@ export default function ElectionMap({ races, updatedAt, initial = 'senate' }: { 
       {/* Bar: Democrats on the left, Republicans on the right, undecided in the middle */}
       <div className="mt-5">
         <div className="mb-1.5 flex items-end justify-between">
-          <div><span className="text-3xl font-extrabold leading-none text-[#2563EB]">{t.d}</span><span className="ml-1.5 text-xs font-bold uppercase tracking-wide text-[#2563EB]">Dem</span>{t.leadingD > 0 && <span className="ml-2 text-xs text-[#8A96A8]">+{t.leadingD} leading</span>}</div>
-          <div className="text-right">{t.leadingR > 0 && <span className="mr-2 text-xs text-[#8A96A8]">+{t.leadingR} leading</span>}<span className="mr-1.5 text-xs font-bold uppercase tracking-wide text-[#DC2626]">GOP</span><span className="text-3xl font-extrabold leading-none text-[#DC2626]">{t.r}</span></div>
+          <div><span className="text-3xl font-extrabold leading-none text-[#2563EB]">{nd}</span><span className="ml-1.5 text-xs font-bold uppercase tracking-wide text-[#2563EB]">Dem</span>{!full && t.leadingD > 0 && <span className="ml-2 text-xs text-[#8A96A8]">+{t.leadingD} leading</span>}</div>
+          <div className="text-right">{!full && t.leadingR > 0 && <span className="mr-2 text-xs text-[#8A96A8]">+{t.leadingR} leading</span>}<span className="mr-1.5 text-xs font-bold uppercase tracking-wide text-[#DC2626]">GOP</span><span className="text-3xl font-extrabold leading-none text-[#DC2626]">{nr}</span></div>
         </div>
-        <div className="flex h-3 overflow-hidden rounded-full bg-[#E5E7EB]" role="img"
-          aria-label={`${LABEL[chamber]}: Democrats ${t.d}, Republicans ${t.r}${t.i ? `, independents ${t.i}` : ''}, ${t.undecided} not yet called, out of ${total} races`}>
-          <div className="bg-[#2563EB] transition-all" style={{ width: pct(t.d) }} />
-          {t.i > 0 && <div className="bg-[#7C3AED]" style={{ width: pct(t.i) }} />}
-          <div className="flex-1" />
-          <div className="bg-[#DC2626] transition-all" style={{ width: pct(t.r) }} />
+        <div className={`relative ${majority ? 'pt-5' : ''}`}>
+          {majority && <span className="absolute top-0 -translate-x-1/2 whitespace-nowrap text-[11px] font-bold text-[#4A5568]" style={{ left: pct(majority) }}>{majority} for majority</span>}
+          <div className="flex h-3 overflow-hidden rounded-full bg-[#E5E7EB]" role="img"
+            aria-label={`${LABEL[chamber]}: Democrats ${nd}, Republicans ${nr}${ni ? `, others ${ni}` : ''}, ${undecided} not yet called, out of ${total}${full ? ' seats' : ' races'}`}>
+            <div className="bg-[#2563EB] transition-all" style={{ width: pct(nd) }} />
+            {ni > 0 && <div className="bg-[#7C3AED]" style={{ width: pct(ni) }} />}
+            <div className="flex-1" />
+            <div className="bg-[#DC2626] transition-all" style={{ width: pct(nr) }} />
+          </div>
+          {majority && <span className="pointer-events-none absolute bottom-[-3px] top-[18px] w-0.5 -translate-x-1/2 bg-[#0D1117]" style={{ left: pct(majority) }} aria-hidden />}
         </div>
-        <p className="mt-1.5 text-center text-xs text-[#8A96A8]">{t.undecided} of {total} races not yet called{t.i > 0 ? ` · ${t.i} independent` : ''}</p>
+        <p className="mt-1.5 text-center text-xs text-[#8A96A8]">
+          {full ? `${undecided} of ${total} seats not yet called${ni > 0 ? ` · ${ni} independent or other` : ''} · ` : `${undecided} of ${total} races not yet called${ni > 0 ? ` · ${ni} independent` : ''} · `}
+          {t.d + t.r + t.i} of {t.total} races on the map called
+        </p>
       </div>
 
       <div className="mt-4">
-        <svg viewBox={MAP_VIEWBOX} className="h-auto w-full" role="group" aria-label={`Map of ${LABEL[chamber]} races`}>
+        <svg viewBox={VIEWBOX} className="h-auto w-full" role="group" aria-label={`Map of ${LABEL[chamber]} races`}>
           <defs>
             <pattern id="em-hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
               <rect width="7" height="7" fill="#F3F4F6" /><line x1="0" y1="0" x2="0" y2="7" stroke="#D1D5DB" strokeWidth="2" />
@@ -96,28 +126,52 @@ export default function ElectionMap({ races, updatedAt, initial = 'senate' }: { 
             const inRace = RACE_STATES[chamber].includes(s.code);
             const r = results.get(raceKey(chamber, s.code));
             const isSel = picked === s.code;
+            const unsettled = inRace && !r?.party;
+            const toggle = () => setPicked(p => (p === s.code ? null : s.code));
             return (
-              <path key={s.code} d={s.d} fill={fillFor(inRace, r)} stroke={isSel ? '#0D1117' : inRace && !(r?.party) ? '#94A3B8' : '#FFFFFF'} strokeWidth={isSel ? 2.2 : inRace && !(r?.party) ? 1.4 : 1.2} strokeLinejoin="round"
+              <path key={s.code} d={s.d} transform={inset(s.code)} fill={fillFor(inRace, r)} stroke={isSel ? '#0D1117' : unsettled ? '#94A3B8' : '#FFFFFF'} strokeWidth={isSel ? 2.2 : unsettled ? 1.4 : 1.2} strokeLinejoin="round"
                 className={inRace ? 'cursor-pointer outline-none transition-opacity hover:opacity-80 focus-visible:opacity-80' : 'outline-none'}
                 tabIndex={inRace ? 0 : undefined} role={inRace ? 'button' : undefined} aria-label={describe(chamber, s.name, inRace, r)}
-                onClick={() => setPicked(p => (p === s.code ? null : s.code))}
-                onKeyDown={e => { if (inRace && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setPicked(p => (p === s.code ? null : s.code)); } }}>
+                onClick={toggle} onKeyDown={e => { if (inRace && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggle(); } }}>
                 <title>{describe(chamber, s.name, inRace, r)}</title>
               </path>
             );
           })}
-          {US_STATES.filter(s => s.w > 34 && s.h > 22).map(s => {
+          {US_STATES.filter(s => s.w > 34 && s.h > 22 && !PILLS.includes(s.code)).map(s => {
             const inRace = RACE_STATES[chamber].includes(s.code);
             const r = results.get(raceKey(chamber, s.code));
             const dark = inRace && r?.party && r.status === 'called';
-            return <text key={s.code} x={s.cx} y={s.cy} textAnchor="middle" dominantBaseline="central" fontSize="13" fontWeight="700" fill={dark ? '#FFFFFF' : inRace ? '#374151' : '#9CA3AF'} pointerEvents="none" aria-hidden>{s.code}</text>;
+            const pos = place(s.code, s.cx, s.cy);
+            return <text key={s.code} x={pos.x} y={pos.y} textAnchor="middle" dominantBaseline="central" fontSize="13" fontWeight="700" fill={dark ? '#FFFFFF' : inRace ? '#374151' : '#9CA3AF'} pointerEvents="none" aria-hidden>{s.code}</text>;
+          })}
+          {/* Small Northeast states: a pill on the right with a leader line, as on Google's map */}
+          {PILLS.map((code, i) => {
+            const s = US_STATES.find(x => x.code === code);
+            if (!s) return null;
+            const inRace = RACE_STATES[chamber].includes(code);
+            const r = results.get(raceKey(chamber, code));
+            const y = PILL_Y0 + i * PILL_STEP;
+            const solid = inRace && r?.party && r.status === 'called';
+            const isSel = picked === code;
+            const toggle = () => setPicked(p => (p === code ? null : code));
+            return (
+              <g key={code}>
+                <line x1={s.cx} y1={s.cy} x2={PILL_X - PILL_W / 2} y2={y} stroke="#94A3B8" strokeWidth="1" />
+                <circle cx={s.cx} cy={s.cy} r="2.4" fill="#475569" />
+                <g tabIndex={inRace ? 0 : undefined} role={inRace ? 'button' : undefined} aria-label={describe(chamber, s.name, inRace, r)} className={inRace ? 'cursor-pointer outline-none hover:opacity-80 focus-visible:opacity-80' : 'outline-none'}
+                  onClick={inRace ? toggle : undefined} onKeyDown={e => { if (inRace && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggle(); } }}>
+                  <rect x={PILL_X - PILL_W / 2} y={y - PILL_H / 2} width={PILL_W} height={PILL_H} rx={PILL_H / 2} fill={fillFor(inRace, r)} stroke={isSel ? '#0D1117' : inRace && !r?.party ? '#94A3B8' : '#E5E7EB'} strokeWidth={isSel ? 2.2 : 1.4} />
+                  <text x={PILL_X} y={y} textAnchor="middle" dominantBaseline="central" fontSize="13" fontWeight="700" fill={solid ? '#FFFFFF' : inRace ? '#374151' : '#9CA3AF'} pointerEvents="none" aria-hidden>{code}</text>
+                </g>
+              </g>
+            );
           })}
         </svg>
       </div>
 
       <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-[#4A5568]">
         {[
-          { c: '#2563EB', t: 'Democrat won' }, { c: '#DC2626', t: 'Republican won' }, { c: '#BFDBFE', t: 'Leading (one outlet or not called)', b: '#93C5FD' },
+          { c: '#2563EB', t: 'Democrat won' }, { c: '#DC2626', t: 'Republican won' }, { c: '#BFDBFE', t: 'Leading (not yet confirmed)', b: '#93C5FD' },
           { c: '#FFFFFF', t: 'No result yet', b: '#D1D5DB' }, { c: 'url(#em-hatch-key)', t: 'No election' },
         ].map(i => (
           <li key={i.t} className="inline-flex items-center gap-1.5">
@@ -163,7 +217,7 @@ export default function ElectionMap({ races, updatedAt, initial = 'senate' }: { 
       })}
 
       <p className="mt-4 border-t border-[#EEF1F7] pt-3 text-xs leading-relaxed text-[#8A96A8]">
-        Source: calls as reported by top news outlets such as AP, Reuters, NPR, BBC and CNN, gathered automatically every few minutes. A state turns solid only when two different outlets report the same winner; a single outlet shows a lighter shade, and outlets that disagree are held back. This is not an official result. Scripwise does not call races itself.
+        Source: calls as reported by top news outlets such as AP, Reuters, NPR, BBC and CNN, gathered automatically every few minutes. A state turns solid when AP, Reuters or Decision Desk HQ calls it, or when two different outlets report the same winner. Any other single outlet shows a lighter shade, and outlets that disagree are held back. This is not an official result. Scripwise does not call races itself.
       </p>
     </section>
   );

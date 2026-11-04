@@ -38,7 +38,7 @@ export default async function SectionPage({ params }: Props) {
     <SubPage
       url={`${BASE}${s.path}`} crumb={s.name} h1={s.h1} intro={s.intro} description={s.description}
       updates={sectionUpdates(s, updates)} meta={meta} faq={s.faq} nonce={nonce}
-      top={mapped ? <ElectionMap races={races} updatedAt={meta?.lastIngestAt ?? null} initial={section === 'governors' ? 'governor' : 'senate'} /> : undefined}
+      top={mapped ? <ElectionMap races={races} updatedAt={meta?.lastIngestAt ?? null} board={meta?.scoreboard} initial={section === 'governors' ? 'governor' : 'senate'} /> : undefined}
       chambers={section === 'markets' ? undefined : [section === 'governors' ? 'governors' : section]}
     />
   );
