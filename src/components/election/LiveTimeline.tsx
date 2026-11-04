@@ -29,7 +29,7 @@ export default function LiveTimeline({ updates, simple = false }: { updates: Ele
   const copy = async (id: string) => {
     const url = `${window.location.origin}${window.location.pathname}#${anchorOf(id)}`;
     let ok = true;
-    try { await navigator.clipboard.writeText(url); } catch { ok = false; window.location.hash = anchorOf(id); } // no clipboard access: put the link in the address bar instead
+    try { await navigator.clipboard.writeText(url); } catch { ok = false; window.history.replaceState(null, "", `#${anchorOf(id)}`); } // no clipboard access: put the link in the address bar instead
     setCopied({ id, ok });
     setTimeout(() => setCopied(null), 2500);
   };
