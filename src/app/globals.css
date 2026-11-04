@@ -314,3 +314,5 @@ body {
 .blog-prose td { white-space: normal; min-width: 7rem; }
 .blog-prose th { background: #F9FAFB; color: #0D1117; font-weight: 600; }
 .blog-prose tr:last-child > td { border-bottom: 0; }
+/* Caption stays at the left edge of the box while a wide table scrolls (checked at 390 px, 4 Nov 2026). */
+.blog-prose caption { caption-side: top; text-align: left; position: sticky; left: 0; padding: .65rem .8rem; font-size: .875rem; font-weight: 600; color: #4B5563; width: calc(100vw - 4.5rem); max-width: 100%; box-sizing: border-box; }
