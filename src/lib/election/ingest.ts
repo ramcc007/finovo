@@ -112,6 +112,47 @@ function parseItems(text: string): { items: AiItem[]; bad: number; snippet: stri
   return { items, bad, snippet, complete: false };
 }
 
+const CALL_WORDS = /\b(wins?|won|defeats?|beats?|elected|re-?elected|projected|projects|declared|called|flips?|holds?|leads?|leading|ahead|clinch\w*)\b/i;
+
+/** Reads the Senate or governor call out of updates saved before call extraction existed (or that the model skipped),
+ *  one batch per run, newest first. Each credited top outlet becomes a report for the live map. Returns the AI calls used. */
+async function backfillCalls(db: ReturnType<typeof getServiceClient>, timeoutMs: number): Promise<number> {
+  const since = new Date(Date.now() - 72 * 3_600_000).toISOString();
+  const { data } = await db.from('election_updates').select('id, headline, summary, race, sources, published_at')
+    .eq('calls_checked', false).eq('hidden', false).gte('published_at', since).order('published_at', { ascending: false }).limit(60);
+  const rows = (data ?? []) as { id: string; headline: string; summary: string; race: string | null; sources: SourceLink[]; published_at: string }[];
+  // Only items that look like a single Senate or governor result are worth a model call; the rest are marked done.
+  const worth = rows.filter(r => /-(senate|governor)$/.test(r.race ?? '') && CALL_WORDS.test(r.headline)).slice(0, 25);
+  const skip = rows.filter(r => !worth.includes(r)).map(r => r.id);
+  if (skip.length) await db.from('election_updates').update({ calls_checked: true }).in('id', skip);
+  if (worth.length === 0) return 0;
+
+  const input = worth.map(r => ({ id: r.id, race: r.race, headline: r.headline, summary: r.summary }));
+  const system = 'You read US election headlines and return only JSON. Never guess and never use outside knowledge.';
+  const user = `For each item, say whether the text reports that a news organisation has called, projected or declared the winner of that Senate or governor race, or says a candidate is leading it with votes counted. Return a JSON array of {"id":"<id>","race_call":null | {"chamber":"senate"|"governor","state":"two-letter postal code","party":"D"|"R"|"I","status":"called"|"leading"}}. Use "called" only when the text says called, projected, won, defeated, elected or declared; otherwise "leading". Use null when the text does not state a result.\n${JSON.stringify(input)}`;
+  try {
+    const { text } = await callClaude(system, user, 2500, timeoutMs);
+    const out = parseJson<{ id: string; race_call: AiItem['race_call'] }[]>(text);
+    for (const o of out) {
+      const row = worth.find(r => r.id === o.id);
+      const rc = o.race_call;
+      const chamber = rc?.chamber === 'senate' || rc?.chamber === 'governor' ? (rc.chamber as MapChamber) : null;
+      const state = String(rc?.state ?? '').toUpperCase();
+      if (!row || !rc || !chamber || !isRaceState(chamber, state) || !['D', 'R', 'I'].includes(rc.party) || (rc.status !== 'called' && rc.status !== 'leading')) continue;
+      for (const src of Array.isArray(row.sources) ? row.sources : []) {
+        if (!TOP_SOURCE_RE.test(src.name) || isGovUrl(src.url)) continue;
+        const { data: prev } = await db.from('election_race_reports').select('reported_at').eq('chamber', chamber).eq('state', state).eq('source_name', src.name).maybeSingle();
+        if (prev && Date.parse(prev.reported_at as string) > Date.parse(row.published_at)) continue;
+        await db.from('election_race_reports').upsert({
+          chamber, state, source_name: src.name.slice(0, 60), party: rc.party as Party, status: rc.status as CallStatus, url: src.url, reported_at: row.published_at,
+        }, { onConflict: 'chamber,state,source_name' });
+      }
+    }
+    await db.from('election_updates').update({ calls_checked: true }).in('id', worth.map(r => r.id));
+  } catch { /* leave them unchecked; the next run tries again */ }
+  return 1;
+}
+
 const int = (v: unknown): number | null => (typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 1000 ? v : null);
 
 export async function runIngest(): Promise<IngestResult> {
@@ -137,6 +178,9 @@ export async function runIngest(): Promise<IngestResult> {
 
   // If this run is killed by the time limit, this note is what the admin page shows.
   await db.from('election_meta').update({ last_ingest_at: new Date().toISOString(), last_error: 'The last run did not finish (it may have timed out).' }).eq('id', 1);
+
+  // 0. Catch up on race calls hidden in updates saved earlier (one small AI call per run, only while there is a backlog)
+  if (calls < MAX_AI_CALLS_PER_DAY && left() > 30_000) calls += await backfillCalls(db, Math.min(20_000, left() - 25_000));
 
   // 1. Collect
   const results = await Promise.all(FEEDS.map(async f => {
@@ -278,7 +322,7 @@ export async function runIngest(): Promise<IngestResult> {
     } else {
       const published = new Date(Math.min(Date.parse(g.items[0].publishedAt), Date.now())).toISOString();
       const { data: row } = await db.from('election_updates').insert({
-        cluster_key: clusterKey, headline, summary, market_impact: impact, market_regions: regions, tag, importance, sources, race: normaliseRace(a.race), published_at: published,
+        cluster_key: clusterKey, headline, summary, market_impact: impact, market_regions: regions, tag, importance, sources, race: normaliseRace(a.race), published_at: published, calls_checked: true,
       }).select('id').single();
       if (row) { created.push({ id: row.id as string, importance }); if (importance === 5) sawFive = true; itemsToday++; }
     }
