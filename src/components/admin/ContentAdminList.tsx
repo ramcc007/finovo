@@ -7,7 +7,7 @@ import {
   Loader2, PenSquare, Pencil, Trash2, ExternalLink, Eye, Search, X, CalendarClock, CheckCircle2, FileText, Layers, Send,
 } from 'lucide-react';
 import { adminFetch } from '@/lib/adminFetch';
-import { formatDate } from '@/lib/blog';
+import { formatDate, formatTimeIST } from '@/lib/blog';
 import { cn } from '@/lib/utils';
 
 interface Row {
@@ -158,7 +158,7 @@ export default function ContentAdminList({ config }: { config: ContentListConfig
 
   const [publishing, setPublishing] = useState<string | null>(null);
   const publishNow = async (r: Row) => {
-    if (!window.confirm(`Publish "${r.title}" now instead of on ${formatDate(r.published_at!)}? It goes live immediately with today's date.`)) return;
+    if (!window.confirm(`Publish "${r.title}" now instead of on ${formatDate(r.published_at!)} at ${formatTimeIST(r.published_at!)}? It goes live immediately with today's date.`)) return;
     setPublishing(r.id);
     try {
       const res = await adminFetch(`${config.apiPath}/${r.id}`, {
@@ -210,6 +210,7 @@ export default function ContentAdminList({ config }: { config: ContentListConfig
     return (
       <div className="leading-tight">
         <div className="font-medium text-[#0D1117]">{formatDate(r.published_at!)}</div>
+        <div className="text-xs font-semibold text-[#4A5568]">{formatTimeIST(r.published_at!)}</div>
         <div className={cn('text-xs', k === 'scheduled' ? 'text-blue-700' : 'text-[#8A96A8]')}>{relative(r.published_at!, now)}</div>
       </div>
     );

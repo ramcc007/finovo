@@ -34,6 +34,12 @@ export function formatDate(iso: string): string {
   });
 }
 
+/** Time of day in Indian Standard Time, e.g. "2:30 pm IST". */
+export function formatTimeIST(iso: string): string {
+  return new Date(iso).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })
+    .replace(/[\u202f\u00a0]/g, ' ').toLowerCase() + ' IST';
+}
+
 export function slugify(s: string): string {
   return s
     .toLowerCase()
