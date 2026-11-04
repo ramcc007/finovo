@@ -14,6 +14,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Server source maps made up about three quarters of each deployment's function bundle; they are not needed in production.
+  experimental: { turbopackSourceMaps: false, serverSourceMaps: false },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

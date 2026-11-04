@@ -1,4 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "regions": ["sin1"]
+  "regions": ["sin1"],
+  "git": {
+    "deploymentEnabled": {
+      "claude/indian-stock-screener-plan-3jy2q3": false
+    }
+  }
 }
