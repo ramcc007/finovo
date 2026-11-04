@@ -59,6 +59,7 @@ export interface ElectionMeta {
   videos: LiveVideo[];
   feedStats: FeedStat[];
   projections: Projection[];
+  raceOverrides: Record<string, { party: 'D' | 'R' | 'I' | null; status: 'called' | 'leading' | 'none' }>;
   autoPublish: boolean;
   coverageEnded: boolean;
   endedAt: string | null;

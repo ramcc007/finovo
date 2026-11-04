@@ -32,8 +32,9 @@ Tag is one of: senate, house, governor, markets, other.
 "cluster_key": a short lowercase slug naming the story (for example "senate-control-called"). If the item is about the same story as one in "recent", reuse that exact cluster_key.
 "seats": only when the text states how many seats each party has won or holds so far in a chamber (not how many it needs): {"chamber":"senate"|"house"|"governors","d":int,"r":int,"other":int|null,"uncalled":int|null}; otherwise null.
 "projection": only when the text reports a race call for control of a chamber by a named organisation ("called"), or a forecast probability from a named model or organisation ("forecast"): {"chamber":"senate"|"house"|"governors","kind":"called"|"forecast","party":"D"|"R","probability":int 0-100 or null,"by":"the organisation or model that made it"}; otherwise null. Never make a projection of your own.
+"race_call": only when the text says a news organisation has called, projected or declared the winner of ONE Senate or governor race in a named state, or says a candidate is leading it with votes counted: {"chamber":"senate"|"governor","state":"two-letter postal code such as GA","party":"D"|"R"|"I","status":"called" when the text says called, projected, won or declared, otherwise "leading"}; otherwise null. Use "I" for an independent. Never guess a result, never infer it from polls or forecasts, and use null for House races and for chamber control.
 Return a JSON array, one object per item, in this shape:
-[{"id":"<id>","importance":3,"tag":"house","headline":"...","summary":"...","cluster_key":"...","market_impact":null,"market_regions":[],"seats":null,"projection":null,"race":null}]`;
+[{"id":"<id>","importance":3,"tag":"house","headline":"...","summary":"...","cluster_key":"...","market_impact":null,"market_regions":[],"seats":null,"projection":null,"race":null,"race_call":null}]`;
 
 const CONTRACTIONS: [RegExp, string][] = [
   [/\bcan't\b/gi, 'cannot'], [/\bwon't\b/gi, 'will not'], [/\bdon't\b/gi, 'do not'], [/\bdoesn't\b/gi, 'does not'],

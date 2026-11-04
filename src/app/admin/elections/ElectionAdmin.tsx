@@ -6,13 +6,15 @@ import { ExternalLink, EyeOff, Eye, Loader2, Pencil, RefreshCw, Trash2 } from 'l
 import { adminFetch } from '@/lib/adminFetch';
 import { PAGE_PATH, TAG_LABEL, type Chamber, type ElectionMeta, type ElectionUpdate, type ScoreEntry } from '@/lib/election/types';
 import { IMAGE_HOSTS, youtubeWatchUrl } from '@/lib/election/media';
+import type { RaceReport } from '@/lib/election/raceMap';
+import MapCallsAdmin from './MapCallsAdmin';
 
 const CHAMBERS: { id: Chamber; label: string }[] = [{ id: 'senate', label: 'Senate' }, { id: 'house', label: 'House' }, { id: 'governors', label: 'Governors' }];
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : 'never');
 const card = 'rounded-xl border border-[#E5E7EB] bg-white p-5';
 const input = 'h-9 w-full rounded-md border border-[#E5E7EB] px-2 text-sm focus:border-[#F97316] focus:outline-none';
 
-interface Payload { meta: ElectionMeta | null; updates: ElectionUpdate[]; aiCap: number }
+interface Payload { meta: ElectionMeta | null; updates: ElectionUpdate[]; aiCap: number; reports: RaceReport[] }
 
 export default function ElectionAdmin() {
   const [data, setData] = useState<Payload | null>(null);
@@ -53,7 +55,7 @@ export default function ElectionAdmin() {
 
   if (error) return <p className="p-8 text-red-600">{error}</p>;
   if (!data) return <div className="flex justify-center py-24"><Loader2 className="animate-spin text-[#F97316]" /></div>;
-  const { meta, updates, aiCap } = data;
+  const { meta, updates, aiCap, reports } = data;
   if (!meta) return <p className="p-8">The election tables are not set up.</p>;
   const pendingKeys = CHAMBERS.filter(c => meta.pendingScoreboard[c.id]);
 
@@ -190,6 +192,8 @@ export default function ElectionAdmin() {
           </div>
         </details>
       </section>
+
+      <MapCallsAdmin reports={reports ?? []} overrides={meta.raceOverrides ?? {}} busy={busy} act={body => act(body)} />
 
       <section className={card}>
         <h2 className="mb-1 font-bold text-[#0D1117]">Watch live videos</h2>

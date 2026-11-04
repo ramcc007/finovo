@@ -10,11 +10,12 @@ import PtTime from '@/components/election/PtTime';
 import ScoreCards from '@/components/election/ScoreCards';
 import YouTubeLite from '@/components/election/YouTubeLite';
 import BalanceOfPower from '@/components/election/BalanceOfPower';
+import ElectionMap from '@/components/election/ElectionMap';
 import ExploreLinks from '@/components/election/ExploreLinks';
 import Projections from '@/components/election/Projections';
 import LiveRefresh from '@/components/election/LiveRefresh';
 import BookmarkButton from '@/components/election/BookmarkButton';
-import { getElectionData } from '@/lib/election/db';
+import { getElectionData, getRaceResults } from '@/lib/election/db';
 import { BASE, FAQ, HOW_IT_WORKS, INTRO, PAGE_DESCRIPTION, PAGE_TITLE, PAGE_URL } from '@/lib/election/content';
 import { pageTitle } from '@/lib/liveLinks';
 import { anchorOf } from '@/lib/election/types';
@@ -42,6 +43,7 @@ export default async function ElectionPage({ searchParams }: { searchParams: Pro
   const limit = Math.min(1000, Math.max(STEP, Math.round(Number(n) / STEP) * STEP || STEP));
   const { updates, meta } = await getElectionData();
   const visible = updates.slice(0, limit);
+  const races = await getRaceResults(meta);
   const ended = !!meta?.coverageEnded;
   const nonce = (await headers()).get('x-nonce') ?? undefined;
   const latest = updates[0]?.publishedAt;
@@ -141,6 +143,7 @@ export default async function ElectionPage({ searchParams }: { searchParams: Pro
 
       <main className="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-12">
         <BalanceOfPower board={meta?.scoreboard ?? {}} />
+        <ElectionMap races={races} updatedAt={meta?.lastIngestAt ?? null} />
         <div className="mb-10"><ExploreLinks updates={updates} /></div>
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-10">
           <div className="min-w-0 lg:order-1">

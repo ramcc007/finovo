@@ -10,6 +10,7 @@ import { ELECTION_TAG, META_COLS, toMeta } from './db';
 import { fetchFeed, jaccard, titleNorm, titleTokens, urlHash, type RawItem } from './rss';
 import { SYSTEM_PROMPT, USER_RULES, cleanText, hasBanned } from './style';
 import { normaliseRace } from './sections';
+import { isRaceState, type CallStatus, type MapChamber, type Party } from './raceMap';
 import { PAGE_PATH, type Chamber, type Projection, type ScoreEntry, type Scoreboard, type SourceLink, type Tag } from './types';
 
 const TAGS: Tag[] = ['senate', 'house', 'governor', 'markets', 'other'];
@@ -22,6 +23,7 @@ interface AiItem {
   market_impact: string | null; market_regions: string[]; seats: { chamber: string; d: number; r: number; other: number | null; uncalled: number | null } | null;
   projection: { chamber: string; kind: string; party: string | null; probability: number | null; by: string } | null;
   race?: string | null;
+  race_call?: { chamber: string; state: string; party: string; status: string } | null;
 }
 
 export interface IngestResult {
@@ -233,6 +235,9 @@ export async function runIngest(): Promise<IngestResult> {
   const board: Scoreboard = { ...meta.scoreboard };
   const projections: Projection[] = [...meta.projections];
   let boardChanged = false, projectionsChanged = false;
+  // Race calls for the live map: one stored report per (race, outlet). Loaded once, only if a call turns up.
+  let knownReports: Map<string, string> | null = null; // "chamber:state:outlet" -> reported_at
+  let callsChanged = false;
 
   for (const g of batch) {
     const a = byId.get(g.id);
@@ -311,6 +316,29 @@ export async function runIngest(): Promise<IngestResult> {
         else if (Date.parse(p.at) >= Date.parse(projections[idx].at)) { projections[idx] = p; projectionsChanged = true; }
       }
     }
+
+    // A single Senate or governor race called, or led, by a top outlet. Each credited top outlet becomes one report;
+    // the map only turns a state solid when two different outlets agree (see raceMap.ts).
+    const rc = a.race_call;
+    const rcChamber = rc?.chamber === 'senate' || rc?.chamber === 'governor' ? (rc.chamber as MapChamber) : null;
+    const rcState = String(rc?.state ?? '').toUpperCase();
+    if (rc && rcChamber && isRaceState(rcChamber, rcState) && ['D', 'R', 'I'].includes(rc.party) && (rc.status === 'called' || rc.status === 'leading')) {
+      if (!knownReports) {
+        const { data } = await db.from('election_race_reports').select('chamber, state, source_name, reported_at');
+        knownReports = new Map((data ?? []).map(r => [`${r.chamber}:${String(r.state).trim()}:${r.source_name}`, r.reported_at as string]));
+      }
+      for (const src of sources) {
+        if (!TOP_SOURCE_RE.test(src.name)) continue;
+        const key = `${rcChamber}:${rcState}:${src.name}`;
+        const prev = knownReports.get(key);
+        if (prev && Date.parse(prev) > Date.parse(at)) continue; // a newer report from this outlet is already stored
+        const { error } = await db.from('election_race_reports').upsert({
+          chamber: rcChamber, state: rcState, source_name: src.name, party: rc.party as Party, status: rc.status as CallStatus,
+          url: src.url, reported_at: at,
+        }, { onConflict: 'chamber,state,source_name' });
+        if (!error) { knownReports.set(key, at); callsChanged = true; }
+      }
+    }
   }
   await markSeen(toSeen);
 
@@ -341,7 +369,7 @@ export async function runIngest(): Promise<IngestResult> {
   await finish(patch);
 
   revalidateTag(ELECTION_TAG, { expire: 0 }); // keeps the "Checked" time on the page accurate
-  if (created.length || merged || takeaways || boardChanged || projectionsChanged) {
+  if (created.length || merged || takeaways || boardChanged || projectionsChanged || callsChanged) {
     await pingWebSub([`${PAGE_PATH}/feed.xml`, `${PAGE_PATH}/feed.json`]);
     const last = (metaRow as { last_indexnow_at: string | null }).last_indexnow_at;
     if (created.length > 0 && (!last || Date.now() - Date.parse(last) > 600_000)) {

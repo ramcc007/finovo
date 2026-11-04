@@ -15,12 +15,12 @@ import type { Chamber, ElectionMeta, ElectionUpdate } from '@/lib/election/types
 interface Props {
   url: string; crumb: string; h1: string; intro: string; description: string;
   updates: ElectionUpdate[]; meta: ElectionMeta | null; faq: { q: string; a: string }[];
-  chambers?: Chamber[]; about?: ReactNode; nonce?: string;
+  chambers?: Chamber[]; about?: ReactNode; top?: ReactNode; nonce?: string;
 }
 
 /** Layout shared by the section pages (Senate, House, Governors, Markets) and the race pages.
  *  The only link to other election pages is the one back to the main live page. */
-export default function SubPage({ url, crumb, h1, intro, description, updates, meta, faq, chambers, about, nonce }: Props) {
+export default function SubPage({ url, crumb, h1, intro, description, updates, meta, faq, chambers, about, top, nonce }: Props) {
   const ended = !!meta?.coverageEnded;
   const latest = updates[0]?.publishedAt;
   const projections = (meta?.projections ?? []).filter(p => !chambers || chambers.includes(p.chamber));
@@ -59,6 +59,7 @@ export default function SubPage({ url, crumb, h1, intro, description, updates, m
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-8 md:px-6 md:py-12">
+        {top && <div className="mb-10">{top}</div>}
         <Projections items={projections} />
         <section id="timeline" aria-labelledby="timeline-h" className="scroll-mt-24">
           <h2 id="timeline-h" className="mb-5 text-2xl font-extrabold tracking-tight text-[#0D1117]">Latest updates</h2>

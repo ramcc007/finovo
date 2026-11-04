@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import SubPage from '@/components/election/SubPage';
-import { getElectionData } from '@/lib/election/db';
+import { getElectionData, getRaceResults } from '@/lib/election/db';
+import ElectionMap from '@/components/election/ElectionMap';
 import { BASE } from '@/lib/election/content';
 import { SECTIONS, isSection, sectionUpdates } from '@/lib/election/sections';
 import { pageTitle } from '@/lib/liveLinks';
@@ -31,10 +32,13 @@ export default async function SectionPage({ params }: Props) {
   const s = SECTIONS[section];
   const { updates, meta } = await getElectionData();
   const nonce = (await headers()).get('x-nonce') ?? undefined;
+  const mapped = section === 'senate' || section === 'governors';
+  const races = mapped ? await getRaceResults(meta) : [];
   return (
     <SubPage
       url={`${BASE}${s.path}`} crumb={s.name} h1={s.h1} intro={s.intro} description={s.description}
       updates={sectionUpdates(s, updates)} meta={meta} faq={s.faq} nonce={nonce}
+      top={mapped ? <ElectionMap races={races} updatedAt={meta?.lastIngestAt ?? null} initial={section === 'governors' ? 'governor' : 'senate'} /> : undefined}
       chambers={section === 'markets' ? undefined : [section === 'governors' ? 'governors' : section]}
     />
   );

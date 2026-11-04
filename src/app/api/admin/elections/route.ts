@@ -7,6 +7,7 @@ import { ELECTION_TAG, META_COLS, UPDATE_COLS, toMeta, toUpdate, type UpdateRow 
 import { MAX_AI_CALLS_PER_DAY } from '@/lib/election/config';
 import { cleanText } from '@/lib/election/style';
 import { parseMedia, parseVideoLines } from '@/lib/election/media';
+import { isRaceState, raceKey, type MapChamber } from '@/lib/election/raceMap';
 import { PAGE_PATH, type Chamber, type ScoreEntry, type Scoreboard } from '@/lib/election/types';
 
 const CHAMBERS: Chamber[] = ['senate', 'house', 'governors'];
@@ -17,14 +18,16 @@ const noStore = { headers: { 'cache-control': 'no-store' } };
 export async function GET(req: NextRequest) {
   if (!(await requireAdmin(req))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const db = getServiceClient();
-  const [{ data: meta }, { data: rows }] = await Promise.all([
+  const [{ data: meta }, { data: rows }, { data: reps }] = await Promise.all([
     db.from('election_meta').select(`${META_COLS}, llm_day`).eq('id', 1).maybeSingle(),
     db.from('election_updates').select(UPDATE_COLS).order('published_at', { ascending: false }).limit(300),
+    db.from('election_race_reports').select('chamber, state, source_name, party, status, url, reported_at').order('reported_at', { ascending: false }).limit(1000),
   ]);
+  const reports = (reps ?? []).map(r => ({ chamber: r.chamber, state: String(r.state).trim(), source: r.source_name, party: r.party, status: r.status, url: r.url, at: r.reported_at }));
   const today = new Date().toISOString().slice(0, 10);
   const m = meta ? toMeta(meta as never) : null;
   if (m && (meta as { llm_day: string | null }).llm_day !== today) { m.llmCallsToday = 0; m.itemsToday = 0; }
-  return NextResponse.json({ meta: m, updates: ((rows ?? []) as UpdateRow[]).map(toUpdate), aiCap: MAX_AI_CALLS_PER_DAY }, noStore);
+  return NextResponse.json({ meta: m, updates: ((rows ?? []) as UpdateRow[]).map(toUpdate), aiCap: MAX_AI_CALLS_PER_DAY, reports }, noStore);
 }
 
 export async function PATCH(req: NextRequest) {
@@ -102,6 +105,27 @@ export async function PATCH(req: NextRequest) {
       const list = Array.isArray(data?.projections) ? data.projections as { chamber: string; kind: string; by: string }[] : [];
       const next = list.filter(p => !(p.chamber === body.chamber && p.kind === body.kind && p.by === body.by));
       await db.from('election_meta').update({ projections: next }).eq('id', 1);
+      return done();
+    }
+    case 'set_race_override': {
+      const chamber = body.chamber === 'senate' || body.chamber === 'governor' ? (body.chamber as MapChamber) : null;
+      const state = String(body.state ?? '').toUpperCase();
+      const party = body.party === 'D' || body.party === 'R' || body.party === 'I' ? body.party : null;
+      const status = body.status === 'called' || body.status === 'leading' || body.status === 'none' ? body.status : null;
+      if (!chamber || !isRaceState(chamber, state) || !status || (status !== 'none' && !party)) return NextResponse.json({ error: 'Choose a state, a party and a status.' }, { status: 400 });
+      const { data } = await db.from('election_meta').select('race_overrides').eq('id', 1).single();
+      const next = { ...((data?.race_overrides as Record<string, unknown>) ?? {}), [raceKey(chamber, state)]: { party: status === 'none' ? null : party, status } };
+      await db.from('election_meta').update({ race_overrides: next }).eq('id', 1);
+      return done();
+    }
+    case 'clear_race_override': {
+      const chamber = body.chamber === 'senate' || body.chamber === 'governor' ? (body.chamber as MapChamber) : null;
+      const state = String(body.state ?? '').toUpperCase();
+      if (!chamber || !isRaceState(chamber, state)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      const { data } = await db.from('election_meta').select('race_overrides').eq('id', 1).single();
+      const next = { ...((data?.race_overrides as Record<string, unknown>) ?? {}) };
+      delete next[raceKey(chamber, state)];
+      await db.from('election_meta').update({ race_overrides: next }).eq('id', 1);
       return done();
     }
     case 'set_videos': {
