@@ -17,15 +17,15 @@ const BASE_NAV = [
   { href: '/pulse', label: 'Pulse' },
   { href: '/screens', label: 'Screens' },
   { href: '/compare', label: 'Compare' },
-  { href: '/watchlist', label: 'Watchlist' },
+  { href: '/glossary', label: 'Glossary', slot: 'account' as const },
   { href: '/blog', label: 'Blog' },
 ];
+const WATCHLIST_NAV = { href: '/watchlist', label: 'Watchlist' };
 const ELECTION_NAV = { href: ELECTION_PATH, label: 'US Elections' };
 
 interface SearchHit { symbol: string; name: string; sector: string }
 
 export default function Header({ showElection = false }: { showElection?: boolean }) {
-  const NAV = showElection ? [...BASE_NAV, ELECTION_NAV] : BASE_NAV;
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -37,6 +37,9 @@ export default function Header({ showElection = false }: { showElection?: boolea
   const ref = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
   const { user, loading: authLoading, signOut } = useAuth();
+  // Visitors see Glossary in this slot; once signed in it becomes Watchlist (4 Nov 2026).
+  const slotted = BASE_NAV.map(i => ('slot' in i && user ? WATCHLIST_NAV : i));
+  const NAV = showElection ? [...slotted, ELECTION_NAV] : slotted;
   const ent = useEntitlement();
   const [isAdmin, setIsAdmin] = useState(false);
 
