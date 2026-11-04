@@ -48,7 +48,14 @@ export default async function GlossaryTermPage({ params }: { params: Promise<{ s
   if (!t) notFound();
   const nonce = (await headers()).get('x-nonce') ?? undefined;
   const url = `${BASE}/glossary/${t.slug}`;
-  const related = relatedOf(t, await getPublishedTerms());
+  const all = await getPublishedTerms();
+  const related = relatedOf(t, all);
+  const sorted = [...all].sort((a, b) => a.term.localeCompare(b.term));
+  const at = sorted.findIndex(x => x.slug === t.slug);
+  const shownSlugs = new Set([t.slug, ...related.map(r => r.slug)]);
+  const more = all.filter(x => x.category === t.category && !shownSlugs.has(x.slug)).slice(0, 6).map(x => ({ slug: x.slug, term: x.term, definition: x.definition }));
+  const prev = at > 0 ? { slug: sorted[at - 1].slug, term: sorted[at - 1].term } : null;
+  const next = at >= 0 && at < sorted.length - 1 ? { slug: sorted[at + 1].slug, term: sorted[at + 1].term } : null;
 
   const jsonLd: unknown[] = [
     {
@@ -107,6 +114,9 @@ export default async function GlossaryTermPage({ params }: { params: Promise<{ s
           maxTerms: 3,
         })}
         related={related}
+        more={more}
+        prev={prev}
+        next={next}
       />
     </>
   );

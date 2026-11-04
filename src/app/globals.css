@@ -250,6 +250,7 @@ body {
   background: radial-gradient(circle, rgba(249,115,22,0.12) 0%, rgba(249,115,22,0) 60%);
   pointer-events: none;
 }
+.hero-dark.hero-open { overflow-x: clip; overflow-y: visible; } /* lets a search dropdown hang below the hero */
 .hero-grid {
   position: absolute; inset: 0;
   background-image: linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),

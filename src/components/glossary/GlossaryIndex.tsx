@@ -17,7 +17,7 @@ const TITLE = 'Stock market glossary';
 const idOf = (l: string) => `letter-${l === '#' ? 'num' : l}`;
 
 function Pill({ category }: { category: string }) {
-  return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${styleOf(category).pill}`}>{category}</span>;
+  return <span className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${styleOf(category).pill}`}>{category}</span>;
 }
 
 function TermCard({ i, isNew }: { i: IndexItem; isNew: boolean }) {
@@ -37,10 +37,10 @@ function TermCard({ i, isNew }: { i: IndexItem; isNew: boolean }) {
 }
 
 /** The interactive glossary home: hero with instant search, learning paths, topics, A-Z list. */
-export default function GlossaryIndex({ items, popular, paths, newest }: { items: IndexItem[]; popular: Ref[]; paths: Path[]; newest: string[] }) {
+export default function GlossaryIndex({ items, popular, paths, newest, initialQ = '', initialCat = 'All' }: { items: IndexItem[]; popular: Ref[]; paths: Path[]; newest: string[]; initialQ?: string; initialCat?: string }) {
   const router = useRouter();
-  const [q, setQ] = useState('');
-  const [cat, setCat] = useState('All');
+  const [q, setQ] = useState(initialQ);
+  const [cat, setCat] = useState(initialCat);
   const [active, setActive] = useState(-1);
   const [focused, setFocused] = useState(false);
   const [letter, setLetter] = useState('');
@@ -96,9 +96,8 @@ export default function GlossaryIndex({ items, popular, paths, newest }: { items
 
   return (
     <div>
-      <header className="hero-dark relative overflow-hidden">
-        <div className="hero-grid" />
-        <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-[#F97316]/20 blur-3xl" />
+      <header className="hero-dark hero-open relative">
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden"><div className="hero-grid" /><div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-[#F97316]/20 blur-3xl" /></div>
         <div className="relative mx-auto max-w-5xl px-4 py-12 md:px-6 md:py-16">
           <nav aria-label="Breadcrumb" className="mb-5 text-xs text-white/50">
             <Link href="/" className="inline-block py-1.5 hover:text-white">Home</Link> / Glossary
@@ -125,7 +124,7 @@ export default function GlossaryIndex({ items, popular, paths, newest }: { items
                 {suggestions.map((s, n) => (
                   <li key={s.slug} role="option" aria-selected={n === active}>
                     <Link href={`/glossary/${s.slug}`} className={`flex items-center justify-between gap-3 px-4 py-2.5 ${n === active ? 'bg-[#FFF7ED]' : 'hover:bg-[#F9FAFB]'}`}>
-                      <span className="min-w-0"><span className="block font-semibold text-[#0D1117]">{s.term}</span><span className="block truncate text-xs text-[#6B7280]">{s.definition}</span></span>
+                      <span className="min-w-0"><span className="block font-semibold text-[#0D1117]">{s.term}</span><span className="line-clamp-1 block text-xs text-[#6B7280]">{s.definition}</span></span>
                       <Pill category={s.category} />
                     </Link>
                   </li>
@@ -143,7 +142,7 @@ export default function GlossaryIndex({ items, popular, paths, newest }: { items
 
           <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
             <p className="text-sm text-white/60"><strong className="text-white">{items.length}</strong> terms · <strong className="text-white">{categories.length}</strong> topics</p>
-            <div className="flex flex-wrap items-center gap-3"><BookmarkButton dark url={`${BASE}/glossary`} title={TITLE} /><ShareBar compact url={`${BASE}/glossary`} title={TITLE} /></div>
+            <div className="flex flex-wrap items-center gap-3"><BookmarkButton dark url={`${BASE}/glossary`} title={TITLE} /><div className="hidden sm:block"><ShareBar compact url={`${BASE}/glossary`} title={TITLE} /></div></div>
           </div>
         </div>
       </header>

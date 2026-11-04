@@ -20,8 +20,10 @@ const META: Metadata = {
 };
 
 // Kept out of search results until the first term is live.
-export async function generateMetadata(): Promise<Metadata> {
-  return (await getPublishedTerms()).length ? META : { ...META, robots: { index: false, follow: true } };
+export async function generateMetadata({ searchParams }: { searchParams: Promise<{ q?: string; cat?: string }> }): Promise<Metadata> {
+  const sp = await searchParams;
+  // Search and filter views are for people; the plain page is the one to index.
+  return (await getPublishedTerms()).length && !sp.q && !sp.cat ? META : { ...META, robots: { index: false, follow: true } };
 }
 
 const WEEK = 7 * 86_400_000;
@@ -32,7 +34,8 @@ function newestSlugs(terms: { slug: string; publishedAt: string | null }[]): str
   return recent.length > 0 && recent.length <= terms.length / 2 ? recent.slice(0, 6).map(t => t.slug) : [];
 }
 
-export default async function GlossaryHub() {
+export default async function GlossaryHub({ searchParams }: { searchParams: Promise<{ q?: string; cat?: string }> }) {
+  const sp = await searchParams;
   const terms = await getPublishedTerms();
   const nonce = (await headers()).get('x-nonce') ?? undefined;
   const items = terms
@@ -75,7 +78,7 @@ export default async function GlossaryHub() {
   return (
     <div>
       {jsonLd.map((d, n) => <script key={n} type="application/ld+json" nonce={nonce} dangerouslySetInnerHTML={{ __html: ld(d) }} />)}
-      {items.length ? <GlossaryIndex items={items} popular={popular} paths={paths} newest={newest} /> : (
+      {items.length ? <GlossaryIndex items={items} popular={popular} paths={paths} newest={newest} initialQ={(sp.q ?? '').slice(0, 60)} initialCat={items.some(i => i.category === sp.cat) ? sp.cat! : 'All'} /> : (
         <div className="mx-auto max-w-5xl px-4 py-16 md:px-6"><h1 className="text-3xl font-bold text-[#0D1117]">Stock market glossary</h1><p className="mt-3 text-[#4A5568]">The first terms are on their way.</p></div>
       )}
 

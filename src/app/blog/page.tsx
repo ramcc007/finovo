@@ -3,7 +3,8 @@ import BlogListing from '@/components/blog/BlogListing';
 import { getPublishedPosts } from '@/lib/blogDb';
 import { POSTS_PER_PAGE } from '@/components/blog/BlogListing';
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({ searchParams }: { searchParams: Promise<{ q?: string }> }): Promise<Metadata> {
+  if ((await searchParams).q) return { title: 'Search the Scripwise blog', robots: { index: false, follow: true }, alternates: { canonical: '/blog' } };
   const total = Math.max(1, Math.ceil((await getPublishedPosts()).length / POSTS_PER_PAGE));
   return {
     title: 'Blog: Indian Stock Market Insights & Investing Guides',
@@ -21,6 +22,6 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function BlogIndex() {
-  return <BlogListing page={1} />;
+export default async function BlogIndex({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  return <BlogListing page={1} q={(await searchParams).q ?? ''} />;
 }
