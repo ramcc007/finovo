@@ -46,7 +46,7 @@ export const RELEVANCE_RE =
 
 // Hard limits that keep the AI bill small.
 export const MAX_ITEMS_PER_RUN = 40;
-export const MAX_AI_CALLS_PER_DAY = 400;
+export const MAX_AI_CALLS_PER_DAY = 1000;
 export const MAX_ITEM_AGE_HOURS = 24;
 export const MIN_IMPORTANCE_TO_PUBLISH = 3;
 export const AI_MODEL = 'claude-haiku-5-5';
