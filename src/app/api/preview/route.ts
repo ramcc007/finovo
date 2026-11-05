@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   if (resetUsed(req)) {
     return NextResponse.json({ error: 'Reset already used.' }, { status: 409 });
   }
-  // Only once the current 30 minutes have run out.
+  // Only once the current 60 minutes have run out.
   if (anonPreviewRemainingMs(req) > 0) {
     return NextResponse.json({ error: 'Your free preview is still running.' }, { status: 409 });
   }

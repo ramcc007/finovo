@@ -59,7 +59,7 @@ export default function PreviewBanner() {
       onClick={async () => { setBusy(true); await resetPreview(); setBusy(false); }}
       className="inline-flex items-center gap-1 rounded-md bg-[#F97316] hover:bg-[#EA580C] disabled:opacity-60 text-white font-semibold px-2.5 py-1 transition-colors"
     >
-      <RotateCcw size={12} aria-hidden="true" /> Reset timer to 30 min
+      <RotateCcw size={12} aria-hidden="true" /> Reset timer to 60 min
     </button>
   );
 
@@ -74,7 +74,7 @@ export default function PreviewBanner() {
       <BottomBar>
         <Sparkles size={13} className="shrink-0" aria-hidden="true" />
         <span>
-          Everything is unlocked for your first 30 minutes — <span className="font-semibold tabular-nums">{mm}:{ss}</span> left.
+          Everything is unlocked for your first 60 minutes — <span className="font-semibold tabular-nums">{mm}:{ss}</span> left.
         </span>
         <Link href="/signup" className="inline-block py-1 font-semibold underline underline-offset-2 hover:text-[#7C2D12]">
           Sign up free to keep going
