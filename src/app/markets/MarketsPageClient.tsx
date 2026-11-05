@@ -100,7 +100,7 @@ function MarketsPageContent() {
                     key={t.key}
                     onClick={() => setTab(t.key)}
                     className={cn(
-                      'text-xs font-semibold px-3 py-1.5 rounded-md transition-all whitespace-nowrap',
+                      'text-xs font-semibold px-2.5 py-1.5 rounded-md transition-all whitespace-nowrap',
                       tab === t.key ? 'bg-white text-[#0D1117] shadow-sm' : 'text-[#4A5568] hover:text-[#0D1117]'
                     )}
                   >
@@ -125,7 +125,8 @@ function MarketsPageContent() {
                 {idx.live < idx.rows.length && <span className="text-[#8A96A8]">{idx.live} updated in the latest session</span>}
               </div>
             )}
-            <div className="overflow-x-auto">
+            {/* Index tabs list up to 100 stocks: scroll inside the card with a pinned header so the page stays a sensible height. */}
+            <div className={cn('overflow-x-auto', idx && 'overflow-y-auto max-h-[70vh] [&_th]:sticky [&_th]:top-0 [&_th]:z-10')}>
               <table className="data-table min-w-[640px]">
                 <thead>
                   <tr>

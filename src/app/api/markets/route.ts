@@ -37,21 +37,32 @@ const INDEX_TABS = [
   { key: 'smallcap100', indexSymbol: 'NIFTY Smallcap 100' },
 ] as const;
 
+// The API returns at most 1000 rows per request, however large `.limit()` is. A plain select of
+// ~2,650 stocks therefore saw only the first thousand, in no useful order. Page through all rows,
+// ordered by symbol so the pages are stable.
+async function fetchAll<T>(table: string, cols: string): Promise<T[]> {
+  const out: T[] = [];
+  for (let start = 0; start < 20_000; start += 1000) {
+    const { data, error } = await supabase.from(table).select(cols).order('symbol').range(start, start + 999);
+    if (error) throw error;
+    const rows = (data ?? []) as T[];
+    out.push(...rows);
+    if (rows.length < 1000) break;
+  }
+  return out;
+}
+
 export async function GET() {
   try {
     // screener_view already joins companies + latest ratios + quote, deduped to
     // the latest row per symbol (name, sector, market cap, 52w range, change %).
-    const { data: view, error: viewErr } = await supabase
-      .from('screener_view')
-      .select('symbol, name, sector, market_cap, week_high_52, week_low_52, price, change_pct')
-      .limit(2000);
-    if (viewErr) throw viewErr;
-
+    type ViewRow = { symbol: string; name: string; sector: string | null; market_cap: number | null; week_high_52: number | null; week_low_52: number | null; price: number | null; change_pct: number | null };
+    type QuoteRow = { symbol: string; volume: number | null; change: number | null; price: number | null; change_pct: number | null; updated_at: string | null };
     // quotes carries the raw EOD volume + absolute change not present in the view.
-    const { data: quotes, error: qErr } = await supabase
-      .from('quotes')
-      .select('symbol, volume, change, price, change_pct, updated_at');
-    if (qErr) throw qErr;
+    const [view, quotes] = await Promise.all([
+      fetchAll<ViewRow>('screener_view', 'symbol, name, sector, market_cap, week_high_52, week_low_52, price, change_pct'),
+      fetchAll<QuoteRow>('quotes', 'symbol, volume, change, price, change_pct, updated_at'),
+    ]);
 
     // Latest trading day represented in the price feed.
     const { data: latest } = await supabase
