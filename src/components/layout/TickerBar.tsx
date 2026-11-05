@@ -18,7 +18,7 @@ const LIVE_WINDOW_MS = 10 * 60_000;
 
 export default function TickerBar() {
   const [items, setItems] = useState<Index[]>([]);
-  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [status, setStatus] = useState<{ label: string; live: boolean }>({ label: '', live: false });
 
   useEffect(() => {
     let alive = true;
@@ -29,7 +29,8 @@ export default function TickerBar() {
         .then(d => {
           if (!alive) return;
           setItems(d.indices ?? []);
-          setUpdatedAt(d.updatedAt ?? null);
+          const at = d.updatedAt ?? null;
+          setStatus({ label: freshnessLabel(at, LIVE_WINDOW_MS / 60_000), live: !!at && Date.now() - Date.parse(at) < LIVE_WINDOW_MS });
         })
         .catch(() => { if (alive) setItems([]); });
     };
@@ -45,8 +46,7 @@ export default function TickerBar() {
   }
 
   const loop = [...items, ...items];
-  const live = !!updatedAt && Date.now() - Date.parse(updatedAt) < LIVE_WINDOW_MS;
-  const label = freshnessLabel(updatedAt, LIVE_WINDOW_MS / 60_000);
+  const { label, live } = status;
 
   return (
     <div
