@@ -1,25 +1,40 @@
 name: Live Quote Update
 
+# Keeps index levels (the ticker bar) and stock quotes fresh during NSE hours.
+#
+# GitHub fires busy cron schedules very irregularly (this job's old */5 cron
+# actually ran about twice a day), so one job stays running for the whole
+# session and loops inside scripts/ingest_quotes.py every LOOP_INTERVAL
+# seconds. Market hours are longer than GitHub's 6-hour job limit, so a job
+# that reaches its own time budget before the close starts a replacement.
+# The two cron entries only start the chain (the second is a backup in case
+# the first fires late or not at all); a job that starts after the close
+# exits at once.
 on:
   schedule:
-    # Every 5 min, Mon–Fri, 03:45–10:05 UTC (= 9:15 AM–3:35 PM IST)
-    - cron: '*/5 3-10 * * 1-5'
+    - cron: '40 3 * * 1-5'   # 09:10 IST
+    - cron: '30 6 * * 1-5'   # 12:00 IST, backup starter
   workflow_dispatch:
+    inputs:
+      test_passes:
+        description: 'Run this many passes now, ignoring market hours (for testing)'
+        required: false
+        default: ''
 
-# A late-starting run overlapping the next one would double-hit NSE and
-# race on the same upserts — cancel the older run instead.
+permissions:
+  actions: write
+  contents: read
+
+# One running job at a time; a later start waits instead of cancelling it,
+# then finds the session over (or nearly) and exits.
 concurrency:
   group: live-quotes
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   quotes:
     runs-on: ubuntu-latest
-    # curl_cffi's Chrome TLS impersonation does a real handshake per request
-    # instead of the near-instant 404 the old plain-requests client got from
-    # NSE's bot detection — genuine fetches take meaningfully longer, so the
-    # old 7-minute budget (sized for fast-fail) is too tight for 4 real passes.
-    timeout-minutes: 12
+    timeout-minutes: 355
 
     steps:
       - uses: actions/checkout@v4
@@ -34,16 +49,40 @@ jobs:
       - name: Install dependencies
         run: pip install -r scripts/requirements.txt
 
-      - name: Fetch live quotes
+      - name: Work out the session window
+        id: window
+        env:
+          TEST_PASSES: ${{ github.event.inputs.test_passes }}
+        run: |
+          if [ -n "${TEST_PASSES}" ]; then
+            echo "Test run: ${TEST_PASSES} pass(es) now, ignoring market hours."
+            echo "passes=${TEST_PASSES}" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          now=$(date -u +%s)
+          close=$(date -u -d "today 10:10" +%s)          # 15:40 IST, a little after the 15:30 close
+          if [ "$now" -ge "$close" ]; then
+            echo "Market session is over for today (UTC $(date -u +%H:%M)); nothing to do."
+            echo "skip=1" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          budget=$(( now + 5*3600 + 40*60 ))              # stay under the 6-hour job limit
+          until=$(( close < budget ? close : budget ))
+          echo "until=$until" >> "$GITHUB_OUTPUT"
+          [ "$until" -lt "$close" ] && echo "continue=1" >> "$GITHUB_OUTPUT"
+          echo "Looping until $(date -u -d @$until +%H:%M) UTC (close at $(date -u -d @$close +%H:%M) UTC)."
+
+      - name: Fetch live quotes until the close
+        if: ${{ steps.window.outputs.skip != '1' }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          # 4 passes ~60s apart per 5-min cron tick ≈ 60–75s effective freshness.
-          LOOP_COUNT: '4'
+          LOOP_UNTIL: ${{ steps.window.outputs.until }}
+          LOOP_COUNT: ${{ steps.window.outputs.passes || '1' }}
           LOOP_INTERVAL: '60'
-          # Unbuffered stdout — Python fully buffers non-tty output by
-          # default, so a run killed by a timeout or cancellation (as
-          # happened diagnosing this exact job) shows zero log output
-          # instead of whatever progress was actually made.
           PYTHONUNBUFFERED: '1'
         run: python scripts/ingest_quotes.py
+
+      - name: Continue in a new job if the close is still ahead
+        if: ${{ always() && steps.window.outputs.continue == '1' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run ingest-quotes.yml --repo "${{ github.repository }}" --ref "${{ github.ref_name }}"

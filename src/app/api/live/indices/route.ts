@@ -2,10 +2,9 @@ import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
 // Deliberately uncached (unlike /api/indices, which is fine served a few
-// minutes stale) — this backs the ticker bar. Index levels only actually
-// change once a day via the EOD archive job; the intraday NSE quotes cron
-// that used to refresh this intraday has been blocked by NSE since ~June
-// 2026 (see ingest_quotes.py) and currently writes nothing.
+// minutes stale): this backs the ticker bar, which the live quotes job
+// (scripts/ingest_quotes.py) refreshes about once a minute during market
+// hours. Outside market hours the rows hold the last close.
 export const dynamic = 'force-dynamic';
 
 export async function GET() {

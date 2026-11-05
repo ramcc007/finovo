@@ -94,3 +94,15 @@ export function downloadTextFile(filename: string, content: string, mime = 'text
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+/** How fresh a quote or index level is, for labels next to prices.
+ *  Within `liveWindowMin` minutes it reads "Updated 12:34 pm IST"; otherwise "As of 04 Nov 2026 close". */
+export function freshnessLabel(iso: string | null | undefined, liveWindowMin = 20): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  if (Date.now() - d.getTime() < liveWindowMin * 60_000) {
+    return `Updated ${d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })} IST`;
+  }
+  return `As of ${formatTradeDate(iso)} close`;
+}
