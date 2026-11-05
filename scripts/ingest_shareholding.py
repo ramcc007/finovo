@@ -107,8 +107,8 @@ def fetch_rows(s, sym: str) -> list[dict]:
     for q in data[:QUARTERS]:
         label = period_label(str(q.get("date") or ""))
         promoter, public = pct(q.get("pr_and_prgrp")), pct(q.get("public_val"))
-        if not label or promoter is None:
-            continue
+        if not label or promoter is None or any(r["quarter"] == label for r in rows):
+            continue  # NSE lists revised filings too; keep the newest one per quarter
         fii = dii = pledge = None
         link = q.get("xbrl")
         if link and str(link).startswith("http"):
@@ -155,10 +155,14 @@ def main() -> int:
                 except Exception:
                     pass
         if rows:
-            client.table("shareholding").upsert(rows, on_conflict="symbol,quarter").execute()
-            rows_total += len(rows)
-            pledge_seen += sum(1 for r in rows if r["pledge_pct"] is not None)
-            ok += 1
+            try:
+                client.table("shareholding").upsert(rows, on_conflict="symbol,quarter").execute()
+                rows_total += len(rows)
+                pledge_seen += sum(1 for r in rows if r["pledge_pct"] is not None)
+                ok += 1
+            except Exception as e:
+                failed += 1
+                print(f"  {sym}: save failed: {e}", flush=True)
         else:
             failed += 1
             print(f"  {sym}: {err or 'no usable rows'}", flush=True)
