@@ -291,7 +291,12 @@ def update_index_levels(client, session) -> int:
             if sensex:
                 updates.append({"symbol": row["symbol"], "name": row["name"], **sensex, "updated_at": now_iso})
             elif sensex_blank:
-                updates.append({"symbol": row["symbol"], "name": row["name"], "change": None, "change_pct": None})
+                # A plain update, not part of the upsert: `last` is NOT NULL and not supplied here.
+                try:
+                    client.table("indices").update({"change": None, "change_pct": None}).eq("symbol", row["symbol"]).execute()
+                    print("  Sensex change cleared (Yahoo figure disagreed with its stocks).", flush=True)
+                except Exception as e:
+                    print(f"  Could not clear Sensex change: {e}", flush=True)
             continue
         name = (row.get("name") or "").strip().lower()
         r = live_by_name.get(name)
