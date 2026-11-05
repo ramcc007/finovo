@@ -42,20 +42,23 @@ interface MarketsData {
   breadth: { advances: number; declines: number; unchanged: number; high52: number; low52: number };
 }
 
-const TABS: { key: MarketTab; label: string }[] = [
-  { key: 'sensex', label: 'Sensex 30' },
-  { key: 'nifty50', label: 'Nifty 50' },
-  { key: 'midcap100', label: 'Midcap 100' },
-  { key: 'smallcap100', label: 'Smallcap 100' },
-  { key: 'gainers', label: 'Top Gainers' },
-  { key: 'losers', label: 'Top Losers' },
-  { key: 'active', label: 'Most Active' },
-  { key: 'high52', label: '52W High' },
-  { key: 'low52', label: '52W Low' },
+const INDEX_TAB_LIST: { key: MarketTab; label: string; short: string }[] = [
+  { key: 'sensex', label: 'Sensex 30', short: 'Sensex' },
+  { key: 'nifty50', label: 'Nifty 50', short: 'Nifty 50' },
+  { key: 'midcap100', label: 'Midcap 100', short: 'Midcap' },
+  { key: 'smallcap100', label: 'Smallcap 100', short: 'Smallcap' },
+];
+const TABS: { key: MarketTab; label: string; short: string }[] = [
+  { key: 'gainers', label: 'Top Gainers', short: 'Gainers' },
+  { key: 'losers', label: 'Top Losers', short: 'Losers' },
+  { key: 'active', label: 'Most Active', short: 'Active' },
+  { key: 'high52', label: '52W High', short: '52W High' },
+  { key: 'low52', label: '52W Low', short: '52W Low' },
 ];
 
 function MarketsPageContent() {
   const [tab, setTab] = useState<MarketTab>('sensex');
+  const [expanded, setExpanded] = useState(false); // phones: index lists show 15 rows until expanded
   const [mkt, setMkt] = useState<MarketsData | null>(null);
   const [mktLabel, setMktLabel] = useState('');
   const router = useRouter();
@@ -90,24 +93,31 @@ function MarketsPageContent() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           {/* Main table */}
           <div className="lg:col-span-2 card-plain p-0 overflow-hidden">
-            <div className="px-4 pt-3 pb-3 border-b border-[#EDF0F7] overflow-x-auto">
-              <div className="inline-flex items-center gap-0.5 bg-[#EEF1F7] p-0.5 rounded-lg">
-                {TABS.map(t => (
-                  <button
-                    key={t.key}
-                    onClick={() => setTab(t.key)}
-                    className={cn(
-                      'text-xs font-semibold px-2.5 py-1.5 rounded-md transition-all whitespace-nowrap',
-                      tab === t.key ? 'bg-white text-[#0D1117] shadow-sm' : 'text-[#4A5568] hover:text-[#0D1117]'
-                    )}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
+            <div className="px-4 pt-3 pb-3 border-b border-[#EDF0F7] space-y-2">
+              {[{ label: 'Indices', list: INDEX_TAB_LIST }, { label: 'Movers', list: TABS }].map(group => (
+                <div key={group.label} className="flex items-center gap-3">
+                  <span className="hidden sm:block w-14 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-[#8A96A8]">{group.label}</span>
+                  <div role="tablist" aria-label={group.label} className="flex w-full sm:w-auto items-center gap-0.5 bg-[#EEF1F7] p-0.5 rounded-lg">
+                    {group.list.map(t => (
+                      <button
+                        key={t.key}
+                        role="tab"
+                        aria-selected={tab === t.key}
+                        onClick={() => { setTab(t.key); setExpanded(false); }}
+                        className={cn(
+                          'flex-1 sm:flex-none min-h-9 text-xs font-semibold px-2 sm:px-3 py-1.5 rounded-md transition-all whitespace-nowrap',
+                          tab === t.key ? 'bg-white text-[#0D1117] shadow-sm' : 'text-[#4A5568] hover:text-[#0D1117]'
+                        )}
+                      >
+                        <span className="sm:hidden">{t.short}</span><span className="hidden sm:inline">{t.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
             {idx && (
               <div className="px-4 py-2.5 border-b border-[#EDF0F7] flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#4A5568]">
@@ -126,53 +136,58 @@ function MarketsPageContent() {
               </div>
             )}
             {/* Index tabs list up to 100 stocks: scroll inside the card with a pinned header so the page stays a sensible height. */}
-            <div className={cn('overflow-x-auto', idx && 'overflow-y-auto max-h-[70vh] [&_th]:sticky [&_th]:top-0 [&_th]:z-10')}>
-              <table className="data-table min-w-[640px]">
+            <div className={cn('sm:overflow-x-auto', idx && 'md:overflow-y-auto md:max-h-[70vh] md:[&_th]:sticky md:[&_th]:top-0 md:[&_th]:z-10')}>
+              <table className="data-table sm:min-w-[640px]">
                 <thead>
                   <tr>
                     <th>Company</th>
                     <th>Price (₹)</th>
-                    <th>Change</th>
+                    <th className="hidden sm:table-cell">Change</th>
                     <th>% Change</th>
-                    <th>Volume</th>
-                    <th>Mkt Cap</th>
+                    <th className="hidden sm:table-cell">Volume</th>
+                    <th className="hidden sm:table-cell">Mkt Cap</th>
                   </tr>
                 </thead>
                 <tbody>
                   {!rows ? (
                     Array(10).fill(0).map((_, i) => (
                       <tr key={i}>{Array(6).fill(0).map((_, j) => (
-                        <td key={j}><div className="h-4 bg-[#EEF1F7] rounded animate-pulse" /></td>
+                        <td key={j} className={j === 2 || j === 4 || j === 5 ? 'hidden sm:table-cell' : undefined}><div className="h-4 bg-[#EEF1F7] rounded animate-pulse" /></td>
                       ))}</tr>
                     ))
                   ) : rows.length === 0 ? (
                     <tr><td colSpan={6} className="text-center py-12 text-[#8A96A8] font-sans">
                       {isIndexTab(tab) ? 'This index list is being set up. Check back soon.' : 'Market data is updating. Check back after the next market close.'}
                     </td></tr>
-                  ) : rows.map(s => (
-                    <tr key={s.symbol} className="group" onClick={() => router.push(`/stocks/${s.symbol}`)}>
+                  ) : rows.map((s, n) => (
+                    <tr key={s.symbol} className={cn('group cursor-pointer', idx && n >= 15 && !expanded && 'hidden md:table-row')} onClick={() => router.push(`/stocks/${s.symbol}`)}>
                       <td>
-                        <div className="font-semibold text-[#0D1117] group-hover:text-[#F97316] transition-colors">{s.symbol}</div>
+                        <Link href={`/stocks/${s.symbol}`} onClick={e => e.stopPropagation()} className="block font-semibold text-[#0D1117] group-hover:text-[#F97316] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#F97316] rounded">{s.symbol}</Link>
                         <div className="text-[11px] text-[#8A96A8] font-sans mt-0.5 max-w-[200px] truncate">{s.name}</div>
                       </td>
                       <td>{s.price != null ? formatPrice(s.price) : '—'}</td>
-                      <td className={s.change == null ? 'text-[#8A96A8]' : s.change >= 0 ? 'text-positive' : 'text-negative'}>
-                        {s.change == null ? '—' : `${s.change >= 0 ? '+' : ''}₹${Math.abs(s.change).toFixed(2)}`}
+                      <td className={cn('hidden sm:table-cell', s.change == null ? 'text-[#8A96A8]' : s.change >= 0 ? 'text-positive' : 'text-negative')}>
+                        {s.change == null ? '—' : `${s.change >= 0 ? '+' : '−'}₹${Math.abs(s.change).toFixed(2)}`}
                       </td>
                       <td>
                         {s.change_pct == null ? '—' : (
-                          <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono font-semibold', s.change_pct >= 0 ? 'badge-positive' : 'badge-negative')}>
+                          <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-mono font-semibold whitespace-nowrap', s.change_pct >= 0 ? 'badge-positive' : 'badge-negative')}>
                             {s.change_pct >= 0 ? '▲' : '▼'} {Math.abs(s.change_pct).toFixed(2)}%
                           </span>
                         )}
                       </td>
-                      <td className="text-[#4A5568]">{formatVolume(s.volume)}</td>
-                      <td className="text-[#4A5568]">{s.market_cap != null ? formatCrores(s.market_cap) : '—'}</td>
+                      <td className="hidden sm:table-cell text-[#4A5568]">{formatVolume(s.volume)}</td>
+                      <td className="hidden sm:table-cell text-[#4A5568]">{s.market_cap != null ? formatCrores(s.market_cap) : '—'}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+            {idx && !expanded && idx.rows.length > 15 && (
+              <button type="button" onClick={() => setExpanded(true)} className="md:hidden w-full border-t border-[#EDF0F7] py-3 text-sm font-semibold text-[#EA580C] hover:bg-[#FFF7ED]">
+                Show all {idx.rows.length} stocks
+              </button>
+            )}
           </div>
 
           {/* Sidebar */}
@@ -186,7 +201,7 @@ function MarketsPageContent() {
                 <p className="text-sm text-[#8A96A8]">Updating.</p>
               ) : (
                 <div className="space-y-2.5">
-                  {mkt.sectors.map(s => {
+                  {(mkt.sectors.length > 10 ? [...mkt.sectors.slice(0, 5), ...mkt.sectors.slice(-5)] : mkt.sectors).map(s => {
                     const pos = s.change >= 0;
                     const barWidth = Math.min(Math.abs(s.change) / 2 * 100, 100);
                     return (
@@ -203,6 +218,11 @@ function MarketsPageContent() {
                       </div>
                     );
                   })}
+                  {mkt.sectors.length > 10 && (
+                    <a href="#sector-heatmap" className="block pt-1 text-xs font-semibold text-[#EA580C] hover:underline">
+                      Strongest 5 and weakest 5 of {mkt.sectors.length} sectors. See all in the heatmap
+                    </a>
+                  )}
                 </div>
               )}
             </div>
@@ -245,7 +265,7 @@ function MarketsPageContent() {
         </div>
 
         {/* Sector Heatmap */}
-        <div className="card-plain p-6">
+        <div id="sector-heatmap" className="card-plain p-6 scroll-mt-24">
           <h3 className="text-sm font-semibold text-[#0D1117] mb-4">Sector Heatmap</h3>
           {!mkt ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">

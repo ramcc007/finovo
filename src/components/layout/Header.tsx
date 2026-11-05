@@ -160,7 +160,7 @@ export default function Header({ showElection = false }: { showElection?: boolea
         </div>
 
         {/* Desktop Nav */}
-        <nav aria-label="Main" className="hidden md:flex items-center gap-1">
+        <nav aria-label="Main" className="hidden lg:flex items-center gap-1">
           {NAV.map(item => {
             const active = pathname === item.href;
             return (
@@ -278,7 +278,7 @@ export default function Header({ showElection = false }: { showElection?: boolea
 
         {/* Mobile hamburger */}
         <button
-          className="md:hidden ml-auto text-[#56616F] hover:text-[#131A24] p-2"
+          className="lg:hidden ml-auto text-[#56616F] hover:text-[#131A24] p-2"
           onClick={() => setMobileOpen(v => !v)}
           aria-label="Menu"
           aria-expanded={mobileOpen}
@@ -289,7 +289,7 @@ export default function Header({ showElection = false }: { showElection?: boolea
 
       {/* Mobile nav drawer */}
       {mobileOpen && (
-        <nav aria-label="Mobile" className="md:hidden fixed inset-x-0 top-16 z-40 bg-white border-b border-[#E9EDF4] py-3 px-4 shadow-[0_12px_32px_rgba(16,24,40,0.10)]">
+        <nav aria-label="Mobile" className="lg:hidden fixed inset-x-0 top-16 z-40 bg-white border-b border-[#E9EDF4] py-3 px-4 shadow-[0_12px_32px_rgba(16,24,40,0.10)]">
           {NAV.map(item => {
             const active = pathname === item.href;
             return (
