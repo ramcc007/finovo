@@ -1,0 +1,27 @@
+name: Index members
+
+# Keeps the Sensex / Nifty 50 / Midcap 100 / Smallcap 100 membership lists behind the /markets tabs
+# up to date. Indices are reconstituted twice a year, so a weekly run is plenty.
+on:
+  schedule:
+    - cron: '30 4 * * 0'
+  workflow_dispatch:
+
+jobs:
+  members:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: scripts/requirements.txt
+      - run: pip install -r scripts/requirements.txt
+      - name: Load index members
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          PYTHONUNBUFFERED: '1'
+        run: python scripts/ingest_index_members.py
