@@ -1,5 +1,5 @@
-// The header and footer link to the live election page for one week, then it is removed
-// from both. The page itself stays online and indexed. Change the date to extend or end it.
-export const ELECTION_LINK_UNTIL = Date.parse('2026-11-10T17:00:00Z');
-export const electionLinkActive = (now = Date.now()) => now < ELECTION_LINK_UNTIL;
+// The live election page is no longer linked from the header or footer (4 Nov 2026 coverage has ended).
+// The page and its section and race pages stay online and indexed. To bring the links back,
+// make electionLinkActive return true again (or compare against a date, as before).
+export const electionLinkActive = (): boolean => false;
 export const ELECTION_PATH = '/us-midterm-elections';

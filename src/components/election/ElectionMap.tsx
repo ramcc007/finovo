@@ -40,7 +40,7 @@ function describe(chamber: MapChamber, name: string, inRace: boolean, r?: RaceRe
 }
 
 /** Live Senate and governor map. Calls come from reports by top news outlets; the page refreshes itself via LiveRefresh. */
-export default function ElectionMap({ races, updatedAt, board, initial = 'senate' }: { races: RaceResult[]; updatedAt: string | null; board?: Partial<Record<'senate' | 'governors', ScoreEntry>>; initial?: MapChamber }) {
+export default function ElectionMap({ races, updatedAt, board, ended = false, initial = 'senate' }: { races: RaceResult[]; updatedAt: string | null; ended?: boolean; board?: Partial<Record<'senate' | 'governors', ScoreEntry>>; initial?: MapChamber }) {
   const [chamber, setChamber] = useState<MapChamber>(initial);
   const [picked, setPicked] = useState<string | null>(null);
 
@@ -68,11 +68,15 @@ export default function ElectionMap({ races, updatedAt, board, initial = 'senate
     <section aria-labelledby="em-h" className="mt-6 rounded-2xl bg-white p-5 ring-1 ring-[#E5E7EB] sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
-          <h2 id="em-h" className="text-2xl font-extrabold tracking-tight text-[#0D1117]">Live map: Senate and governor races</h2>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wider text-red-600 ring-1 ring-red-200">
-            <span className="relative flex h-2 w-2" aria-hidden><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-70" /><span className="relative inline-flex h-2 w-2 rounded-full bg-red-600" /></span>
-            Live
-          </span>
+          <h2 id="em-h" className="text-2xl font-extrabold tracking-tight text-[#0D1117]">{ended ? 'Map: Senate and governor races' : 'Live map: Senate and governor races'}</h2>
+          {ended ? (
+            <span className="inline-flex items-center rounded-full bg-green-50 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wider text-green-700 ring-1 ring-green-200">Final</span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wider text-red-600 ring-1 ring-red-200">
+              <span className="relative flex h-2 w-2" aria-hidden><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-70" /><span className="relative inline-flex h-2 w-2 rounded-full bg-red-600" /></span>
+              Live
+            </span>
+          )}
         </div>
         <div role="tablist" aria-label="Choose a chamber" className="inline-flex rounded-full bg-[#EEF1F7] p-1">
           {(['senate', 'governor'] as MapChamber[]).map(c => (
@@ -89,7 +93,7 @@ export default function ElectionMap({ races, updatedAt, board, initial = 'senate
       </p>
       <p className="mt-1 text-xs text-[#8A96A8]">
         {chamber === 'senate' ? '35 of 100 Senate seats are up this year.' : '36 of 50 governorships are up this year.'}{' '}
-        {updatedAt ? <>Updated <PtTime iso={updatedAt} />.</> : 'Waiting for the first result.'} Refreshes about every 10 minutes.
+        {updatedAt ? <>{ended ? 'Last updated' : 'Updated'} <PtTime iso={updatedAt} />.</> : 'Waiting for the first result.'}{ended ? ' This map is no longer being updated.' : ' Refreshes about every 10 minutes.'}
       </p>
 
       {/* Bar: Democrats on the left, Republicans on the right, undecided in the middle */}

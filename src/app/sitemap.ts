@@ -61,14 +61,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // thin, data-only pages dilute the sitemap. They stay reachable by links.
   // Election section and race pages: only those with something to say.
   const { updates: electionUpdates, meta: electionMeta } = await getElectionData();
+  // Coverage has ended: the pages no longer change, so they stop advertising hourly updates.
+  const electionFreq = electionMeta?.coverageEnded ? ('monthly' as const) : ('hourly' as const);
   const newest = (...t: (string | null | undefined)[]) => { const v = t.filter((x): x is string => !!x).sort().pop(); return v ? new Date(v) : undefined; };
   const boardTimes = Object.values(electionMeta?.scoreboard ?? {}).map(e => e?.updatedAt);
   const electionRoutes: MetadataRoute.Sitemap = [
-    { url: `${base}/us-midterm-elections`, lastModified: newest(electionUpdates[0]?.publishedAt, ...boardTimes), changeFrequency: 'hourly', priority: 0.8 },
+    { url: `${base}/us-midterm-elections`, lastModified: newest(electionUpdates[0]?.publishedAt, ...boardTimes), changeFrequency: electionFreq, priority: 0.8 },
     ...SECTION_IDS.filter(id => sectionUpdates(SECTIONS[id], electionUpdates).length > 0)
-      .map(id => ({ url: `${base}${SECTIONS[id].path}`, lastModified: newest(sectionUpdates(SECTIONS[id], electionUpdates)[0]?.publishedAt, ...(id === 'markets' ? [] : boardTimes)), changeFrequency: 'hourly' as const, priority: 0.8 })),
+      .map(id => ({ url: `${base}${SECTIONS[id].path}`, lastModified: newest(sectionUpdates(SECTIONS[id], electionUpdates)[0]?.publishedAt, ...(id === 'markets' ? [] : boardTimes)), changeFrequency: electionFreq, priority: 0.8 })),
     ...listRaces(electionUpdates).filter(r => r.count >= MIN_UPDATES_TO_INDEX)
-        .map(r => ({ url: `${base}${racePath(r.slug)}`, lastModified: newest(r.latest), changeFrequency: 'hourly' as const, priority: 0.7 })),
+        .map(r => ({ url: `${base}${racePath(r.slug)}`, lastModified: newest(r.latest), changeFrequency: electionFreq, priority: 0.7 })),
   ];
 
   return [...staticRoutes, ...electionRoutes, ...blogRoutes, ...authorRoutes, ...glossaryRoutes];

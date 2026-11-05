@@ -143,7 +143,7 @@ export default async function ElectionPage({ searchParams }: { searchParams: Pro
 
       <main className="mx-auto max-w-6xl px-4 py-8 md:px-6 md:py-12">
         <BalanceOfPower board={meta?.scoreboard ?? {}} />
-        <ElectionMap races={races} updatedAt={meta?.lastIngestAt ?? null} board={meta?.scoreboard} />
+        <ElectionMap races={races} ended={!!meta?.coverageEnded} updatedAt={meta?.lastIngestAt ?? null} board={meta?.scoreboard} />
         <div className="mb-10"><ExploreLinks updates={updates} /></div>
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-10">
           <div className="min-w-0 lg:order-1">
