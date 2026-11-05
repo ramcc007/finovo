@@ -15,10 +15,12 @@ export async function GET(
   }
 
   try {
-    const [{ data: company }, { data: ratios }, { data: shareholding }] = await Promise.all([
+    const [{ data: company }, { data: ratios }, { data: shareholding }, { data: annual }] = await Promise.all([
       supabase.from('companies').select('sector').eq('symbol', sym).single(),
       supabase.from('ratios').select('*').eq('symbol', sym).order('date', { ascending: false }).limit(1).single(),
       supabase.from('shareholding').select('pledge_pct').eq('symbol', sym).order('quarter', { ascending: false }).limit(1).single(),
+      supabase.from('fundamentals').select('period, revenue, net_profit, total_equity, total_debt, eps').eq('symbol', sym)
+        .eq('period_type', 'annual').order('period', { ascending: false }).limit(3),
     ]);
 
     if (!ratios) {
@@ -41,15 +43,28 @@ export async function GET(
       if (pbs.length >= 3) sectorAvgPb = pbs.reduce((a, b) => a + b, 0) / pbs.length;
     }
 
+    // The ratios table is often sparse. Fill gaps from the annual statements so missing data
+    // is not scored as bad. Values from the ratios table win when present.
+    const [cur, prev] = (annual ?? []) as Array<Record<string, number | null>>;
+    const n = (v: unknown) => (typeof v === 'number' && isFinite(v) ? v : null);
+    const growth = (a: unknown, b: unknown) => (n(a) != null && n(b) != null && (n(b) as number) > 0 && (n(a) as number) > 0 ? Math.round(((n(a) as number) / (n(b) as number) - 1) * 1000) / 10 : null);
+    const eq = n(cur?.total_equity);
+    const calc = {
+      roe: eq && eq > 0 && n(cur?.net_profit) != null ? Math.round(((n(cur?.net_profit) as number) / eq) * 1000) / 10 : null,
+      de: eq && eq > 0 && n(cur?.total_debt) != null ? Math.round(((n(cur?.total_debt) as number) / eq) * 100) / 100 : null,
+      rev: growth(cur?.revenue, prev?.revenue),
+      profit: growth(cur?.net_profit, prev?.net_profit),
+    };
+
     const result = computeScripwiseScore({
       pe: ratios.pe,
       pb: ratios.pb,
-      roe: ratios.roe,
+      roe: ratios.roe ?? calc.roe,
       roce: ratios.roce,
-      debtToEquity: ratios.debt_to_equity,
+      debtToEquity: ratios.debt_to_equity ?? calc.de,
       currentRatio: ratios.current_ratio,
-      revenueGrowth1Y: ratios.revenue_growth_1y,
-      profitGrowth1Y: ratios.profit_growth_1y,
+      revenueGrowth1Y: ratios.revenue_growth_1y ?? calc.rev,
+      profitGrowth1Y: ratios.profit_growth_1y ?? calc.profit,
       dividendYield: ratios.dividend_yield,
       pledgePct: shareholding?.pledge_pct ?? null,
       sectorAvgPe,

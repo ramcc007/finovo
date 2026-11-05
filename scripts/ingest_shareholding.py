@@ -137,7 +137,7 @@ def main() -> int:
                     "symbol": sym, "quarter": label, "promoter_pct": promoter,
                     "fii_pct": round(fii, 2) if fii is not None else None,
                     "dii_pct": round(dii, 2) if dii is not None else None,
-                    "public_pct": public, "pledge_pct": pledge if pledge is not None else 0,
+                    "public_pct": public, "pledge_pct": pledge,
                 })
             if rows:
                 client.table("shareholding").upsert(rows, on_conflict="symbol,quarter").execute()

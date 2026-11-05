@@ -707,9 +707,11 @@ export default function StockPageClient() {
                   })}
                   <div className="mt-4 pt-4 border-t border-[#EDF0F7] flex items-center justify-between">
                     <span className="text-sm text-[#4A5568]">Promoter Pledge</span>
-                    {(data?.shareholding?.[0]?.pledge_pct ?? 0) === 0
-                      ? <span className="text-xs font-semibold text-[#16A34A] bg-[#DCFCE7] px-2.5 py-1 rounded">✓ No Pledge</span>
-                      : <span className="text-xs font-semibold text-[#D97706] bg-[#FEF3C7] px-2.5 py-1 rounded">⚠ {data?.shareholding?.[0]?.pledge_pct}% Pledged</span>
+                    {data?.shareholding?.[0]?.pledge_pct == null
+                      ? <span className="text-xs text-[#8A96A8]">Not reported</span>
+                      : data.shareholding[0].pledge_pct === 0
+                        ? <span className="text-xs font-semibold text-[#16A34A] bg-[#DCFCE7] px-2.5 py-1 rounded">✓ No Pledge</span>
+                        : <span className="text-xs font-semibold text-[#D97706] bg-[#FEF3C7] px-2.5 py-1 rounded">⚠ {data.shareholding[0].pledge_pct}% Pledged</span>
                     }
                   </div>
                 </>

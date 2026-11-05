@@ -193,7 +193,8 @@ export function computeScripwiseScore(input: ScoreInput): ScoreResult {
   }
 
   const score = breakdown.reduce((sum, l) => sum + l.points, 0);
-  const maxScore = breakdown.reduce((sum, l) => sum + l.maxPoints, 0);
+  // Metrics with no data are left out of the denominator, so missing data does not lower the score.
+  const maxScore = breakdown.filter(l => l.status !== 'na').reduce((sum, l) => sum + l.maxPoints, 0) || 1;
   const naCount = breakdown.filter(l => l.status === 'na').length;
 
   const pct = (score / maxScore) * 100;
