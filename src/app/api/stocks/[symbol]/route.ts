@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { formatCrores } from '@/lib/utils';
+import { computeDerived } from '@/lib/derived';
+
+const INDEX_LABEL: Record<string, string> = { sensex: 'Sensex 30', nifty50: 'Nifty 50', midcap100: 'Nifty Midcap 100', smallcap100: 'Nifty Smallcap 100' };
 
 
 export async function GET(
@@ -61,6 +64,35 @@ export async function GET(
       }));
     }
 
+    // Extras are best effort: a missing table or a failed query must never break the page.
+    const dataOf = async <T,>(f: () => PromiseLike<{ data: T | null }>): Promise<T | null> => { try { return (await f()).data; } catch { return null; } };
+    const countOf = async (f: () => PromiseLike<{ count: number | null }>): Promise<number | null> => { try { return (await f()).count; } catch { return null; } };
+
+    const [profile, members] = await Promise.all([
+      dataOf(() => supabase.from('company_profiles').select('summary, website, employees, city, state, country, officers, source, updated_at').eq('symbol', sym).maybeSingle()),
+      dataOf(() => supabase.from('index_members').select('index_key').eq('symbol', sym)),
+    ]);
+
+    // Where the company sits by market cap: within its sector and overall.
+    const mcap: number | null = ratios?.market_cap ?? null;
+    let rank: { sector: string | null; sectorRank: number | null; sectorTotal: number | null; overallRank: number | null; overallTotal: number | null } | null = null;
+    if (mcap != null && mcap > 0) {
+      const sector: string | null = company?.sector ?? null;
+      const all = () => supabase.from('screener_view').select('symbol', { count: 'exact', head: true }).gt('market_cap', 0);
+      const [sAbove, sTotal, oAbove, oTotal] = await Promise.all([
+        sector ? countOf(() => all().eq('sector', sector).gt('market_cap', mcap)) : Promise.resolve(null),
+        sector ? countOf(() => all().eq('sector', sector)) : Promise.resolve(null),
+        countOf(() => all().gt('market_cap', mcap)),
+        countOf(() => all()),
+      ]);
+      rank = {
+        sector, sectorRank: sAbove != null ? sAbove + 1 : null, sectorTotal: sTotal,
+        overallRank: oAbove != null ? oAbove + 1 : null, overallTotal: oTotal,
+      };
+    }
+
+    const derived = computeDerived(annualFin ?? [], mcap);
+
     // If live quote is missing, synthesize from latest ratios price
     const effectiveQuote = quote ?? (ratios?.price ? {
       symbol: sym,
@@ -82,6 +114,10 @@ export async function GET(
       shareholding: shareholding ?? [],
       corporateActions: corporateActions ?? [],
       peers,
+      profile: profile ?? null,
+      indices: ((members ?? []) as { index_key: string }[]).map(m => INDEX_LABEL[m.index_key]).filter(Boolean),
+      rank,
+      derived,
     });
   } catch {
     return NextResponse.json({ error: 'Stock not found' }, { status: 404 });

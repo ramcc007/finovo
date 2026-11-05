@@ -6,6 +6,8 @@ import { useParams } from 'next/navigation';
 import { ArrowLeft, Plus, Check, ExternalLink, RefreshCw } from 'lucide-react';
 import { cn, formatPrice, formatCrores, formatTradeDate, freshnessLabel } from '@/lib/utils';
 import PriceChart from '@/components/charts/PriceChart';
+import TechnicalsCard from '@/components/stock/TechnicalsCard';
+import type { Derived } from '@/lib/derived';
 import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
 import FinancialTrendChart from '@/components/charts/FinancialTrendChart';
 import ScripwiseScoreCard from '@/components/stock/ScripwiseScoreCard';
@@ -46,6 +48,14 @@ interface StockData {
     record_date: string | null; purpose: string | null;
   }>;
   peers?: typeof PEERS;
+  profile?: {
+    summary: string | null; website: string | null; employees: number | null;
+    city: string | null; state: string | null; country: string | null;
+    officers: { name: string; title: string | null }[] | null; source: string | null;
+  } | null;
+  indices?: string[];
+  rank?: { sector: string | null; sectorRank: number | null; sectorTotal: number | null; overallRank: number | null; overallTotal: number | null } | null;
+  derived?: Derived;
 }
 
 function ChangeBadge({ value }: { value: number }) {
@@ -57,15 +67,64 @@ function ChangeBadge({ value }: { value: number }) {
   );
 }
 
-function RatioRow({ label, value, unit = '' }: {
-  label: string; value: number | null | undefined; unit?: string;
+function RatioRow({ label, value, unit = '', calc }: {
+  label: string; value: number | null | undefined; unit?: string; calc?: string | null;
 }) {
   return (
     <div className="py-3 border-b border-[#EDF0F7] last:border-0 flex items-center justify-between">
       <span className="text-sm text-[#4A5568]">{label}</span>
       <span className="num text-sm font-semibold text-[#0D1117]">
         {value === null || value === undefined ? <span className="text-[#8A96A8]">—</span> : `${value.toFixed(1)}${unit}`}
+        {calc && value != null && <span className="ml-1.5 rounded bg-[#F4F6FA] px-1.5 py-0.5 font-sans text-[10px] font-medium text-[#8A96A8]" title="Calculated by Scripwise from the annual financial statements">{calc}</span>}
       </span>
+    </div>
+  );
+}
+
+const isGovHost = (url: string) => { try { const h = new URL(url).hostname.toLowerCase(); return /(^|\.)(gov|nic)\.[a-z.]+$|\.gov$/.test(h); } catch { return true; } };
+
+function AboutCard({ symbol, company, profile, loading }: { symbol: string; company: StockData['company'] | undefined; profile: StockData['profile']; loading: boolean }) {
+  const [open, setOpen] = useState(false);
+  const summary = profile?.summary ?? null;
+  const long = !!summary && summary.length > 320;
+  const place = [profile?.city, profile?.state, profile?.country].filter(Boolean).join(', ');
+  const site = profile?.website && !isGovHost(profile.website) ? profile.website : null;
+  return (
+    <div className="card p-5">
+      <h3 className="font-semibold text-[#0D1117] text-sm mb-3">About {company?.name ?? symbol}</h3>
+      {loading ? (
+        <div className="space-y-2"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-4/5" /><Skeleton className="h-4 w-3/4" /></div>
+      ) : summary ? (
+        <>
+          <p className={cn('text-sm text-[#4A5568] leading-relaxed', !open && long && 'line-clamp-4')}>{summary}</p>
+          {long && <button type="button" onClick={() => setOpen(o => !o)} className="mt-1 text-xs font-semibold text-[#EA580C] hover:underline">{open ? 'Show less' : 'Read more'}</button>}
+        </>
+      ) : (
+        <p className="text-sm text-[#4A5568] leading-relaxed">
+          {company?.name} is listed on the NSE under symbol {symbol}
+          {company?.sector && ` in the ${company.sector} sector`}
+          {company?.industry && `, ${company.industry} industry`}.
+        </p>
+      )}
+      {!loading && (
+        <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-2 text-xs sm:grid-cols-2">
+          {company?.sector && <div className="flex justify-between gap-3"><dt className="text-[#8A96A8]">Sector</dt><dd className="font-medium text-[#0D1117]">{company.sector}</dd></div>}
+          {company?.industry && <div className="flex justify-between gap-3"><dt className="text-[#8A96A8]">Industry</dt><dd className="text-right font-medium text-[#0D1117]">{company.industry}</dd></div>}
+          {place && <div className="flex justify-between gap-3"><dt className="text-[#8A96A8]">Head office</dt><dd className="text-right font-medium text-[#0D1117]">{place}</dd></div>}
+          {profile?.employees != null && <div className="flex justify-between gap-3"><dt className="text-[#8A96A8]">Employees</dt><dd className="font-medium text-[#0D1117]">{profile.employees.toLocaleString('en-IN')}</dd></div>}
+          {site && <div className="flex justify-between gap-3"><dt className="text-[#8A96A8]">Website</dt><dd className="truncate font-medium"><a href={site} target="_blank" rel="nofollow noopener noreferrer" className="text-[#EA580C] hover:underline">{site.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}</a></dd></div>}
+          {company?.bse_code && <div className="flex justify-between gap-3"><dt className="text-[#8A96A8]">BSE code</dt><dd className="font-medium text-[#0D1117]">{company.bse_code}</dd></div>}
+        </dl>
+      )}
+      {!loading && !!profile?.officers?.length && (
+        <div className="mt-4 border-t border-[#EDF0F7] pt-3">
+          <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-[#8A96A8]">Key people</div>
+          <ul className="space-y-1 text-xs">
+            {profile.officers.slice(0, 4).map(o => <li key={o.name} className="flex justify-between gap-3"><span className="font-medium text-[#0D1117]">{o.name}</span><span className="text-right text-[#8A96A8]">{o.title}</span></li>)}
+          </ul>
+        </div>
+      )}
+      {!loading && summary && <p className="mt-3 text-[10px] text-[#8A96A8]">Business details: {profile?.source ?? 'Yahoo Finance'}</p>}
     </div>
   );
 }
@@ -213,6 +272,21 @@ export default function StockPageClient() {
                   {c?.bse_code && ` · BSE: ${c.bse_code}`}
                   {c?.industry && ` · ${c.industry}`}
                 </p>
+                {(!!data?.indices?.length || data?.rank?.sectorRank != null) && (
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    {data?.indices?.map(i => <span key={i} className="rounded-full bg-[#EEF1F7] px-2.5 py-0.5 text-[11px] font-semibold text-[#4A5568]">{i}</span>)}
+                    {data?.rank?.sectorRank != null && data.rank.sectorTotal != null && data.rank.sector && (
+                      <span className="rounded-full bg-[#FFF7ED] px-2.5 py-0.5 text-[11px] font-semibold text-[#C2410C]" title="By market capitalisation">
+                        #{data.rank.sectorRank} of {data.rank.sectorTotal.toLocaleString('en-IN')} in {data.rank.sector}
+                      </span>
+                    )}
+                    {data?.rank?.overallRank != null && data.rank.overallTotal != null && (
+                      <span className="rounded-full bg-[#F4F6FA] px-2.5 py-0.5 text-[11px] font-medium text-[#56616F]" title="By market capitalisation">
+                        #{data.rank.overallRank.toLocaleString('en-IN')} of {data.rank.overallTotal.toLocaleString('en-IN')} by size
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-col items-start md:items-end gap-2">
@@ -225,7 +299,7 @@ export default function StockPageClient() {
                 <div className="text-sm text-[#4A5568] flex items-center gap-2">
                   <span className="num">{(q?.change ?? 0) >= 0 ? '+' : ''}₹{(q?.change ?? 0).toFixed(2)}</span>
                   <span>·</span>
-                  <span>At last market close · NSE</span>
+                  <span>{priceLabel ? priceLabel.replace(/^As of /, 'As of ') : 'At last market close'} · NSE</span>
                 </div>
                 <button
                   onClick={() => {
@@ -301,11 +375,12 @@ export default function StockPageClient() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             {!loading && <ScripwiseScoreCard symbol={symbol} />}
 
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 space-y-5">
               {loading
                 ? <div className="card p-5"><Skeleton className="h-72 w-full" /></div>
                 : <PriceChart symbol={symbol} currentPrice={price} live={liveCandle} />
               }
+              {!loading && <TechnicalsCard symbol={symbol} />}
             </div>
 
             {/* Key Metrics */}
@@ -320,9 +395,9 @@ export default function StockPageClient() {
                   { label: 'Market Cap', value: r?.market_cap ? `₹ ${formatCrores(r.market_cap)}` : '—' },
                   { label: 'P/E Ratio', value: r?.pe ? `${r.pe.toFixed(1)}x` : '—' },
                   { label: 'P/B Ratio', value: r?.pb ? `${r.pb.toFixed(1)}x` : '—' },
-                  { label: 'EV/EBITDA', value: r?.ev_ebitda ? `${r.ev_ebitda.toFixed(1)}x` : '—' },
+                  { label: 'EV/EBITDA', value: (r?.ev_ebitda ?? data?.derived?.ev_ebitda) ? `${(r?.ev_ebitda ?? data?.derived?.ev_ebitda ?? 0).toFixed(1)}x` : '—' },
                   { label: 'Dividend Yield', value: r?.dividend_yield ? `${r.dividend_yield.toFixed(2)}%` : '—' },
-                  { label: 'EPS (TTM)', value: r?.eps ? `₹ ${r.eps.toFixed(2)}` : '—' },
+                  { label: data?.derived?.fy ? `EPS (${data.derived.fy})` : 'EPS', value: data?.derived?.eps != null ? `₹ ${data.derived.eps.toFixed(2)}` : '—' },
                   { label: '52W High', value: weekHigh ? `₹ ${formatPrice(weekHigh)}` : '—' },
                   { label: '52W Low', value: weekLow ? `₹ ${formatPrice(weekLow)}` : '—' },
                   { label: "Today's Open", value: q?.open ? `₹ ${formatPrice(q.open)}` : '—' },
@@ -339,24 +414,7 @@ export default function StockPageClient() {
             </div>
 
             {/* About */}
-            <div className="lg:col-span-2 card-plain p-5">
-              <h3 className="font-semibold text-[#0D1117] text-sm mb-3">About {symbol}</h3>
-              {loading
-                ? <div className="space-y-2"><Skeleton className="h-4 w-full" /><Skeleton className="h-4 w-4/5" /><Skeleton className="h-4 w-3/4" /></div>
-                : <p className="text-sm text-[#4A5568] leading-relaxed">
-                    {c?.name} is listed on the NSE under symbol {symbol}
-                    {c?.sector && ` in the ${c.sector} sector`}
-                    {c?.industry && `, ${c.industry} industry`}.
-                  </p>
-              }
-              {!loading && (
-                <div className="mt-4 flex flex-wrap gap-4 text-xs text-[#8A96A8]">
-                  {c?.sector && <span>Sector: <span className="text-[#0D1117] font-medium">{c.sector}</span></span>}
-                  {c?.industry && <span>Industry: <span className="text-[#0D1117] font-medium">{c.industry}</span></span>}
-                  {c?.bse_code && <span>BSE: <span className="text-[#0D1117] font-medium">{c.bse_code}</span></span>}
-                </div>
-              )}
-            </div>
+            <AboutCard symbol={symbol} company={c} profile={data?.profile} loading={loading} />
 
             {/* Quick Ratios */}
             <div className="card-plain p-5">
@@ -364,9 +422,9 @@ export default function StockPageClient() {
               {loading
                 ? <div className="space-y-3">{Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-5 w-full" />)}</div>
                 : [
-                    { label: 'ROE', value: r?.roe ? `${r.roe.toFixed(1)}%` : '—', good: (r?.roe ?? 0) > 15 },
+                    { label: 'ROE', value: (r?.roe ?? data?.derived?.roe) != null ? `${(r?.roe ?? data?.derived?.roe ?? 0).toFixed(1)}%` : '—', good: (r?.roe ?? data?.derived?.roe ?? 0) > 15 },
                     { label: 'ROCE', value: r?.roce ? `${r.roce.toFixed(1)}%` : '—', good: (r?.roce ?? 0) > 15 },
-                    { label: 'Net Margin', value: r?.net_margin ? `${r.net_margin.toFixed(1)}%` : '—', good: (r?.net_margin ?? 0) > 10 },
+                    { label: 'Net Margin', value: (r?.net_margin ?? data?.derived?.net_margin) != null ? `${(r?.net_margin ?? data?.derived?.net_margin ?? 0).toFixed(1)}%` : '—', good: (r?.net_margin ?? data?.derived?.net_margin ?? 0) > 10 },
                     { label: 'Debt/Equity', value: r?.debt_to_equity != null ? `${r.debt_to_equity.toFixed(2)}x` : '—', good: (r?.debt_to_equity ?? 999) < 1 },
                     { label: 'Current Ratio', value: r?.current_ratio ? `${r.current_ratio.toFixed(2)}x` : '—', good: (r?.current_ratio ?? 0) > 1.5 },
                   ].map(row => (
@@ -530,16 +588,26 @@ export default function StockPageClient() {
               <h3 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-4">Valuation</h3>
               <RatioRow label="P/E Ratio" value={r?.pe} unit="x" />
               <RatioRow label="P/B Ratio" value={r?.pb} unit="x" />
-              <RatioRow label="EV/EBITDA" value={r?.ev_ebitda} unit="x" />
+              <RatioRow label="EV/EBITDA" value={r?.ev_ebitda ?? data?.derived?.ev_ebitda} unit="x" calc={r?.ev_ebitda == null ? data?.derived?.fy : null} />
               <RatioRow label="Dividend Yield" value={r?.dividend_yield} unit="%" />
               <RatioRow label="PEG Ratio" value={r?.peg_ratio} unit="x" />
+              {data?.derived?.ev != null && (
+                <div className="py-3 border-b border-[#EDF0F7] last:border-0 flex items-center justify-between">
+                  <span className="text-sm text-[#4A5568]">Enterprise Value</span>
+                  <span className="num text-sm font-semibold text-[#0D1117]">₹ {formatCrores(data.derived.ev)}<span className="ml-1.5 rounded bg-[#F4F6FA] px-1.5 py-0.5 font-sans text-[10px] font-medium text-[#8A96A8]">{data.derived.fy}</span></span>
+                </div>
+              )}
+              <RatioRow label="Free Cash Flow Yield" value={data?.derived?.fcf_yield} unit="%" calc={data?.derived?.fcf_yield != null ? data?.derived?.fy : null} />
             </div>
             <div className="card p-5">
               <h3 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-4">Profitability</h3>
-              <RatioRow label="ROE" value={r?.roe} unit="%" />
+              <RatioRow label="ROE" value={r?.roe ?? data?.derived?.roe} unit="%" calc={r?.roe == null ? data?.derived?.fy : null} />
               <RatioRow label="ROCE" value={r?.roce} unit="%" />
-              <RatioRow label="Net Profit Margin" value={r?.net_margin} unit="%" />
+              <RatioRow label="Net Profit Margin" value={r?.net_margin ?? data?.derived?.net_margin} unit="%" calc={r?.net_margin == null ? data?.derived?.fy : null} />
               <RatioRow label="Operating Margin" value={r?.operating_margin} unit="%" />
+              <RatioRow label="EBITDA Margin" value={data?.derived?.ebitda_margin} unit="%" calc={data?.derived?.ebitda_margin != null ? data?.derived?.fy : null} />
+              <RatioRow label="Asset Turnover" value={data?.derived?.asset_turnover} unit="x" calc={data?.derived?.asset_turnover != null ? data?.derived?.fy : null} />
+              <RatioRow label="Cash Flow / Profit" value={data?.derived?.cash_conversion} unit="x" calc={data?.derived?.cash_conversion != null ? data?.derived?.fy : null} />
             </div>
             <div className="card p-5">
               <h3 className="text-xs font-semibold text-[#4A5568] uppercase tracking-wide mb-4">Financial Health</h3>
@@ -559,8 +627,8 @@ export default function StockPageClient() {
                 </thead>
                 <tbody>
                   {[
-                    { label: 'Revenue', y1: r?.revenue_growth_1y, y3: r?.revenue_growth_3y },
-                    { label: 'Profit', y1: r?.profit_growth_1y, y3: r?.profit_growth_3y },
+                    { label: 'Revenue', y1: r?.revenue_growth_1y, y3: r?.revenue_growth_3y ?? data?.derived?.revenue_cagr_3y },
+                    { label: 'Profit', y1: r?.profit_growth_1y, y3: r?.profit_growth_3y ?? data?.derived?.profit_cagr_3y },
                     { label: 'EPS', y1: r?.eps_growth_1y, y3: null },
                   ].map(row => (
                     <tr key={row.label} className="border-t border-[#EDF0F7]">
@@ -575,6 +643,9 @@ export default function StockPageClient() {
                 </tbody>
               </table>
             </div>
+            <p className="md:col-span-2 text-[11px] leading-relaxed text-[#8A96A8]">
+              Figures with a financial-year tag{data?.derived?.fy ? ` (${data.derived.fy})` : ''} are calculated by Scripwise from the annual statements where the data feed has no value; the 3-year growth is a compound annual rate over three financial years. Untagged figures are trailing values from the data feed, so they can differ from annual figures.
+            </p>
           </div>
         )}
 
