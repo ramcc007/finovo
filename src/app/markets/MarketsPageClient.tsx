@@ -18,15 +18,23 @@ function heatColor(change: number): { bg: string; text: string } {
     : { bg: `rgba(220,38,38,${0.10 + intensity * 0.65})`, text: strong ? '#fff' : '#7F1D1D' };
 }
 
-type MarketTab = 'gainers' | 'losers' | 'active' | 'high52' | 'low52';
+type IndexTab = 'sensex' | 'nifty50' | 'midcap100' | 'smallcap100';
+type MarketTab = IndexTab | 'gainers' | 'losers' | 'active' | 'high52' | 'low52';
+const INDEX_KEYS: IndexTab[] = ['sensex', 'nifty50', 'midcap100', 'smallcap100'];
+const isIndexTab = (t: MarketTab): t is IndexTab => (INDEX_KEYS as string[]).includes(t);
 
 interface Mover {
   symbol: string; name: string; sector: string | null;
   price: number | null; change: number | null; change_pct: number | null;
   volume: number | null; market_cap: number | null;
 }
+interface IndexTabData {
+  rows: Mover[]; total: number; live: number;
+  level: { last: number; change: number | null; change_pct: number | null } | null;
+}
 interface MarketsData {
   tradeDate: string | null;
+  indexTabs?: Partial<Record<IndexTab, IndexTabData>>;
   updatedAt?: string | null;
   total: number;
   gainers: Mover[]; losers: Mover[]; active: Mover[]; high52: Mover[]; low52: Mover[];
@@ -35,6 +43,10 @@ interface MarketsData {
 }
 
 const TABS: { key: MarketTab; label: string }[] = [
+  { key: 'sensex', label: 'Sensex 30' },
+  { key: 'nifty50', label: 'Nifty 50' },
+  { key: 'midcap100', label: 'Midcap 100' },
+  { key: 'smallcap100', label: 'Smallcap 100' },
   { key: 'gainers', label: 'Top Gainers' },
   { key: 'losers', label: 'Top Losers' },
   { key: 'active', label: 'Most Active' },
@@ -43,7 +55,7 @@ const TABS: { key: MarketTab; label: string }[] = [
 ];
 
 function MarketsPageContent() {
-  const [tab, setTab] = useState<MarketTab>('gainers');
+  const [tab, setTab] = useState<MarketTab>('sensex');
   const [mkt, setMkt] = useState<MarketsData | null>(null);
   const [mktLabel, setMktLabel] = useState('');
   const router = useRouter();
@@ -57,7 +69,8 @@ function MarketsPageContent() {
     return () => { alive = false; };
   }, []);
 
-  const rows: Mover[] | null = mkt ? mkt[tab] : null;
+  const idx = isIndexTab(tab) ? mkt?.indexTabs?.[tab] ?? null : null;
+  const rows: Mover[] | null = mkt ? (isIndexTab(tab) ? idx?.rows ?? [] : mkt[tab]) : null;
   const breadth = mkt?.breadth;
   const total = breadth ? Math.max(breadth.advances + breadth.declines + breadth.unchanged, 1) : 1;
 
@@ -96,6 +109,22 @@ function MarketsPageContent() {
                 ))}
               </div>
             </div>
+            {idx && (
+              <div className="px-4 py-2.5 border-b border-[#EDF0F7] flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#4A5568]">
+                {idx.level && (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="num font-semibold text-[#0D1117] text-sm">{idx.level.last.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    {idx.level.change_pct != null && (
+                      <span className={cn('num font-semibold', idx.level.change_pct >= 0 ? 'text-positive' : 'text-negative')}>
+                        {idx.level.change_pct >= 0 ? '▲' : '▼'} {Math.abs(idx.level.change_pct).toFixed(2)}%
+                      </span>
+                    )}
+                  </span>
+                )}
+                <span>{idx.rows.length} of {idx.total} stocks, largest first</span>
+                {idx.live < idx.rows.length && <span className="text-[#8A96A8]">{idx.live} updated in the latest session</span>}
+              </div>
+            )}
             <div className="overflow-x-auto">
               <table className="data-table min-w-[640px]">
                 <thead>
@@ -117,7 +146,7 @@ function MarketsPageContent() {
                     ))
                   ) : rows.length === 0 ? (
                     <tr><td colSpan={6} className="text-center py-12 text-[#8A96A8] font-sans">
-                      Market data is updating — check back after the next market close.
+                      {isIndexTab(tab) ? 'This index list is being set up. Check back soon.' : 'Market data is updating. Check back after the next market close.'}
                     </td></tr>
                   ) : rows.map(s => (
                     <tr key={s.symbol} className="group" onClick={() => router.push(`/stocks/${s.symbol}`)}>

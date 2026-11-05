@@ -61,14 +61,24 @@ def norm(name: str) -> str:
     return re.sub(r"\s+", " ", n).strip()
 
 
-def all_companies(client) -> list[dict]:
+def fetch_all(client, table: str, cols: str) -> list[dict]:
+    """The API returns at most 1000 rows per request, so page through the table."""
     out, start = [], 0
     while True:
-        rows = client.table("companies").select("symbol, name").range(start, start + 999).execute().data or []
+        rows = client.table(table).select(cols).range(start, start + 999).execute().data or []
         out += rows
         if len(rows) < 1000:
             return out
         start += 1000
+
+
+def all_companies(client) -> list[dict]:
+    return fetch_all(client, "companies", "symbol, name")
+
+
+# Short names Wikipedia uses that do not match our company names. Each symbol is checked against the
+# companies table before use, so a wrong entry here is skipped, never stored.
+ALIASES = {"adani ports sez": "ADANIPORTS", "hcltech": "HCLTECH", "sun pharma": "SUNPHARMA"}
 
 
 def sensex_from_wikipedia(client) -> list[str]:
@@ -90,15 +100,19 @@ def sensex_from_wikipedia(client) -> list[str]:
     col = next(c for c in table.columns if "company" in str(c).lower() or "name" in str(c).lower())
     names = [str(x) for x in table[col].dropna()]
     print(f"  Wikipedia table columns: {list(table.columns)}; {len(names)} names")
+    print(table.head(4).to_string(max_colwidth=28))
 
     companies = all_companies(client)
     by_norm: dict[str, list[str]] = {}
     for c in companies:
         by_norm.setdefault(norm(c["name"]), []).append(c["symbol"])
+    known_symbols = {c["symbol"] for c in companies}
     symbols, missing = [], []
     for nm in names:
         key = norm(nm)
         hit = by_norm.get(key)
+        if not hit and ALIASES.get(key) in known_symbols:
+            hit = [ALIASES[key]]
         if not hit:  # fall back to a unique prefix / containment match
             cands = [s for k, v in by_norm.items() if k and (k.startswith(key) or key.startswith(k)) for s in v]
             hit = cands if len(set(cands)) == 1 else None
@@ -116,7 +130,7 @@ def replace_members(client, key: str, symbols: list[str], expected: int) -> bool
     if len(symbols) != expected:
         print(f"  {key}: got {len(symbols)} symbols, expected {expected}. Keeping the stored list.")
         return False
-    known = {r["symbol"] for r in client.table("quotes").select("symbol").range(0, 9999).execute().data or []}
+    known = {r["symbol"] for r in fetch_all(client, "quotes", "symbol")}
     absent = [s for s in symbols if s not in known]
     if absent:
         print(f"  {key}: {len(absent)} symbols have no quote row yet: {absent}")

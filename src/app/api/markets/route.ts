@@ -30,6 +30,13 @@ const slim = (r: Row) => ({
   market_cap: r.market_cap,
 });
 
+const INDEX_TABS = [
+  { key: 'sensex', indexSymbol: 'SENSEX' },
+  { key: 'nifty50', indexSymbol: 'Nifty 50' },
+  { key: 'midcap100', indexSymbol: 'NIFTY Midcap 100' },
+  { key: 'smallcap100', indexSymbol: 'NIFTY Smallcap 100' },
+] as const;
+
 export async function GET() {
   try {
     // screener_view already joins companies + latest ratios + quote, deduped to
@@ -61,8 +68,13 @@ export async function GET() {
     const updatedAt = (quotes ?? []).map(q => q.updated_at as string | null).filter((x): x is string => !!x).sort().at(-1) ?? null;
     const latestDay = istDay(updatedAt);
 
-    const qmap = new Map<string, { volume: number | null; change: number | null; price: number | null; change_pct: number | null }>();
-    for (const q of quotes ?? []) if (istDay(q.updated_at) === latestDay) qmap.set(q.symbol, q);
+    type Q = { volume: number | null; change: number | null; price: number | null; change_pct: number | null; updated_at: string | null };
+    const qmap = new Map<string, Q>();
+    const qAll = new Map<string, Q>();
+    for (const q of quotes ?? []) {
+      qAll.set(q.symbol, q);
+      if (istDay(q.updated_at) === latestDay) qmap.set(q.symbol, q);
+    }
 
     const rows: Row[] = (view ?? []).filter(v => qmap.has(v.symbol)).map(v => {
       const q = qmap.get(v.symbol);
@@ -118,9 +130,42 @@ export async function GET() {
     const declines = priced.filter(r => r.change_pct! < 0).length;
     const unchanged = priced.filter(r => r.change_pct === 0).length;
 
+    // Index tabs: every member of Sensex / Nifty 50 / Midcap 100 / Smallcap 100 with its latest quote,
+    // largest first. These are not limited to the latest trading day; `live` says how many are current.
+    const viewBySymbol = new Map((view ?? []).map(v => [v.symbol as string, v]));
+    const [{ data: members }, { data: levels }] = await Promise.all([
+      supabase.from('index_members').select('index_key, symbol'),
+      supabase.from('indices').select('symbol, last, change, change_pct'),
+    ]);
+    const levelBySymbol = new Map((levels ?? []).map(l => [l.symbol as string, l]));
+    const indexTabs: Record<string, { rows: ReturnType<typeof slim>[]; total: number; live: number; level: { last: number; change: number | null; change_pct: number | null } | null }> = {};
+    for (const t of INDEX_TABS) {
+      const syms = (members ?? []).filter(m => m.index_key === t.key).map(m => m.symbol as string);
+      const list: Row[] = [];
+      let live = 0;
+      for (const sym of syms) {
+        const v = viewBySymbol.get(sym);
+        const q = qAll.get(sym);
+        if (!v || !q || !(q.price != null && q.price > 0)) continue;
+        if (istDay(q.updated_at) === latestDay) live++;
+        list.push({
+          symbol: sym, name: v.name, sector: v.sector, market_cap: v.market_cap,
+          week_high_52: v.week_high_52, week_low_52: v.week_low_52,
+          price: q.price, change: q.change, change_pct: q.change_pct ?? v.change_pct ?? null, volume: q.volume,
+        });
+      }
+      list.sort((a, b) => (b.market_cap ?? 0) - (a.market_cap ?? 0));
+      const lv = levelBySymbol.get(t.indexSymbol);
+      indexTabs[t.key] = {
+        rows: list.map(slim), total: syms.length, live,
+        level: lv ? { last: Number(lv.last), change: lv.change == null ? null : Number(lv.change), change_pct: lv.change_pct == null ? null : Number(lv.change_pct) } : null,
+      };
+    }
+
     return NextResponse.json({
       tradeDate,
       updatedAt,
+      indexTabs,
       total: priced.length,
       gainers, losers, active, high52, low52, sectors,
       breadth: { advances, declines, unchanged, high52: high52.length, low52: low52.length },
