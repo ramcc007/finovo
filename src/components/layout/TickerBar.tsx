@@ -65,9 +65,11 @@ export default function TickerBar() {
                 <span className="text-[11px] font-mono font-semibold text-[#131A24]">
                   {idx.last != null ? idx.last.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
                 </span>
-                <span className={cn('text-[11px] font-mono font-semibold', pos ? 'text-[#15A05B]' : 'text-[#E0392B]')}>
-                  {pos ? '▲' : '▼'} {Math.abs(idx.change_pct ?? 0).toFixed(2)}%
-                </span>
+                {idx.change_pct != null && (
+                  <span className={cn('text-[11px] font-mono font-semibold', pos ? 'text-[#15A05B]' : 'text-[#E0392B]')}>
+                    {pos ? '▲' : '▼'} {Math.abs(idx.change_pct).toFixed(2)}%
+                  </span>
+                )}
               </span>
             );
           })}

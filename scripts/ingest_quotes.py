@@ -282,13 +282,16 @@ def update_index_levels(client, session) -> int:
 
     now_iso = stamp or datetime.now(timezone.utc).isoformat()
     sensex = fetch_sensex_live() if any((row.get("symbol") or "").upper() == "SENSEX" for row in existing) else None
+    sensex_blank = False
     if sensex and not sensex_agrees_with_members(client, sensex):
-        sensex = None
+        sensex, sensex_blank = None, True  # the site then shows no change for Sensex rather than a wrong one
     updates = []
     for row in existing:
         if (row.get("symbol") or "").upper() == "SENSEX":
             if sensex:
                 updates.append({"symbol": row["symbol"], "name": row["name"], **sensex, "updated_at": now_iso})
+            elif sensex_blank:
+                updates.append({"symbol": row["symbol"], "name": row["name"], "change": None, "change_pct": None})
             continue
         name = (row.get("name") or "").strip().lower()
         r = live_by_name.get(name)

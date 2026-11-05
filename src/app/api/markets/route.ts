@@ -151,7 +151,7 @@ export async function GET() {
       supabase.from('indices').select('symbol, last, change, change_pct'),
     ]);
     const levelBySymbol = new Map((levels ?? []).map(l => [l.symbol as string, l]));
-    const indexTabs: Record<string, { rows: ReturnType<typeof slim>[]; total: number; live: number; level: { last: number; change: number | null; change_pct: number | null } | null }> = {};
+    const indexTabs: Record<string, { rows: ReturnType<typeof slim>[]; total: number; live: number; level: { last: number; change: number | null; change_pct: number | null } | null; membersAvg: number | null }> = {};
     for (const t of INDEX_TABS) {
       const syms = (members ?? []).filter(m => m.index_key === t.key).map(m => m.symbol as string);
       const list: Row[] = [];
@@ -169,10 +169,17 @@ export async function GET() {
       }
       list.sort((a, b) => (b.market_cap ?? 0) - (a.market_cap ?? 0));
       const lv = levelBySymbol.get(t.indexSymbol);
-      indexTabs[t.key] = {
-        rows: list.map(slim), total: syms.length, live,
-        level: lv ? { last: Number(lv.last), change: lv.change == null ? null : Number(lv.change), change_pct: lv.change_pct == null ? null : Number(lv.change_pct) } : null,
-      };
+      let level = lv ? { last: Number(lv.last), change: lv.change == null ? null : Number(lv.change), change_pct: lv.change_pct == null ? null : Number(lv.change_pct) } : null;
+      // Sensex comes from a different source than the others. If its level has no change, or its change is far from
+      // how its own 30 stocks moved, show the stocks' average (clearly labelled) instead of a doubtful index figure.
+      const moves = list.filter(r => r.change_pct != null && Math.abs(r.change_pct) <= 40 && qAll.get(r.symbol) && istDay(qAll.get(r.symbol)!.updated_at) === latestDay).map(r => r.change_pct as number);
+      const membersAvg = moves.length >= 20 ? Math.round(moves.reduce((a, b) => a + b, 0) / moves.length * 100) / 100 : null;
+      if (t.key === 'sensex' && membersAvg != null && (level?.change_pct == null || Math.abs(level.change_pct - membersAvg) > 1.25)) {
+        level = null;
+      } else if (t.key !== 'sensex') {
+        // other indices keep their own level; the average is only used as the Sensex fallback
+      }
+      indexTabs[t.key] = { rows: list.map(slim), total: syms.length, live, level, membersAvg: level ? null : membersAvg };
     }
 
     return NextResponse.json({

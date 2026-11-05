@@ -31,6 +31,7 @@ interface Mover {
 interface IndexTabData {
   rows: Mover[]; total: number; live: number;
   level: { last: number; change: number | null; change_pct: number | null } | null;
+  membersAvg?: number | null;
 }
 interface MarketsData {
   tradeDate: string | null;
@@ -129,6 +130,14 @@ function MarketsPageContent() {
                         {idx.level.change_pct >= 0 ? '▲' : '▼'} {Math.abs(idx.level.change_pct).toFixed(2)}%
                       </span>
                     )}
+                  </span>
+                )}
+                {!idx.level && idx.membersAvg != null && (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="text-[#4A5568]">Average move of these stocks</span>
+                    <span className={cn('num font-semibold', idx.membersAvg >= 0 ? 'text-positive' : 'text-negative')}>
+                      {idx.membersAvg >= 0 ? '▲' : '▼'} {Math.abs(idx.membersAvg).toFixed(2)}%
+                    </span>
                   </span>
                 )}
                 <span>{idx.rows.length} of {idx.total} stocks, largest first</span>
