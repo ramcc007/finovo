@@ -104,7 +104,9 @@ export async function GET() {
     });
 
     // Only rows with a real, priced quote count toward movers / breadth.
-    const priced = rows.filter(r => r.price != null && r.price > 0 && r.change_pct != null);
+    // A move beyond 40% in a day is almost always a split, bonus or other corporate action the feed has not
+    // adjusted for (e.g. a -88% print), not a real price move. Keep those out of movers and sector averages.
+    const priced = rows.filter(r => r.price != null && r.price > 0 && r.change_pct != null && Math.abs(r.change_pct) <= 40);
 
     const byChangeDesc = [...priced].sort((a, b) => (b.change_pct! - a.change_pct!));
     const gainers = byChangeDesc.filter(r => r.change_pct! > 0).slice(0, 12).map(slim);

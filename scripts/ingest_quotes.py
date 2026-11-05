@@ -202,19 +202,49 @@ def update_stock_quotes_yahoo(client, symbols: list[str]) -> int:
 
 def fetch_sensex_live() -> dict | None:
     """Intraday Sensex from Yahoo Finance (^BSESN); BSE is not in NSE's feed.
-    Returns last/change/change_pct or None. Never raises."""
+    Returns last/change/change_pct or None. Never raises.
+
+    fast_info's previous_close can be stale or from the wrong day, which once showed +0.5% on a +2.4% day.
+    So the change is taken from the last two daily bars instead, and the bar must be today's."""
     try:
         import yfinance as yf
-        info = yf.Ticker("^BSESN").fast_info
-        last = float(info.last_price or 0)
-        prev = float(info.previous_close or 0)
-        if not last or not prev:
-            return None
-        change = round(last - prev, 2)
-        return {"last": last, "change": change, "change_pct": round(change / prev * 100, 2)}
+        t = yf.Ticker("^BSESN")
+        hist = t.history(period="7d", interval="1d")
+        closes = hist["Close"].dropna()
+        if len(closes) >= 2:
+            last, prev = float(closes.iloc[-1]), float(closes.iloc[-2])
+            bar_day = closes.index[-1].date()
+            if bar_day == datetime.now(IST).date() and last and prev:
+                change = round(last - prev, 2)
+                return {"last": round(last, 2), "change": change, "change_pct": round(change / prev * 100, 2)}
+        print("  Sensex: no bar for today yet", flush=True)
+        return None
     except Exception as e:
         print(f"  Sensex (yfinance) failed: {e}")
         return None
+
+
+def sensex_agrees_with_members(client, sensex: dict) -> bool:
+    """Sanity check: the 30 Sensex stocks' average move should be near the index move. Skips the check when
+    there are too few same-day member quotes to judge."""
+    try:
+        members = [r["symbol"] for r in (client.table("index_members").select("symbol").eq("index_key", "sensex").execute().data or [])]
+        if len(members) < 20:
+            return True
+        quotes = client.table("quotes").select("symbol, change_pct, updated_at").in_("symbol", members).execute().data or []
+        today = datetime.now(IST).date().isoformat()
+        moves = [float(q["change_pct"]) for q in quotes
+                 if q.get("change_pct") is not None and abs(float(q["change_pct"])) <= 40
+                 and (q.get("updated_at") or "")[:10] >= today[:10]]
+        if len(moves) < 20:
+            return True
+        avg = sum(moves) / len(moves)
+        ok = abs(avg - sensex["change_pct"]) <= 1.25
+        if not ok:
+            print(f"  Sensex rejected: index {sensex['change_pct']}% vs members average {avg:.2f}%", flush=True)
+        return ok
+    except Exception:
+        return True
 
 
 def update_index_levels(client, session) -> int:
@@ -251,6 +281,8 @@ def update_index_levels(client, session) -> int:
 
     now_iso = stamp or datetime.now(timezone.utc).isoformat()
     sensex = fetch_sensex_live() if any((row.get("symbol") or "").upper() == "SENSEX" for row in existing) else None
+    if sensex and not sensex_agrees_with_members(client, sensex):
+        sensex = None
     updates = []
     for row in existing:
         if (row.get("symbol") or "").upper() == "SENSEX":
