@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { formatCrores } from '@/lib/utils';
 import { computeDerived } from '@/lib/derived';
+import { computePeerStats, type PeerRow } from '@/lib/peerStats';
 
 const INDEX_LABEL: Record<string, string> = { sensex: 'Sensex 30', nifty50: 'Nifty 50', midcap100: 'Nifty Midcap 100', smallcap100: 'Nifty Smallcap 100' };
 
@@ -91,6 +92,22 @@ export async function GET(
       };
     }
 
+    // Standing among sector peers on valuation, profitability, growth, leverage and yield.
+    let peerStats: ReturnType<typeof computePeerStats> = [];
+    if (company?.sector) {
+      try {
+        const rows: PeerRow[] = [];
+        for (let start = 0; start < 3000; start += 1000) {
+          const { data: chunk } = await supabase.from('screener_view')
+            .select('symbol, pe, pb, roe, net_margin, debt_to_equity, revenue_growth_1y, dividend_yield')
+            .eq('sector', company.sector).order('symbol').range(start, start + 999);
+          rows.push(...((chunk ?? []) as PeerRow[]));
+          if (!chunk || chunk.length < 1000) break;
+        }
+        peerStats = computePeerStats(rows, sym);
+      } catch { /* the comparison is an extra */ }
+    }
+
     const derived = computeDerived(annualFin ?? [], mcap);
 
     // If live quote is missing, synthesize from latest ratios price
@@ -118,6 +135,7 @@ export async function GET(
       indices: ((members ?? []) as { index_key: string }[]).map(m => INDEX_LABEL[m.index_key]).filter(Boolean),
       rank,
       derived,
+      peerStats,
     });
   } catch {
     return NextResponse.json({ error: 'Stock not found' }, { status: 404 });

@@ -10,6 +10,8 @@ import TechnicalsCard from '@/components/stock/TechnicalsCard';
 import QuarterlyCard from '@/components/stock/QuarterlyCard';
 import DividendCard from '@/components/stock/DividendCard';
 import NewsCard from '@/components/stock/NewsCard';
+import PeerStatsCard from '@/components/stock/PeerStatsCard';
+import type { PeerMetric } from '@/lib/peerStats';
 import type { Derived } from '@/lib/derived';
 import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
 import FinancialTrendChart from '@/components/charts/FinancialTrendChart';
@@ -59,6 +61,7 @@ interface StockData {
   indices?: string[];
   rank?: { sector: string | null; sectorRank: number | null; sectorTotal: number | null; overallRank: number | null; overallTotal: number | null } | null;
   derived?: Derived;
+  peerStats?: PeerMetric[];
 }
 
 function ChangeBadge({ value }: { value: number }) {
@@ -747,6 +750,8 @@ export default function StockPageClient() {
 
         {/* PEERS */}
         {activeTab === 'Peers' && (
+          <div className="space-y-5">
+          <PeerStatsCard symbol={symbol} sector={c?.sector ?? null} metrics={data?.peerStats ?? []} />
           <div className="card p-0 overflow-auto">
             <div className="px-5 py-4 border-b border-[#EDF0F7] flex items-center justify-between">
               <h3 className="font-semibold text-[#0D1117] text-sm">
@@ -794,6 +799,7 @@ export default function StockPageClient() {
                 ))}
               </tbody>
             </table>
+          </div>
           </div>
         )}
       </div>
