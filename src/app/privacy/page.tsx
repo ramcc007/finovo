@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
-  description: 'Privacy policy for Scripwise — how we handle your data.',
+  description: 'Privacy policy for Scripwise: what data we collect, how we use it and the choices you have.',
 };
 
 export default function PrivacyPage() {

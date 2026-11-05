@@ -9,7 +9,7 @@ import {
 import { FreeCTA, ProCTA } from './PricingCTA';
 
 export const metadata: Metadata = {
-  title: 'Pricing — Scripwise',
+  title: 'Pricing: Free and Pro Plans',
   description:
     'Start free, or go Pro for ₹499/year to unlock all screener filters, CSV export, the full Scripwise Scorecard and Pulse, and unlimited watchlists.',
 };
