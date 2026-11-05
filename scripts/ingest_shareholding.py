@@ -96,6 +96,39 @@ def institutions(f: dict):
     return fii, f.get("InstitutionsDomestic_ContextI")
 
 
+def fetch_rows(s, sym: str) -> list[dict]:
+    r = s.get(f"https://www.nseindia.com/api/corporate-share-holdings-master?index=equities&symbol={sym}", timeout=25)
+    if r.status_code != 200:
+        raise RuntimeError(f"HTTP {r.status_code}")
+    data = r.json()
+    if not isinstance(data, list) or not data:
+        raise RuntimeError("no data")
+    rows = []
+    for q in data[:QUARTERS]:
+        label = period_label(str(q.get("date") or ""))
+        promoter, public = pct(q.get("pr_and_prgrp")), pct(q.get("public_val"))
+        if not label or promoter is None:
+            continue
+        fii = dii = pledge = None
+        link = q.get("xbrl")
+        if link and str(link).startswith("http"):
+            try:
+                x = s.get(link, timeout=40)
+                if x.status_code == 200:
+                    fii, dii = institutions(facts(x.text))
+                    pledge = pledge_pct(x.text, promoter)
+            except Exception:
+                pass
+            time.sleep(0.4)
+        rows.append({
+            "symbol": sym, "quarter": label, "promoter_pct": promoter,
+            "fii_pct": round(fii, 2) if fii is not None else None,
+            "dii_pct": round(dii, 2) if dii is not None else None,
+            "public_pct": public, "pledge_pct": pledge,
+        })
+    return rows
+
+
 def main() -> int:
     client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
     ranked = [r["symbol"] for r in fetch_all(client, "screener_view", "symbol, market_cap", "market_cap", True) if r.get("market_cap")]
@@ -107,53 +140,33 @@ def main() -> int:
     s = new_session()
     ok = failed = rows_total = pledge_seen = 0
     for i, sym in enumerate(todo, 1):
-        try:
-            r = s.get(f"https://www.nseindia.com/api/corporate-share-holdings-master?index=equities&symbol={sym}", timeout=25)
-            if r.status_code != 200:
-                raise RuntimeError(f"HTTP {r.status_code}")
-            data = r.json()
-            if not isinstance(data, list) or not data:
-                raise RuntimeError("no data")
-            rows = []
-            for q in data[:QUARTERS]:
-                label = period_label(str(q.get("date") or ""))
-                promoter, public = pct(q.get("pr_and_prgrp")), pct(q.get("public_val"))
-                if not label or promoter is None:
-                    continue
-                fii = dii = pledge = None
-                link = q.get("xbrl")
-                if link and str(link).startswith("http"):
-                    try:
-                        x = s.get(link, timeout=40)
-                        if x.status_code == 200:
-                            fii, dii = institutions(facts(x.text))
-                            pledge = pledge_pct(x.text, promoter)
-                    except Exception:
-                        pass
-                    time.sleep(0.4)
-                if pledge is not None:
-                    pledge_seen += 1
-                rows.append({
-                    "symbol": sym, "quarter": label, "promoter_pct": promoter,
-                    "fii_pct": round(fii, 2) if fii is not None else None,
-                    "dii_pct": round(dii, 2) if dii is not None else None,
-                    "public_pct": public, "pledge_pct": pledge,
-                })
-            if rows:
-                client.table("shareholding").upsert(rows, on_conflict="symbol,quarter").execute()
-                rows_total += len(rows)
-                ok += 1
-            else:
-                failed += 1
-        except Exception as e:
-            failed += 1
-            print(f"  {sym}: {e}", flush=True)
-            if "HTTP 403" in str(e) or "HTTP 401" in str(e):
-                time.sleep(5)
+        rows, err = [], None
+        for attempt in (1, 2, 3):
+            try:
+                rows = fetch_rows(s, sym)
+                err = None
+                break
+            except Exception as e:
+                err = e
+                # NSE drops long-lived connections (HTTP/2 resets, 401/403): start a fresh session and try again.
+                time.sleep(3 * attempt)
                 try:
                     s = new_session()
                 except Exception:
                     pass
+        if rows:
+            client.table("shareholding").upsert(rows, on_conflict="symbol,quarter").execute()
+            rows_total += len(rows)
+            pledge_seen += sum(1 for r in rows if r["pledge_pct"] is not None)
+            ok += 1
+        else:
+            failed += 1
+            print(f"  {sym}: {err or 'no usable rows'}", flush=True)
+        if i % 50 == 0:
+            try:
+                s = new_session()  # refresh proactively before NSE does it for us
+            except Exception:
+                pass
         time.sleep(0.8)
         if i % 25 == 0:
             print(f"  {i}/{len(todo)}  ok={ok} failed={failed} rows={rows_total}", flush=True)
