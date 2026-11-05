@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   try {
     const { data, error } = await supabase
       .from('quotes')
-      .select('symbol, price, change, change_pct, volume, updated_at')
+      .select('symbol, price, change, change_pct, open, high, low, prev_close, volume, updated_at')
       .in('symbol', symbols);
     if (error) throw error;
 

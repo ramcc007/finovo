@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import TickerBar from '@/components/layout/TickerBar';
 import AuthGate from '@/components/auth/AuthGate';
-import { cn, formatPrice, formatVolume, formatCrores, formatTradeDate } from '@/lib/utils';
+import { cn, formatPrice, formatVolume, formatCrores, formatTradeDate, freshnessLabel } from '@/lib/utils';
 
 // Maps a sector's average day-change % to a heatmap tile color — green for
 // gains, red for losses, intensity scaled to ±3% (a "big" day for a sector).
@@ -27,6 +27,7 @@ interface Mover {
 }
 interface MarketsData {
   tradeDate: string | null;
+  updatedAt?: string | null;
   total: number;
   gainers: Mover[]; losers: Mover[]; active: Mover[]; high52: Mover[]; low52: Mover[];
   sectors: { name: string; change: number; count: number }[];
@@ -44,13 +45,14 @@ const TABS: { key: MarketTab; label: string }[] = [
 function MarketsPageContent() {
   const [tab, setTab] = useState<MarketTab>('gainers');
   const [mkt, setMkt] = useState<MarketsData | null>(null);
+  const [mktLabel, setMktLabel] = useState('');
   const router = useRouter();
 
   useEffect(() => {
     let alive = true;
     fetch('/api/markets')
       .then(r => r.json())
-      .then(d => { if (alive) setMkt(d); })
+      .then(d => { if (alive) { setMkt(d); setMktLabel(d?.updatedAt ? freshnessLabel(d.updatedAt) : ''); } })
       .catch(() => { if (alive) setMkt(null); });
     return () => { alive = false; };
   }, []);
@@ -66,10 +68,11 @@ function MarketsPageContent() {
         <div>
           <h1 className="h-section text-[#0D1117]">Market Overview</h1>
           <p className="text-sm text-[#4A5568] mt-1.5">
-            Official NSE close
-            {mkt?.tradeDate
-              ? <> · as of <span className="font-medium text-[#0D1117]">{formatTradeDate(mkt.tradeDate)}</span></>
-              : ' · updating…'}
+            {mktLabel
+              ? <span className="font-medium text-[#0D1117]">{mktLabel}</span>
+              : mkt?.tradeDate
+                ? <>Official NSE close · as of <span className="font-medium text-[#0D1117]">{formatTradeDate(mkt.tradeDate)}</span></>
+                : 'Updating…'}
             {mkt && mkt.total > 0 ? <> · {mkt.total.toLocaleString('en-IN')} stocks tracked</> : null}
           </p>
         </div>

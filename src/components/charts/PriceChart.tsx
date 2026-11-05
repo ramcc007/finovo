@@ -15,16 +15,28 @@ interface PricePoint {
 interface PriceChartProps {
   symbol: string;
   currentPrice: number;
+  /** Today's candle built from the live quote; replaces or extends the last daily bar. */
+  live?: PricePoint | null;
+}
+
+function withLive(data: PricePoint[], live: PricePoint | null | undefined): PricePoint[] {
+  if (!live || data.length === 0) return data;
+  const last = data[data.length - 1];
+  if (live.date < last.date) return data;
+  if (live.date === last.date) return [...data.slice(0, -1), { ...last, high: Math.max(last.high, live.high), low: Math.min(last.low, live.low), close: live.close, volume: Math.max(last.volume, live.volume) }];
+  return [...data, live];
 }
 
 const PERIODS = ['1D', '1W', '1M', '6M', '1Y', '5Y'] as const;
 type Period = typeof PERIODS[number];
 
-export default function PriceChart({ symbol, currentPrice }: PriceChartProps) {
+export default function PriceChart({ symbol, currentPrice, live = null }: PriceChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   // Keep latest currentPrice in a ref so fetchPrices never has a stale closure.
   const currentPriceRef = useRef(currentPrice);
   useEffect(() => { currentPriceRef.current = currentPrice; }, [currentPrice]);
+  const liveRef = useRef(live);
+  useEffect(() => { liveRef.current = live; }, [live]);
 
   // Track the live chart instance so we can safely remove it before re-creating.
   const chartRef = useRef<{ remove: () => void } | null>(null);
@@ -42,7 +54,7 @@ export default function PriceChart({ symbol, currentPrice }: PriceChartProps) {
       const price = currentPriceRef.current;
       const priceParam = price > 0 ? `&price=${price}` : '';
       const res = await fetch(`/api/stocks/${symbol}/prices?period=${p}${priceParam}`);
-      const data: PricePoint[] = await res.json();
+      const data: PricePoint[] = withLive(await res.json(), liveRef.current);
       setPrices(data);
 
       if (data.length >= 2) {
@@ -59,6 +71,13 @@ export default function PriceChart({ symbol, currentPrice }: PriceChartProps) {
   }, [symbol]);
 
   useEffect(() => { fetchPrices(period); }, [period, fetchPrices]);
+
+  // A new live quote moves today's last point without refetching the history.
+  const liveKey = live ? `${live.date}|${live.close}|${live.high}|${live.low}` : '';
+  useEffect(() => {
+    if (!liveKey) return;
+    setPrices(p => withLive(p, liveRef.current));
+  }, [liveKey]);
 
   useEffect(() => {
     if (!chartContainerRef.current || prices.length === 0) return;

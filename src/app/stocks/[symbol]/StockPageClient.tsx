@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Plus, Check, ExternalLink, RefreshCw } from 'lucide-react';
-import { cn, formatPrice, formatCrores, formatTradeDate } from '@/lib/utils';
+import { cn, formatPrice, formatCrores, formatTradeDate, freshnessLabel } from '@/lib/utils';
 import PriceChart from '@/components/charts/PriceChart';
 import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
 import FinancialTrendChart from '@/components/charts/FinancialTrendChart';
@@ -22,6 +22,7 @@ interface StockData {
   quote: {
     price: number; change: number; change_pct: number;
     open: number; high: number; low: number; prev_close: number; volume: number;
+    updated_at?: string | null;
   };
   ratios: {
     date?: string;
@@ -79,6 +80,7 @@ export default function StockPageClient() {
 
   const [data, setData] = useState<StockData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [priceLabel, setPriceLabel] = useState('');
   const [notFound, setNotFound] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('Overview');
   const { isWatched, toggle, atLimit, limit } = useWatchlist();
@@ -99,6 +101,7 @@ export default function StockPageClient() {
           setData(null);
         } else {
           setData(d);
+          setPriceLabel(d?.quote?.updated_at ? freshnessLabel(d.quote.updated_at) : '');
         }
         setLoading(false);
       })
@@ -107,6 +110,25 @@ export default function StockPageClient() {
         setData(null);
         setLoading(false);
       });
+  }, [symbol]);
+
+  // Keep the price current while the tab is open: once a minute, only when visible.
+  useEffect(() => {
+    let alive = true;
+    const poll = () => {
+      if (document.visibilityState === 'hidden') return;
+      fetch(`/api/live/quotes?symbols=${encodeURIComponent(symbol)}`, { cache: 'no-store' })
+        .then(r => r.json())
+        .then(d => {
+          const nq = d?.quotes?.[0];
+          if (!alive || !nq?.updated_at) return;
+          setData(prev => (prev && prev.quote?.updated_at !== nq.updated_at ? { ...prev, quote: { ...prev.quote, ...nq } } : prev));
+          setPriceLabel(freshnessLabel(nq.updated_at));
+        })
+        .catch(() => {});
+    };
+    const t = setInterval(poll, 60_000);
+    return () => { alive = false; clearInterval(t); };
   }, [symbol]);
 
   const q = data?.quote;
@@ -118,6 +140,11 @@ export default function StockPageClient() {
   const price = q?.price ?? 0;
   const range52w = weekHigh - weekLow;
   const pricePos = range52w > 0 ? Math.min(((price - weekLow) / range52w) * 100, 100) : 50;
+
+  // Today's candle from the live quote, so the chart's last point is not a day behind.
+  const liveCandle = q?.updated_at && q.price > 0 && q.open > 0
+    ? { date: new Date(q.updated_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }), open: q.open, high: Math.max(q.high, q.price), low: Math.min(q.low || q.price, q.price), close: q.price, volume: q.volume ?? 0 }
+    : null;
 
   const annualFin = data?.financials?.annual ?? [];
   const quarterlyFin = data?.financials?.quarterly ?? [];
@@ -265,7 +292,7 @@ export default function StockPageClient() {
         <AdviceDisclaimer />
         {r?.date && (
           <p className="text-[11px] text-[#8A96A8] -mt-1 mb-4">
-            Fundamentals &amp; ratios as of latest reported period ({formatTradeDate(r.date)}) · price at last market close
+            Fundamentals &amp; ratios as of latest reported period ({formatTradeDate(r.date)}) · price: {priceLabel ? priceLabel.charAt(0).toLowerCase() + priceLabel.slice(1) : 'at last market close'}
           </p>
         )}
 
@@ -277,7 +304,7 @@ export default function StockPageClient() {
             <div className="lg:col-span-2">
               {loading
                 ? <div className="card p-5"><Skeleton className="h-72 w-full" /></div>
-                : <PriceChart symbol={symbol} currentPrice={price} />
+                : <PriceChart symbol={symbol} currentPrice={price} live={liveCandle} />
               }
             </div>
 

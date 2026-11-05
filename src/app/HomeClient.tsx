@@ -22,6 +22,7 @@ interface Mover {
 }
 interface MarketsData {
   tradeDate: string | null;
+  updatedAt?: string | null;
   total: number;
   gainers: Mover[]; losers: Mover[];
   sectors: { name: string; change: number; count: number }[];
@@ -72,13 +73,14 @@ export default function HomeClient() {
   const [searchResults, setSearchResults] = useState<SearchHit[]>([]);
   const [searching, setSearching] = useState(false);
   const [mkt, setMkt] = useState<MarketsData | null>(null);
+  const [mktLabel, setMktLabel] = useState('');
   const router = useRouter();
 
   useEffect(() => {
     let alive = true;
     fetch('/api/markets')
       .then(r => r.json())
-      .then(d => { if (alive) setMkt(d); })
+      .then(d => { if (alive) { setMkt(d); setMktLabel(d?.updatedAt ? freshnessLabel(d.updatedAt) : ''); } })
       .catch(() => { if (alive) setMkt(null); });
     return () => { alive = false; };
   }, []);
@@ -372,8 +374,9 @@ export default function HomeClient() {
             <div>
               <h2 className="h-section text-[#0D1117]">Latest market</h2>
               <p className="text-sm text-[#4A5568] mt-1">
-                Official close across NSE-listed companies
-                {mkt?.tradeDate ? <> · as of <span className="font-medium text-[#0D1117]">{formatTradeDate(mkt.tradeDate)}</span></> : null}
+                {mktLabel
+                  ? <>NSE-listed companies · <span className="font-medium text-[#0D1117]">{mktLabel}</span></>
+                  : <>Official close across NSE-listed companies{mkt?.tradeDate ? <> · as of <span className="font-medium text-[#0D1117]">{formatTradeDate(mkt.tradeDate)}</span></> : null}</>}
               </p>
             </div>
             <Link href="/markets" className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium text-[#F97316] hover:gap-2.5 transition-all">

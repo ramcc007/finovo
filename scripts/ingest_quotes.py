@@ -30,6 +30,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from urllib.parse import quote
+from zoneinfo import ZoneInfo
 from curl_cffi import requests
 from supabase import create_client
 from dotenv import load_dotenv
@@ -45,6 +46,13 @@ LOOP_COUNT = max(1, int(os.environ.get("LOOP_COUNT", "1")))
 LOOP_INTERVAL = max(10, int(os.environ.get("LOOP_INTERVAL", "60")))
 # Epoch seconds. When set, passes continue until this time (long-running job mode).
 LOOP_UNTIL = int(os.environ.get("LOOP_UNTIL", "0") or 0)
+# Stock prices come from Yahoo Finance (NSE's per-index stock endpoint answers 404
+# to GitHub's servers). One batch call for the largest N companies, every
+# STOCK_EVERY_N_PASSES passes. Set NSE_QUOTES=1 to try the NSE endpoint as well.
+YAHOO_UNIVERSE = max(50, int(os.environ.get("YAHOO_UNIVERSE", "500")))
+STOCK_EVERY_N_PASSES = max(1, int(os.environ.get("STOCK_EVERY_N_PASSES", "2")))
+NSE_QUOTES = os.environ.get("NSE_QUOTES", "") == "1"
+IST = ZoneInfo("Asia/Kolkata")
 
 NSE_BASE = "https://www.nseindia.com"
 NSE_INDICES = [
@@ -131,6 +139,67 @@ def update_stock_quotes(client, session) -> int:
     return len(all_records)
 
 
+def load_universe(client) -> list[str]:
+    """The largest companies by market cap: the set we refresh from Yahoo."""
+    try:
+        rows = (client.table("screener_view").select("symbol, market_cap")
+                .gt("market_cap", 0).order("market_cap", desc=True).limit(YAHOO_UNIVERSE).execute().data or [])
+        return [r["symbol"] for r in rows if r.get("symbol")]
+    except Exception as e:
+        print(f"  Could not load the stock list: {e}", flush=True)
+        return []
+
+
+def update_stock_quotes_yahoo(client, symbols: list[str]) -> int:
+    """Latest price, day range and volume for `symbols` from Yahoo's daily bars.
+    The bar for today updates through the session, so its Close is the last price
+    and the bar before it gives the previous close. Rows whose latest bar is not
+    from today (holiday, halted, stale) are skipped, never written."""
+    if not symbols:
+        return 0
+    try:
+        import yfinance as yf
+        df = yf.download([f"{s}.NS" for s in symbols], period="5d", interval="1d", group_by="ticker",
+                         auto_adjust=False, threads=True, progress=False)
+    except Exception as e:
+        print(f"  Yahoo download failed: {e}", flush=True)
+        return 0
+
+    today = datetime.now(IST).date()
+    now_iso = datetime.now(timezone.utc).isoformat()
+    records, stale, odd = [], 0, 0
+    for sym in symbols:
+        try:
+            sub = df[f"{sym}.NS"].dropna(subset=["Close"])
+            if len(sub) < 2:
+                stale += 1
+                continue
+            if sub.index[-1].date() != today:
+                stale += 1
+                continue
+            last, prev = sub.iloc[-1], float(sub["Close"].iloc[-2])
+            price = float(last["Close"])
+            if price <= 0 or prev <= 0:
+                odd += 1
+                continue
+            change = round(price - prev, 2)
+            pct = round(change / prev * 100, 4)
+            if abs(pct) > 30:          # beyond any circuit limit: a bad tick, not a price
+                odd += 1
+                continue
+            records.append({
+                "symbol": sym, "price": price, "change": change, "change_pct": pct,
+                "open": float(last["Open"]), "high": float(last["High"]), "low": float(last["Low"]),
+                "prev_close": prev, "volume": int(last["Volume"] or 0), "updated_at": now_iso,
+            })
+        except Exception:
+            stale += 1
+    for i in range(0, len(records), 200):
+        client.table("quotes").upsert(records[i:i + 200], on_conflict="symbol").execute()
+    print(f"  Yahoo: wrote {len(records)} of {len(symbols)} quotes ({stale} without a bar for today, {odd} rejected).", flush=True)
+    return len(records)
+
+
 def fetch_sensex_live() -> dict | None:
     """Intraday Sensex from Yahoo Finance (^BSESN); BSE is not in NSE's feed.
     Returns last/change/change_pct or None. Never raises."""
@@ -152,10 +221,18 @@ def update_index_levels(client, session) -> int:
     """Refresh last/change on the rows the daily EOD job created — matched by
     name so we never invent rows (rank/name/ordering stay owned by that job).
     Returns the number of index rows written."""
+    stamp = None
     try:
         resp = session.get(f"{NSE_BASE}/api/allIndices", timeout=15)
         resp.raise_for_status()
-        live = resp.json().get("data", [])
+        payload = resp.json()
+        live = payload.get("data", [])
+        # NSE says when its numbers are from. Use that time, so a holiday or pre-open
+        # run (which only re-reads the last close) is not labelled as fresh.
+        try:
+            stamp = datetime.strptime(payload.get("timestamp", ""), "%d-%b-%Y %H:%M:%S").replace(tzinfo=IST).astimezone(timezone.utc).isoformat()
+        except ValueError:
+            stamp = None
     except Exception as e:
         print(f"  Error fetching allIndices: {e}")
         live = []
@@ -172,7 +249,7 @@ def update_index_levels(client, session) -> int:
         print(f"  Error reading indices table: {e}")
         return 0
 
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now_iso = stamp or datetime.now(timezone.utc).isoformat()
     sensex = fetch_sensex_live() if any((row.get("symbol") or "").upper() == "SENSEX" for row in existing) else None
     updates = []
     for row in existing:
@@ -212,15 +289,19 @@ def update_index_levels(client, session) -> int:
     return len(updates)
 
 
-def run_once(client) -> tuple[int, int]:
+def run_once(client, universe: list[str], pass_no: int) -> tuple[int, int]:
     session = get_nse_session()
-    quotes = update_stock_quotes(client, session)
+    quotes = update_stock_quotes(client, session) if NSE_QUOTES else 0
     indices = update_index_levels(client, session)
+    if pass_no % STOCK_EVERY_N_PASSES == 0:
+        quotes += update_stock_quotes_yahoo(client, universe)
     return quotes, indices
 
 
 def run() -> tuple[int, int]:
     client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    universe = load_universe(client)
+    print(f"Stock list: {len(universe)} companies (largest by market cap).", flush=True)
     total_quotes = total_indices = 0
     i = 0
     while True:
@@ -228,7 +309,7 @@ def run() -> tuple[int, int]:
         label = f"until {datetime.fromtimestamp(LOOP_UNTIL, timezone.utc):%H:%M} UTC" if LOOP_UNTIL else f"of {LOOP_COUNT}"
         print(f"Pass {i + 1} ({label}): fetching live NSE data...", flush=True)
         try:
-            q, n = run_once(client)
+            q, n = run_once(client, universe, i)
             total_quotes += q
             total_indices += n
         except Exception as e:
@@ -255,4 +336,4 @@ if __name__ == "__main__":
         print("Nothing was updated in any pass — treating as a failed run.")
         sys.exit(1)
     if quotes == 0:
-        print("Warning: index levels updated but no stock quotes (the per-index NSE endpoint may be blocked).")
+        print("Warning: index levels updated but no stock quotes were written.")

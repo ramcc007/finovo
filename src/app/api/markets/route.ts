@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-// EOD data changes once per trading day — cache the aggregate for 5 minutes
-// instead of re-scanning ~4,400 rows (screener_view + quotes) per request.
-export const revalidate = 300;
+// Quotes refresh about every 2 minutes in market hours (largest companies) and once at the
+// end of day for the rest. Cache the aggregate for a minute instead of re-scanning
+// ~4,400 rows (screener_view + quotes) per request.
+export const revalidate = 60;
 
 interface Row {
   symbol: string;
@@ -42,7 +43,7 @@ export async function GET() {
     // quotes carries the raw EOD volume + absolute change not present in the view.
     const { data: quotes, error: qErr } = await supabase
       .from('quotes')
-      .select('symbol, volume, change, price, change_pct');
+      .select('symbol, volume, change, price, change_pct, updated_at');
     if (qErr) throw qErr;
 
     // Latest trading day represented in the price feed.
@@ -53,10 +54,17 @@ export async function GET() {
       .limit(1);
     const tradeDate: string | null = latest?.[0]?.date ?? null;
 
-    const qmap = new Map<string, { volume: number | null; change: number | null; price: number | null; change_pct: number | null }>();
-    for (const q of quotes ?? []) qmap.set(q.symbol, q);
+    // During a session only the largest companies are live, the rest still hold the last close.
+    // Mixing the two would blend today's moves with yesterday's, so movers and breadth use only
+    // quotes from the most recent trading day (IST) present in the table.
+    const istDay = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }) : '');
+    const updatedAt = (quotes ?? []).map(q => q.updated_at as string | null).filter((x): x is string => !!x).sort().at(-1) ?? null;
+    const latestDay = istDay(updatedAt);
 
-    const rows: Row[] = (view ?? []).map(v => {
+    const qmap = new Map<string, { volume: number | null; change: number | null; price: number | null; change_pct: number | null }>();
+    for (const q of quotes ?? []) if (istDay(q.updated_at) === latestDay) qmap.set(q.symbol, q);
+
+    const rows: Row[] = (view ?? []).filter(v => qmap.has(v.symbol)).map(v => {
       const q = qmap.get(v.symbol);
       return {
         symbol: v.symbol,
@@ -67,7 +75,7 @@ export async function GET() {
         week_low_52: v.week_low_52,
         price: q?.price ?? v.price,
         change: q?.change ?? null,
-        change_pct: v.change_pct ?? q?.change_pct ?? null,
+        change_pct: q?.change_pct ?? v.change_pct ?? null,
         volume: q?.volume ?? null,
       };
     });
@@ -112,6 +120,7 @@ export async function GET() {
 
     return NextResponse.json({
       tradeDate,
+      updatedAt,
       total: priced.length,
       gainers, losers, active, high52, low52, sectors,
       breadth: { advances, declines, unchanged, high52: high52.length, low52: low52.length },
