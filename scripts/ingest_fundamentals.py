@@ -243,7 +243,9 @@ def ingest_one(client, symbol: str, session):
     try:
         qfin = ticker.quarterly_financials
         for col in qfin.columns[:8]:  # last 8 quarters
-            period = col.strftime("%YQ%q") if hasattr(col, 'strftime') else str(col)[:7]
+            # "%q" is not a strftime directive: every quarter of a year got the same label
+            # ("2026Q%q") and overwrote the others. Label by period end month, like annual rows.
+            period = col.strftime("%Y-%m") if hasattr(col, 'strftime') else str(col)[:7]
             rev = safe_float(qfin.loc["Total Revenue", col]) if "Total Revenue" in qfin.index else None
             np_ = safe_float(qfin.loc["Net Income", col]) if "Net Income" in qfin.index else None
             eps = safe_float(qfin.loc["Basic EPS", col]) if "Basic EPS" in qfin.index else None
