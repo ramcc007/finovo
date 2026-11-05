@@ -77,6 +77,27 @@ def get_active_symbols(client) -> list[str]:
     return symbols
 
 
+def by_market_cap(client, symbols: list[str]) -> list[str]:
+    """Largest companies first, so a run cut short by MAX_SYMBOLS or the job limit still covers
+    the stocks people look at most. Symbols with no market cap keep their order at the end."""
+    ranked, start = [], 0
+    try:
+        while True:
+            rows = (client.table("screener_view").select("symbol, market_cap").gt("market_cap", 0)
+                    .order("market_cap", desc=True).range(start, start + 999).execute().data or [])
+            ranked += [r["symbol"] for r in rows]
+            if len(rows) < 1000:
+                break
+            start += 1000
+    except Exception as e:
+        print(f"  Could not rank by market cap ({e}); using table order.")
+        return symbols
+    have = set(symbols)
+    first = [s for s in ranked if s in have]
+    seen = set(first)
+    return first + [s for s in symbols if s not in seen]
+
+
 def safe_float(val) -> float | None:
     try:
         v = float(val)
@@ -272,7 +293,7 @@ def ingest_one(client, symbol: str, session):
 def run():
     print("Starting fundamental ingestion...")
     client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-    symbols = get_active_symbols(client)[:MAX_SYMBOLS]
+    symbols = by_market_cap(client, get_active_symbols(client))[:MAX_SYMBOLS]
     print(f"  {len(symbols)} symbols to process")
 
     session = make_session()

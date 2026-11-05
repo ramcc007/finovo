@@ -130,10 +130,15 @@ def run():
         change = round(close - prev, 2) if prev is not None else None
         change_pct = round((change / prev) * 100, 4) if prev else None
 
+        # Delivery columns are in the same file: shares actually taken for delivery and as a % of traded.
+        dq = _num(row.get("DELIV_QTY"))
+        dp = _num(row.get("DELIV_PER"))
         price_records.append({
             "symbol": sym, "date": trade_date.isoformat(),
             "open": o, "high": h, "low": lo, "close": close,
             "volume": int(vol) if vol is not None else None,
+            "delivery_qty": int(dq) if dq is not None else None,
+            "delivery_pct": dp if dp is not None and 0 <= dp <= 100 else None,
         })
         quote_records.append({
             "symbol": sym, "price": close, "change": change, "change_pct": change_pct,

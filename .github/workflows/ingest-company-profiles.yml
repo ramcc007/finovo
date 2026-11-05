@@ -11,6 +11,10 @@ on:
         description: 'How many companies to fetch this run'
         required: false
         default: '600'
+      max_age_days:
+        description: 'Skip companies refreshed within this many days (0 refreshes everything)'
+        required: false
+        default: '30'
 
 jobs:
   profiles:
@@ -29,5 +33,6 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           MAX_SYMBOLS: ${{ github.event.inputs.max_symbols || '1500' }}
+          PROFILE_MAX_AGE_DAYS: ${{ github.event.inputs.max_age_days || '30' }}
           PYTHONUNBUFFERED: '1'
         run: python scripts/ingest_company_profiles.py
