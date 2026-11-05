@@ -69,9 +69,11 @@ export async function GET(
     const dataOf = async <T,>(f: () => PromiseLike<{ data: T | null }>): Promise<T | null> => { try { return (await f()).data; } catch { return null; } };
     const countOf = async (f: () => PromiseLike<{ count: number | null }>): Promise<number | null> => { try { return (await f()).count; } catch { return null; } };
 
-    const [profile, members] = await Promise.all([
+    const since90 = new Date(Date.now() - 90 * 86_400_000).toISOString().slice(0, 10);
+    const [profile, members, bulkDeals] = await Promise.all([
       dataOf(() => supabase.from('company_profiles').select('summary, website, employees, city, state, country, officers, source, next_earnings, updated_at').eq('symbol', sym).maybeSingle()),
       dataOf(() => supabase.from('index_members').select('index_key').eq('symbol', sym)),
+      dataOf(() => supabase.from('bulk_deals').select('trade_date, client, side, quantity, price, deal_type').eq('symbol', sym).gte('trade_date', since90).order('trade_date', { ascending: false }).limit(20)),
     ]);
 
     // Where the company sits by market cap: within its sector and overall.
@@ -136,6 +138,7 @@ export async function GET(
       rank,
       derived,
       peerStats,
+      bulkDeals: bulkDeals ?? [],
     });
   } catch {
     return NextResponse.json({ error: 'Stock not found' }, { status: 404 });

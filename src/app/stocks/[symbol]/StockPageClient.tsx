@@ -11,6 +11,7 @@ import QuarterlyCard from '@/components/stock/QuarterlyCard';
 import DividendCard from '@/components/stock/DividendCard';
 import NewsCard from '@/components/stock/NewsCard';
 import PeerStatsCard from '@/components/stock/PeerStatsCard';
+import BulkDealsCard, { type Deal } from '@/components/stock/BulkDealsCard';
 import type { PeerMetric } from '@/lib/peerStats';
 import type { Derived } from '@/lib/derived';
 import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
@@ -62,6 +63,7 @@ interface StockData {
   rank?: { sector: string | null; sectorRank: number | null; sectorTotal: number | null; overallRank: number | null; overallTotal: number | null } | null;
   derived?: Derived;
   peerStats?: PeerMetric[];
+  bulkDeals?: Deal[];
 }
 
 function ChangeBadge({ value }: { value: number }) {
@@ -488,6 +490,7 @@ export default function StockPageClient() {
                 <DividendCard actions={data?.corporateActions ?? []} />
               </div>
             )}
+            {!loading && !!data?.bulkDeals?.length && <div className="lg:col-span-3"><BulkDealsCard deals={data.bulkDeals} /></div>}
             {!loading && <div className="lg:col-span-3"><NewsCard symbol={symbol} name={c?.name ?? symbol} /></div>}
           </div>
         )}
