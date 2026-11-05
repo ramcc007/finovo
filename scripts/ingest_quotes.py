@@ -214,10 +214,11 @@ def fetch_sensex_live() -> dict | None:
         if len(closes) >= 2:
             last, prev = float(closes.iloc[-1]), float(closes.iloc[-2])
             bar_day = closes.index[-1].date()
-            if bar_day == datetime.now(IST).date() and last and prev:
+            # The latest daily bar is the last close after hours and today's running bar in session.
+            if (datetime.now(IST).date() - bar_day).days <= 4 and last and prev:
                 change = round(last - prev, 2)
                 return {"last": round(last, 2), "change": change, "change_pct": round(change / prev * 100, 2)}
-        print("  Sensex: no bar for today yet", flush=True)
+        print("  Sensex: no recent daily bar", flush=True)
         return None
     except Exception as e:
         print(f"  Sensex (yfinance) failed: {e}")
@@ -232,10 +233,10 @@ def sensex_agrees_with_members(client, sensex: dict) -> bool:
         if len(members) < 20:
             return True
         quotes = client.table("quotes").select("symbol, change_pct, updated_at").in_("symbol", members).execute().data or []
-        today = datetime.now(IST).date().isoformat()
+        newest = max((q.get("updated_at") or "")[:10] for q in quotes) if quotes else ""
         moves = [float(q["change_pct"]) for q in quotes
                  if q.get("change_pct") is not None and abs(float(q["change_pct"])) <= 40
-                 and (q.get("updated_at") or "")[:10] >= today[:10]]
+                 and (q.get("updated_at") or "")[:10] == newest]
         if len(moves) < 20:
             return True
         avg = sum(moves) / len(moves)
