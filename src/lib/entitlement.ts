@@ -11,6 +11,17 @@ export interface Entitlement {
   preview?: boolean; // anonymous visitor inside the free full-access window
 }
 
+// A renewal charge can land a little after current_period_end. While Razorpay still reports the
+// subscription as active, keep access through this gap so a paying member is not locked out mid-renewal.
+const RENEWAL_GRACE_MS = 3 * 24 * 60 * 60 * 1000;
+
+/** Single rule for "does this subscription row give Pro right now", shared by the gates and the status API. */
+export function subscriptionGivesPro(sub: { plan?: string | null; status?: string | null; current_period_end?: string | null } | null | undefined): boolean {
+  if (!sub || sub.plan !== 'pro' || sub.status !== 'active') return false;
+  if (!sub.current_period_end) return true;
+  return new Date(sub.current_period_end).getTime() + RENEWAL_GRACE_MS > Date.now();
+}
+
 const FREE: Entitlement = { userId: null, plan: 'free', active: false };
 
 /**
@@ -45,8 +56,7 @@ export async function getEntitlementFromToken(token: string | null): Promise<Ent
       .eq('user_id', userId)
       .maybeSingle();
 
-    const notExpired = !sub?.current_period_end || new Date(sub.current_period_end) > new Date();
-    if (sub && sub.plan === 'pro' && sub.status === 'active' && notExpired) {
+    if (subscriptionGivesPro(sub)) {
       return { userId, plan: 'pro', active: true };
     }
   } catch {

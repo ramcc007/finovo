@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabaseServer';
-import { getEntitlement } from '@/lib/entitlement';
+import { getEntitlement, subscriptionGivesPro } from '@/lib/entitlement';
 import { syncSubscriptionStatus } from '@/lib/razorpaySync';
 
 export const dynamic = 'force-dynamic';
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   // possibly-stale row — covers a missed/misconfigured webhook or a
   // checkout whose client-side handler never fired (closed tab, UPI
   // app-switch, etc.).
-  if (sub?.razorpay_subscription_id && sub.status !== 'active') {
+  if (sub?.razorpay_subscription_id && (sub.status !== 'active' || !subscriptionGivesPro(sub))) {
     await syncSubscriptionStatus(ent.userId, sub.razorpay_subscription_id);
     const { data: refreshed } = await client
       .from('subscriptions')
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
     sub = refreshed ?? sub;
   }
 
-  const active = sub?.plan === 'pro' && sub?.status === 'active';
+  const active = subscriptionGivesPro(sub);
 
   return NextResponse.json({
     plan: active ? 'pro' : 'free',
