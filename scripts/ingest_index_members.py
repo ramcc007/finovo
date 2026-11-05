@@ -107,10 +107,18 @@ def sensex_from_wikipedia(client) -> list[str]:
     for c in companies:
         by_norm.setdefault(norm(c["name"]), []).append(c["symbol"])
     known_symbols = {c["symbol"] for c in companies}
+    # The table's own Symbol column (e.g. "ADANIPORTS.BO") is the most reliable key; names are the fallback.
+    sym_col = next((c for c in table.columns if str(c).strip().lower() == "symbol"), None)
+    wiki_symbol = {}
+    if sym_col is not None:
+        for nm, sv in zip(table[col], table[sym_col]):
+            wiki_symbol[str(nm)] = re.sub(r"\.(BO|NS)$", "", str(sv).strip().upper())
     symbols, missing = [], []
     for nm in names:
         key = norm(nm)
-        hit = by_norm.get(key)
+        hit = [wiki_symbol[nm]] if wiki_symbol.get(nm) in known_symbols else None
+        if not hit:
+            hit = by_norm.get(key)
         if not hit and ALIASES.get(key) in known_symbols:
             hit = [ALIASES[key]]
         if not hit:  # fall back to a unique prefix / containment match
