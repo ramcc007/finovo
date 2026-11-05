@@ -13,9 +13,8 @@ const base = 'https://www.scripwise.co.in';
 // appear without a redeploy.
 export const revalidate = 300;
 
-// Ram's rule (3 Nov 2026): no <lastmod> anywhere, except the live US election pages (4 Nov 2026),
-// which carry the real time of their latest update; every URL carries
-// <changefreq> and <priority> instead. Paginated blog listings (/blog/page/N) and stock pages are
+// Ram's rule (3 Nov 2026, repeated 6 Nov 2026): no <lastmod> on any URL, the election pages included;
+// every URL carries <changefreq> and <priority> instead. Paginated blog listings (/blog/page/N) and stock pages are
 // deliberately not listed.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const blogPosts = await getPublishedPosts(); // newest publish date first
@@ -63,14 +62,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const { updates: electionUpdates, meta: electionMeta } = await getElectionData();
   // Coverage has ended: the pages no longer change, so they stop advertising hourly updates.
   const electionFreq = electionMeta?.coverageEnded ? ('monthly' as const) : ('hourly' as const);
-  const newest = (...t: (string | null | undefined)[]) => { const v = t.filter((x): x is string => !!x).sort().pop(); return v ? new Date(v) : undefined; };
-  const boardTimes = Object.values(electionMeta?.scoreboard ?? {}).map(e => e?.updatedAt);
   const electionRoutes: MetadataRoute.Sitemap = [
-    { url: `${base}/us-midterm-elections`, lastModified: newest(electionUpdates[0]?.publishedAt, ...boardTimes), changeFrequency: electionFreq, priority: 0.8 },
+    { url: `${base}/us-midterm-elections`, changeFrequency: electionFreq, priority: 0.8 },
     ...SECTION_IDS.filter(id => sectionUpdates(SECTIONS[id], electionUpdates).length > 0)
-      .map(id => ({ url: `${base}${SECTIONS[id].path}`, lastModified: newest(sectionUpdates(SECTIONS[id], electionUpdates)[0]?.publishedAt, ...(id === 'markets' ? [] : boardTimes)), changeFrequency: electionFreq, priority: 0.8 })),
+      .map(id => ({ url: `${base}${SECTIONS[id].path}`, changeFrequency: electionFreq, priority: 0.8 })),
     ...listRaces(electionUpdates).filter(r => r.count >= MIN_UPDATES_TO_INDEX)
-        .map(r => ({ url: `${base}${racePath(r.slug)}`, lastModified: newest(r.latest), changeFrequency: electionFreq, priority: 0.7 })),
+        .map(r => ({ url: `${base}${racePath(r.slug)}`, changeFrequency: electionFreq, priority: 0.7 })),
   ];
 
   return [...staticRoutes, ...electionRoutes, ...blogRoutes, ...authorRoutes, ...glossaryRoutes];
