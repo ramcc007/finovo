@@ -1,11 +1,51 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CreditCard, Loader2, CheckCircle2, ArrowRight } from 'lucide-react';
+import { CreditCard, Loader2, CheckCircle2, ArrowRight, Receipt } from 'lucide-react';
 import { authFetch } from '@/lib/authFetch';
 import { useEntitlement } from '@/lib/useEntitlement';
 import { formatTradeDate } from '@/lib/utils';
+
+interface Payment { id: string; date: string | null; amount: number; currency: string; receiptUrl: string | null }
+
+/** Past payments with a link to the receipt Razorpay hosts for each one. */
+function PaymentHistory() {
+  const [payments, setPayments] = useState<Payment[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    authFetch('/api/billing/history')
+      .then(r => (r.ok ? r.json() : Promise.reject()))
+      .then(d => { if (alive) setPayments(d.payments ?? []); })
+      .catch(() => { if (alive) setFailed(true); });
+    return () => { alive = false; };
+  }, []);
+
+  if (failed) return <p className="mt-5 text-xs text-[#8A96A8]">Payment history could not be loaded right now. Your payment confirmation was also emailed by Razorpay.</p>;
+  if (!payments) return null;
+  if (!payments.length) return null;
+  return (
+    <div className="mt-5 pt-4 border-t border-[#EDF0F7]">
+      <div className="flex items-center gap-2 mb-2">
+        <Receipt size={14} className="text-[#8A96A8]" />
+        <h3 className="text-sm font-semibold text-[#0D1117]">Payment history</h3>
+      </div>
+      <ul className="divide-y divide-[#EDF0F7]">
+        {payments.map(p => (
+          <li key={p.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+            <span className="text-[#4A5568]">{p.date ? formatTradeDate(p.date) : 'Paid'}</span>
+            <span className="font-medium tabular-nums text-[#0D1117]">{p.currency === 'INR' ? '₹' : `${p.currency} `}{p.amount.toLocaleString('en-IN')}</span>
+            {p.receiptUrl
+              ? <a href={p.receiptUrl} target="_blank" rel="noopener noreferrer" className="text-[#EA580C] font-medium hover:underline">View receipt</a>
+              : <span className="text-[#8A96A8]">Paid</span>}
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-xs text-[#8A96A8]">Receipts are payment confirmations hosted by Razorpay.</p>
+    </div>
+  );
+}
 
 export default function BillingSection() {
   const ent = useEntitlement();
@@ -81,6 +121,7 @@ export default function BillingSection() {
           </Link>
         </div>
       )}
+      {!ent.loading && <PaymentHistory />}
     </div>
   );
 }
