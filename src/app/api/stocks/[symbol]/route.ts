@@ -39,7 +39,7 @@ export async function GET(
       supabase.from('shareholding').select('*').eq('symbol', sym)
         .order('quarter', { ascending: false }).limit(4),
       supabase.from('corporate_actions').select('*').eq('symbol', sym)
-        .order('ex_date', { ascending: false, nullsFirst: false }).limit(20),
+        .order('ex_date', { ascending: false, nullsFirst: false }).limit(60),
     ]);
     if (compErr) throw compErr;
 
@@ -69,7 +69,7 @@ export async function GET(
     const countOf = async (f: () => PromiseLike<{ count: number | null }>): Promise<number | null> => { try { return (await f()).count; } catch { return null; } };
 
     const [profile, members] = await Promise.all([
-      dataOf(() => supabase.from('company_profiles').select('summary, website, employees, city, state, country, officers, source, updated_at').eq('symbol', sym).maybeSingle()),
+      dataOf(() => supabase.from('company_profiles').select('summary, website, employees, city, state, country, officers, source, next_earnings, updated_at').eq('symbol', sym).maybeSingle()),
       dataOf(() => supabase.from('index_members').select('index_key').eq('symbol', sym)),
     ]);
 

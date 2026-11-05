@@ -7,6 +7,9 @@ import { ArrowLeft, Plus, Check, ExternalLink, RefreshCw } from 'lucide-react';
 import { cn, formatPrice, formatCrores, formatTradeDate, freshnessLabel } from '@/lib/utils';
 import PriceChart from '@/components/charts/PriceChart';
 import TechnicalsCard from '@/components/stock/TechnicalsCard';
+import QuarterlyCard from '@/components/stock/QuarterlyCard';
+import DividendCard from '@/components/stock/DividendCard';
+import NewsCard from '@/components/stock/NewsCard';
 import type { Derived } from '@/lib/derived';
 import AdviceDisclaimer from '@/components/ui/AdviceDisclaimer';
 import FinancialTrendChart from '@/components/charts/FinancialTrendChart';
@@ -51,7 +54,7 @@ interface StockData {
   profile?: {
     summary: string | null; website: string | null; employees: number | null;
     city: string | null; state: string | null; country: string | null;
-    officers: { name: string; title: string | null }[] | null; source: string | null;
+    officers: { name: string; title: string | null }[] | null; source: string | null; next_earnings?: string | null;
   } | null;
   indices?: string[];
   rank?: { sector: string | null; sectorRank: number | null; sectorTotal: number | null; overallRank: number | null; overallTotal: number | null } | null;
@@ -475,6 +478,14 @@ export default function StockPageClient() {
                 </div>
               )}
             </div>
+
+            {!loading && (
+              <div className="lg:col-span-3 grid grid-cols-1 gap-5 lg:grid-cols-2">
+                <QuarterlyCard quarterly={data?.financials?.quarterly ?? []} nextEarnings={data?.profile?.next_earnings ?? null} />
+                <DividendCard actions={data?.corporateActions ?? []} />
+              </div>
+            )}
+            {!loading && <div className="lg:col-span-3"><NewsCard symbol={symbol} name={c?.name ?? symbol} /></div>}
           </div>
         )}
 

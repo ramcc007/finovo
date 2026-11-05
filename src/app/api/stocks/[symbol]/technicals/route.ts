@@ -11,9 +11,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ sym
   if (!/^[A-Z0-9&-]{1,20}$/.test(sym)) return NextResponse.json({ technicals: null });
   try {
     // ~5 years of trading days; newest first so a row cap can only cut the oldest bars.
-    const { data, error } = await supabase.from('prices').select('date, high, low, close, volume')
+    const { data, error } = await supabase.from('prices').select('date, high, low, close, volume, delivery_pct')
       .eq('symbol', sym).order('date', { ascending: false }).limit(1300);
     if (error) throw error;
+    const deliveryRows = (data ?? []).filter(r => r.delivery_pct != null).slice(0, 30).map(r => ({ date: String(r.date), pct: Number(r.delivery_pct) })).reverse();
     const bars: Bar[] = (data ?? []).map(r => ({ date: String(r.date), close: Number(r.close), high: Number(r.high), low: Number(r.low), volume: Number(r.volume) || 0 }));
 
     // A live quote from today extends the history by one bar so the figures are not a day behind.
@@ -23,8 +24,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ sym
       const newest = bars.reduce((m, b) => (b.date > m ? b.date : m), '');
       if (day > newest) bars.push({ date: day, close: Number(q.price), high: Number(q.high) || Number(q.price), low: Number(q.low) || Number(q.price), volume: Number(q.volume) || 0 });
     }
-    return NextResponse.json({ technicals: computeTechnicals(bars) });
+    // Delivery: share of traded shares actually taken for delivery, newest 30 sessions that have it.
+    const last20 = deliveryRows.slice(-20);
+    const delivery = deliveryRows.length >= 5
+      ? { latest: deliveryRows[deliveryRows.length - 1], avg20: Math.round((last20.reduce((a, b) => a + b.pct, 0) / last20.length) * 10) / 10, series: deliveryRows }
+      : null;
+    return NextResponse.json({ technicals: computeTechnicals(bars), delivery });
   } catch {
-    return NextResponse.json({ technicals: null });
+    return NextResponse.json({ technicals: null, delivery: null });
   }
 }

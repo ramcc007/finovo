@@ -22,12 +22,13 @@ function Row({ label, value, sub, className }: { label: string; value: React.Rea
 /** Returns, moving averages, RSI, volume and volatility, worked out from the stored daily prices. */
 export default function TechnicalsCard({ symbol }: { symbol: string }) {
   const [t, setT] = useState<Technicals | null | undefined>(undefined);
+  const [delivery, setDelivery] = useState<{ latest: { date: string; pct: number }; avg20: number; series: { date: string; pct: number }[] } | null>(null);
 
   useEffect(() => {
     let alive = true;
     fetch(`/api/stocks/${encodeURIComponent(symbol)}/technicals`)
       .then(r => r.json())
-      .then(d => { if (alive) setT(d?.technicals ?? null); })
+      .then(d => { if (alive) { setT(d?.technicals ?? null); setDelivery(d?.delivery ?? null); } })
       .catch(() => { if (alive) setT(null); });
     return () => { alive = false; };
   }, [symbol]);
@@ -66,7 +67,30 @@ export default function TechnicalsCard({ symbol }: { symbol: string }) {
           <Row label="Volatility (1 year)" value={t.volatility1y != null ? `${t.volatility1y.toFixed(1)}%` : '—'} sub="Annualised, from daily moves" />
         </div>
       </div>
-      <p className="mt-3 text-[11px] leading-relaxed text-[#8A96A8]">Worked out from daily closing prices. Information only, not a recommendation.</p>
+      {delivery && (
+        <div className="mt-4 border-t border-[#EDF0F7] pt-4">
+          <div className="flex items-baseline justify-between gap-2">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-[#4A5568]">Delivery</h4>
+            <span className="text-[11px] text-[#8A96A8]">Share of traded shares taken for delivery</span>
+          </div>
+          <div className="mt-3 flex flex-wrap items-end gap-x-8 gap-y-3">
+            <div>
+              <div className="num text-2xl font-bold text-[#0D1117]">{delivery.latest.pct.toFixed(1)}%</div>
+              <div className="text-[11px] text-[#8A96A8]">on {formatTradeDate(delivery.latest.date)}</div>
+            </div>
+            <div>
+              <div className="num text-lg font-semibold text-[#0D1117]">{delivery.avg20.toFixed(1)}%</div>
+              <div className="text-[11px] text-[#8A96A8]">average, last 20 sessions</div>
+            </div>
+            <div className="flex h-12 flex-1 items-end gap-[3px]" role="img" aria-label={`Delivery percentage over the last ${delivery.series.length} sessions`}>
+              {delivery.series.map(d => (
+                <div key={d.date} title={`${formatTradeDate(d.date)}: ${d.pct.toFixed(1)}%`} className="min-w-[3px] flex-1 rounded-sm bg-[#C7D2FE]" style={{ height: `${Math.max(6, Math.min(100, d.pct))}%` }} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      <p className="mt-3 text-[11px] leading-relaxed text-[#8A96A8]">Worked out from daily closing prices and NSE delivery data. Information only, not a recommendation.</p>
     </section>
   );
 }
