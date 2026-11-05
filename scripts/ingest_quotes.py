@@ -201,25 +201,20 @@ def update_stock_quotes_yahoo(client, symbols: list[str]) -> int:
 
 
 def fetch_sensex_live() -> dict | None:
-    """Intraday Sensex from Yahoo Finance (^BSESN); BSE is not in NSE's feed.
-    Returns last/change/change_pct or None. Never raises.
+    """Sensex from Yahoo Finance (^BSESN); BSE is not in NSE's feed. Returns last/change/change_pct or None.
 
-    fast_info's previous_close can be stale or from the wrong day, which once showed +0.5% on a +2.4% day.
-    So the change is taken from the last two daily bars instead, and the bar must be today's."""
+    Uses the live price and previous close (checked on 5 Nov 2026: 79,310.01 vs 77,301.40 = +2.60%, the same as
+    Google). Do NOT use the daily history for this: it has no bar for the current day until later, so its last
+    two bars are the previous two sessions. Never raises."""
     try:
         import yfinance as yf
-        t = yf.Ticker("^BSESN")
-        hist = t.history(period="7d", interval="1d")
-        closes = hist["Close"].dropna()
-        if len(closes) >= 2:
-            last, prev = float(closes.iloc[-1]), float(closes.iloc[-2])
-            bar_day = closes.index[-1].date()
-            # The latest daily bar is the last close after hours and today's running bar in session.
-            if (datetime.now(IST).date() - bar_day).days <= 4 and last and prev:
-                change = round(last - prev, 2)
-                return {"last": round(last, 2), "change": change, "change_pct": round(change / prev * 100, 2)}
-        print("  Sensex: no recent daily bar", flush=True)
-        return None
+        info = yf.Ticker("^BSESN").fast_info
+        last = float(info.last_price or 0)
+        prev = float(info.previous_close or 0)
+        if not last or not prev:
+            return None
+        change = round(last - prev, 2)
+        return {"last": round(last, 2), "change": change, "change_pct": round(change / prev * 100, 2)}
     except Exception as e:
         print(f"  Sensex (yfinance) failed: {e}")
         return None
