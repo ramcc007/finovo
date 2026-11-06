@@ -21,8 +21,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: s.description,
     alternates: { canonical: s.path },
     robots: sectionUpdates(s, updates).length === 0 ? { index: false, follow: true } : undefined,
-    openGraph: { type: 'article', url, title: s.title, description: s.description },
-    twitter: { card: 'summary_large_image', title: s.title, description: s.description },
+    openGraph: { type: 'article', url, title: s.title, description: s.description, images: [{ url: '/us-midterm-elections/opengraph-image', width: 1200, height: 630 }] },
+    twitter: { card: 'summary_large_image', title: s.title, description: s.description, images: ['/us-midterm-elections/opengraph-image'] },
   };
 }
 

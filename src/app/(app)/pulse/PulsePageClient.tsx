@@ -37,6 +37,7 @@ export default function PulsePageClient() {
   if (authLoading || preview.pending || !allowed) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
+        <h1 className="sr-only">Scripwise Pulse: Indian market fear and greed</h1>
         <Loader2 size={22} className="animate-spin text-[#8A96A8]" />
       </div>
     );

@@ -20,7 +20,7 @@ export default function Footer({ showElection = false }: { showElection?: boolea
 
           {/* Tools */}
           <div>
-            <h4 className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-4">Tools</h4>
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-4">Tools</h2>
             <ul className="space-y-2.5">
               {[
                 { href: '/screener', label: 'Stock Explorer' },
@@ -42,7 +42,7 @@ export default function Footer({ showElection = false }: { showElection?: boolea
 
           {/* Legal */}
           <div>
-            <h4 className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-4">Legal</h4>
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-4">Legal</h2>
             <ul className="space-y-2.5">
               {[
                 { href: '/disclaimer', label: 'Disclaimer' },

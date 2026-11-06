@@ -26,8 +26,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     alternates: { canonical: racePath(race) },
     // A race page stays out of search results until it has enough to say.
     robots: n < MIN_UPDATES_TO_INDEX ? { index: false, follow: true } : undefined,
-    openGraph: { type: 'article', url: `${BASE}${racePath(race)}`, title, description },
-    twitter: { card: 'summary_large_image', title, description },
+    openGraph: { type: 'article', url: `${BASE}${racePath(race)}`, title, description, images: [{ url: '/us-midterm-elections/opengraph-image', width: 1200, height: 630 }] },
+    twitter: { card: 'summary_large_image', title, description, images: ['/us-midterm-elections/opengraph-image'] },
   };
 }
 

@@ -18,6 +18,9 @@ export default function AuthGate({ feature, description, children }: Props) {
   if (loading || (!user && preview.pending)) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
+        {/* The page is rendered on the server with this state, so give crawlers and screen readers the page heading. */}
+        <h1 className="sr-only">{feature}</h1>
+        <p className="sr-only">{description}</p>
         <Loader2 size={22} className="animate-spin text-[#8A96A8]" />
       </div>
     );

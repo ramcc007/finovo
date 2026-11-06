@@ -20,6 +20,7 @@ export default function ProGate({ feature, description, children }: Props) {
   if (ent.loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
+        <span className="sr-only">{feature}</span>
         <Loader2 size={22} className="animate-spin text-[#8A96A8]" />
       </div>
     );

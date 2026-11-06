@@ -8,15 +8,15 @@ import { getPublishedPosts } from '@/lib/blogDb';
 import { GLOSSARY_FAQ, LEARNING_PATHS, POPULAR_TERMS } from '@/lib/glossaryHub';
 import { ArrowRight, BarChart3, LineChart, Scale } from 'lucide-react';
 import { ld } from '@/components/blog/jsonLd';
+import { pageMeta } from '@/lib/siteMeta';
 
 const BASE = 'https://www.scripwise.co.in';
 
-const META: Metadata = {
-  title: 'Stock Market Glossary: Indian Investing Terms Explained',
+const META: Metadata = pageMeta({
+  title: 'Stock Market Glossary: Indian Investing Terms',
   description: 'Plain-language meanings of Indian stock market and investing terms, from SIP and NAV to repo rate and P/E ratio, with how each works in India.',
-  alternates: { canonical: '/glossary' },
-  openGraph: { type: 'website', url: `${BASE}/glossary`, title: 'Scripwise Glossary: Indian Investing Terms Explained' },
-};
+  path: '/glossary',
+});
 
 // Kept out of search results until the first term is live.
 export async function generateMetadata({ searchParams }: { searchParams: Promise<{ q?: string; cat?: string }> }): Promise<Metadata> {

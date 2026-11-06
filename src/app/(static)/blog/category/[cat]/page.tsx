@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { pageMeta } from '@/lib/siteMeta';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getPublishedPosts } from '@/lib/blogDb';
@@ -23,11 +24,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { cat } = await params;
   const { posts, name } = await load(cat);
   if (!name) return { title: 'Category not found', robots: { index: false } };
-  return {
+  return pageMeta({
     title: `${name} Articles: Indian Stock Market Blog`,
-    description: `${posts.length} plain-language ${name.toLowerCase()} article${posts.length === 1 ? '' : 's'} on Indian stocks and investing from the Scripwise blog.`,
-    alternates: { canonical: `/blog/category/${cat}` },
-  };
+    description: `${posts.length} ${name.toLowerCase()} article${posts.length === 1 ? '' : 's'} for Indian investors, written in plain language with sources and clear examples, from the Scripwise blog.`,
+    path: `/blog/category/${cat}`,
+  });
 }
 
 export default async function CategoryPage({ params }: Props) {

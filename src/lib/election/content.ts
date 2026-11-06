@@ -4,7 +4,7 @@ export const BASE = 'https://www.scripwise.co.in';
 export const PAGE_URL = `${BASE}${PAGE_PATH}`;
 export const PAGE_TITLE = 'US Midterm Elections 2026: Live Updates and Results';
 export const PAGE_DESCRIPTION =
-  'Live updates and results from the US midterm elections of 3 November 2026: Senate, House and governors, with the market impact for the US, Europe and India. Every update credits its source.';
+  'Results and updates from the 3 November 2026 US midterms for the Senate, House and governors, with the market impact for India. Each update names its source.';
 
 export const INTRO =
   'Voters in the United States are electing all 435 seats of the House of Representatives, 35 Senate seats and 36 governors in the midterm elections of 3 November 2026. This page will carry the latest updates until the full results are known.';
