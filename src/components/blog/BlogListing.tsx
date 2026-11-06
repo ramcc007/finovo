@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { headers } from 'next/headers';
 import { categoryHref } from './categories';
 import { notFound } from 'next/navigation';
 import { BookOpen, Rss } from 'lucide-react';
@@ -22,7 +21,7 @@ export default async function BlogListing({ page, q = '' }: { page: number; q?: 
   const hits = query ? new Set(searchDocs(all.map(p => ({ href: p.slug, title: p.title, sub: p.excerpt, tag: p.category, extra: p.tags.join(' ') })), query, 100).map(d => d.href)) : null;
   const found = hits ? all.filter(p => hits.has(p.slug)) : null;
   const posts = found ?? all.slice((page - 1) * POSTS_PER_PAGE, page * POSTS_PER_PAGE);
-  const nonce = (await headers()).get('x-nonce') ?? undefined;
+  const nonce: string | undefined = undefined; // JSON-LD blocks are data, not executed script, so they need no CSP nonce
 
   // Page 1 leads with a large featured card; later pages are a plain grid.
   const featured = page === 1 && !found ? posts[0] : undefined;

@@ -1,4 +1,4 @@
-import { revalidateTag } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { NextRequest, NextResponse, after } from 'next/server';
 import { requireAdmin, isValidUserId } from '@/lib/adminAuth';
 import { getServiceClient } from '@/lib/supabaseServer';
@@ -32,7 +32,7 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
     return NextResponse.json({ error: 'Failed to save term.' }, { status: 500 });
   }
   if (!data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  revalidateTag(GLOSSARY_TAG, { expire: 0 });
+  revalidateTag(GLOSSARY_TAG, { expire: 0 }); revalidatePath('/glossary', 'layout');
   if (parsed.value.status === 'published') after(() => pingIndexNow([`/glossary/${data.slug}`, '/glossary', '/sitemap.xml']));
   return NextResponse.json({ data });
 }
@@ -46,7 +46,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (body?.action !== 'publish_now') return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
   const res = await publishNow('glossary_terms', id);
   if (!res.ok) return NextResponse.json({ error: res.error }, { status: res.status });
-  revalidateTag(GLOSSARY_TAG, { expire: 0 });
+  revalidateTag(GLOSSARY_TAG, { expire: 0 }); revalidatePath('/glossary', 'layout');
   after(() => pingIndexNow([`/glossary/${res.slug}`, '/glossary', '/sitemap.xml']));
   return NextResponse.json({ data: { id, slug: res.slug } });
 }
@@ -57,6 +57,6 @@ export async function DELETE(req: NextRequest, { params }: Ctx) {
   if (!isValidUserId(id)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   const { error } = await getServiceClient().from('glossary_terms').delete().eq('id', id);
   if (error) return NextResponse.json({ error: 'Failed to delete term.' }, { status: 500 });
-  revalidateTag(GLOSSARY_TAG, { expire: 0 });
+  revalidateTag(GLOSSARY_TAG, { expire: 0 }); revalidatePath('/glossary', 'layout');
   return NextResponse.json({ ok: true });
 }

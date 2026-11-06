@@ -1,0 +1,231 @@
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { getPublishedPost, getPublishedPosts } from '@/lib/blogDb';
+import { getAuthorByName } from '@/lib/authorsDb';
+import { authorHref, initials } from '@/lib/authors';
+import { PostCard } from '@/components/blog/PostCard';
+import { formatDate, modifiedAt, relatedPosts, stripHtml } from '@/lib/blog';
+import Inline from '@/components/blog/Inline';
+import PostAdminActions from '@/components/blog/PostAdminActions';
+import ShareBar from '@/components/blog/ShareBar';
+import AuthorBox from '@/components/blog/AuthorBox';
+import ContentDisclaimer from '@/components/blog/ContentDisclaimer';
+import { categoryHref } from '@/components/blog/categories';
+import { ld } from '@/components/blog/jsonLd';
+import { liveInternalPaths, pageTitle, unlinkNotLive } from '@/lib/liveLinks';
+import { enhanceContent } from '@/lib/enhance';
+import { getPublishedTerms } from '@/lib/glossaryDb';
+import { ArticleToc } from '@/components/blog/ReadingAids';
+import ReadingProgress from '@/components/blog/ReadingProgress';
+import GlossaryCards from '@/components/blog/GlossaryCards';
+
+const BASE = 'https://www.scripwise.co.in';
+
+// Cached and refreshed every 5 minutes (admin saves also invalidate the data cache). An empty list means pages are
+// built on first request, then served from cache, instead of being rendered for every visitor.
+export const revalidate = 300;
+export function generateStaticParams() { return []; }
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const post = await getPublishedPost((await params).slug);
+  if (!post) return { title: 'Post not found', robots: { index: false } };
+  const title = post.metaTitle || post.title;
+  const description = post.metaDescription || post.excerpt;
+  return {
+    title: pageTitle(title),
+    description,
+    keywords: post.tags,
+    authors: [{ name: post.author }],
+    // Set here rather than relying on the layout's x-pathname header from middleware.
+    alternates: { canonical: `/blog/${post.slug}` },
+    openGraph: {
+      type: 'article',
+      siteName: 'Scripwise',
+      locale: 'en_IN',
+      url: `${BASE}/blog/${post.slug}`,
+      title,
+      description,
+      publishedTime: post.publishedAt ?? undefined,
+      modifiedTime: modifiedAt(post.publishedAt, post.updatedAt),
+      authors: [post.author],
+      section: post.category,
+      tags: post.tags,
+    },
+    twitter: { card: 'summary_large_image', title, description },
+  };
+}
+
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const post = await getPublishedPost((await params).slug);
+  if (!post) notFound();
+  const author = await getAuthorByName(post.author);
+  const authorUrl = `${BASE}${authorHref(post.author)}`;
+  const live = await liveInternalPaths();
+  const terms = await getPublishedTerms();
+  const aids = enhanceContent(unlinkNotLive(post.contentHtml, live), {
+    glossary: terms.map(t => ({ slug: t.slug, term: t.term, definition: t.definition })),
+  });
+  const nonce: string | undefined = undefined; // JSON-LD blocks are data, not executed script, so they need no CSP nonce
+  const url = `${BASE}/blog/${post.slug}`;
+  const related = relatedPosts(post, await getPublishedPosts());
+
+  const jsonLd: unknown[] = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BlogPosting',
+      headline: post.title,
+      description: post.metaDescription || post.excerpt,
+      url,
+      mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+      image: [`${url}/opengraph-image`],
+      datePublished: post.publishedAt,
+      dateCreated: post.createdAt,
+      ...(post.sources.length ? { citation: post.sources.map(s => ({ '@type': 'CreativeWork', name: s.name, url: s.url })) } : {}),
+      dateModified: modifiedAt(post.publishedAt, post.updatedAt),
+      author: author
+        ? { '@type': 'Person', '@id': `${authorUrl}#person`, name: author.name, url: authorUrl, ...(author.role ? { jobTitle: author.role } : {}), ...(author.photoUrl ? { image: author.photoUrl } : {}) }
+        : { '@type': 'Organization', name: post.author },
+      publisher: { '@type': 'Organization', name: 'Scripwise', url: BASE },
+      articleSection: post.category,
+      keywords: post.tags.join(', '),
+      inLanguage: 'en-IN',
+      wordCount: stripHtml(post.contentHtml).split(' ').filter(Boolean).length,
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: BASE },
+        { '@type': 'ListItem', position: 2, name: 'Blog', item: `${BASE}/blog` },
+        { '@type': 'ListItem', position: 3, name: post.category, item: `${BASE}${categoryHref(post.category)}` },
+        { '@type': 'ListItem', position: 4, name: post.title, item: url },
+      ],
+    },
+  ];
+  if (post.faq.length > 0) {
+    jsonLd.push({
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: post.faq.map(f => ({
+        '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    });
+  }
+
+  return (
+    <div>
+      {jsonLd.map((d, i) => (
+        <script key={i} type="application/ld+json" nonce={nonce} dangerouslySetInnerHTML={{ __html: ld(d) }} />
+      ))}
+
+      <header className="hero-dark relative overflow-hidden">
+        <div className="hero-grid" />
+        <div className="relative mx-auto max-w-3xl px-4 py-12 md:px-6 md:py-16">
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <nav aria-label="Breadcrumb" className="text-xs text-white/50">
+              <Link href="/" className="inline-flex min-h-11 items-center hover:text-white">Home</Link> / <Link href="/blog" className="inline-flex min-h-11 items-center hover:text-white">Blog</Link> / <Link href={categoryHref(post.category)} className="inline-flex min-h-11 items-center hover:text-white">{post.category}</Link>
+            </nav>
+            <PostAdminActions id={post.id} title={post.title} redirectTo="/blog" />
+          </div>
+          <Link href={categoryHref(post.category)} className="inline-flex min-h-11 items-center rounded-full bg-[#F97316]/15 px-4 text-xs font-semibold uppercase tracking-wide text-[#FB923C] hover:bg-[#F97316]/25">{post.category}</Link>
+          <h1 className="mt-4 text-3xl font-bold leading-tight text-white md:text-5xl">{post.title}</h1>
+          <div className="mt-6 flex items-center gap-3 text-sm text-white/60">
+            {author?.photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={author.photoUrl} alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-full object-cover ring-2 ring-white/15" />
+            ) : (
+              <span aria-hidden className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#FB923C] to-[#EA580C] text-sm font-bold text-white">{initials(post.author)}</span>
+            )}
+            <div className="leading-tight">
+              <Link href={authorHref(post.author)} className="font-semibold text-white hover:underline">{post.author}</Link>
+              {author?.role && <span className="text-xs text-white/50"> · {author.role}</span>}
+              <div className="text-xs">
+                {post.publishedAt && <>Published <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time> · </>}
+                {post.readingMinutes} min read
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <article className="mx-auto max-w-3xl px-4 py-10 md:px-6 md:py-12">
+        {post.keyTakeaways.length > 0 && (
+          <section aria-labelledby="key-takeaways" className="mb-10 rounded-2xl border border-[#FFEDD5] border-l-4 border-l-[#F97316] bg-[#FFF7ED] p-5 md:p-6">
+            <h2 id="key-takeaways" className="mb-3 font-bold text-[#0D1117]">In short</h2>
+            <ul className="list-disc space-y-2 pl-5 text-[15px] leading-relaxed text-[#4A5568]">
+              {post.keyTakeaways.map((k, i) => <li key={i}><Inline text={k} /></li>)}
+            </ul>
+          </section>
+        )}
+
+        <ArticleToc items={aids.toc} />
+        <ReadingProgress targetId="article-body" />
+        <div id="article-body" className="blog-prose" dangerouslySetInnerHTML={{ __html: aids.html }} />
+        <GlossaryCards targetId="article-body" />
+
+        <div className="mt-8 flex flex-wrap gap-2">
+          {post.tags.map(t => (
+            <span key={t} className="rounded-full bg-[#FFF7ED] px-3 py-1 text-xs text-[#C2410C]">{t}</span>
+          ))}
+        </div>
+
+        {post.faq.length > 0 && (
+          <section aria-labelledby="faq" className="mt-12">
+            <h2 id="faq" className="mb-4 text-2xl font-bold text-[#0D1117]">Frequently asked questions</h2>
+            <div className="divide-y divide-[#E5E7EB] rounded-2xl border border-[#E5E7EB] bg-white">
+              {post.faq.map((f, i) => (
+                <div key={i} className="p-5">
+                  <h3 className="mb-1 font-semibold text-[#0D1117]">{f.q}</h3>
+                  <p className="leading-relaxed text-[#4A5568]">{f.a}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {post.sources.length > 0 && (
+          <section aria-labelledby="sources" className="mt-12">
+            <h2 id="sources" className="mb-3 text-lg font-bold text-[#0D1117]">Sources &amp; credits</h2>
+            <p className="mb-3 text-sm text-[#4A5568]">Facts and figures in this article draw on these sources. All writing is our own.</p>
+            <ul className="flex flex-wrap gap-2">
+              {post.sources.map(s => (
+                <li key={s.url}>
+                  <a href={s.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded-full border border-[#E5E7EB] bg-white px-4 text-sm font-semibold text-[#EA580C] hover:border-[#F97316]">
+                    {s.name} ↗
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <ContentDisclaimer sourced={post.sources.length > 0} />
+
+        <ShareBar url={url} title={post.title} />
+
+        <AuthorBox name={post.author} />
+
+        <section className="mt-12 rounded-2xl bg-[#0B0E14] p-6 text-white md:p-8">
+          <h2 className="text-xl font-bold">Screen stocks yourself</h2>
+          <p className="mt-1 mb-4 text-sm text-white/60">Run quality filters on 5,000+ NSE &amp; BSE companies with Scripwise, free.</p>
+          <div className="flex flex-wrap gap-3 text-sm font-semibold">
+            <Link href="/screens" className="inline-flex min-h-11 items-center rounded-lg bg-[#F97316] px-4 text-white hover:bg-[#EA580C]">Open pre-built screens</Link>
+            <Link href="/screener" className="inline-flex min-h-11 items-center rounded-lg border border-white/20 px-4 text-white hover:border-[#F97316]">Stock Explorer</Link>
+          </div>
+        </section>
+      </article>
+
+      {related.length > 0 && (
+        <section aria-labelledby="more" className="border-t border-[#E5E7EB] bg-[#F9FAFB]">
+          <div className="mx-auto max-w-6xl px-4 py-12 md:px-6">
+            <h2 id="more" className="mb-6 text-2xl font-bold text-[#0D1117]">Keep reading</h2>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {related.map(p => <PostCard key={p.id} post={p} headingLevel={3} />)}
+            </div>
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}

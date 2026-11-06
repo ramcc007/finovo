@@ -20,6 +20,13 @@ function resetUsed(req: NextRequest): boolean {
 // has left, and whether their reset is available. Both cookies are httpOnly,
 // so the client can't read them directly.
 export async function GET(req: NextRequest) {
+  // Content pages (blog, glossary, pricing, legal) are cached, so the middleware does not set the window cookie on
+  // them. A first-time visitor's window starts here instead, the first time their browser asks about it.
+  if (!req.cookies.get('sw_anon_since')) {
+    const res = NextResponse.json({ remainingMs: ANON_PREVIEW_MS, canReset: !resetUsed(req) });
+    res.cookies.set('sw_anon_since', String(Date.now()), { path: '/', sameSite: 'lax', httpOnly: true });
+    return res;
+  }
   return NextResponse.json({
     remainingMs: anonPreviewRemainingMs(req),
     canReset: !resetUsed(req),

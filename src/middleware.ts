@@ -32,6 +32,12 @@ function sweepBuckets() {
   }
 }
 
+// Content pages that can be cached: no per-request nonce, no cookie (a Set-Cookie header keeps a response out of the
+// CDN cache). They live in the (static) route group. Scripts there are allowed with 'unsafe-inline' instead of a
+// nonce, because Next.js inlines its page data as scripts and a fixed page cannot carry a fresh nonce.
+const STATIC_PREFIXES = ['/blog', '/glossary', '/pricing', '/disclaimer', '/privacy', '/terms', '/refund', '/contact'];
+const isStaticContent = (p: string) => STATIC_PREFIXES.some(s => p === s || p.startsWith(s + '/'));
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -53,10 +59,13 @@ export function middleware(request: NextRequest) {
   // generation. Next.js auto-applies this nonce to its own framework/page
   // scripts once it sees it in the CSP header; our own <Script> tags need it
   // passed explicitly via the `nonce` prop.
+  const staticContent = isStaticContent(pathname);
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://challenges.cloudflare.com https://www.googletagmanager.com https://checkout.razorpay.com`,
+    staticContent
+      ? "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://www.googletagmanager.com https://checkout.razorpay.com"
+      : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://challenges.cloudflare.com https://www.googletagmanager.com https://checkout.razorpay.com`,
     "style-src 'self' 'unsafe-inline'",
     // upload.wikimedia.org, images.unsplash.com and images.pexels.com: credited free-licence pictures on the
     // election page. i.ytimg.com: video thumbnails for the click-to-play YouTube player.
@@ -76,6 +85,12 @@ export function middleware(request: NextRequest) {
     // so a single mixed-content reference can't open a downgrade/MITM window.
     "upgrade-insecure-requests",
   ].join('; ');
+
+  if (staticContent) {
+    const res = NextResponse.next();
+    res.headers.set('Content-Security-Policy', csp);
+    return res;
+  }
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);

@@ -1,4 +1,4 @@
-import { revalidateTag } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { NextRequest, NextResponse, after } from 'next/server';
 import { pingIndexNow } from '@/lib/indexNow';
 import { BLOG_TAG } from '@/lib/blogDb';
@@ -28,6 +28,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to create post.' }, { status: 500 });
   }
   if (parsed.value.status === 'published') after(() => pingIndexNow([`/blog/${data.slug}`, '/blog', '/sitemap.xml']));
-  revalidateTag(BLOG_TAG, { expire: 0 });
+  revalidateTag(BLOG_TAG, { expire: 0 }); revalidatePath('/blog', 'layout');
   return NextResponse.json({ data }, { status: 201 });
 }

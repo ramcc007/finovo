@@ -1,4 +1,4 @@
-import { revalidateTag } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { NextRequest, NextResponse, after } from 'next/server';
 import { pingIndexNow } from '@/lib/indexNow';
 import { publishNow } from '@/lib/publishNow';
@@ -34,7 +34,7 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
     return NextResponse.json({ error: 'Failed to save post.' }, { status: 500 });
   }
   if (!data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  revalidateTag(BLOG_TAG, { expire: 0 });
+  revalidateTag(BLOG_TAG, { expire: 0 }); revalidatePath('/blog', 'layout');
   if (parsed.value.status === 'published') after(() => pingIndexNow([`/blog/${data.slug}`, '/blog', '/sitemap.xml']));
   return NextResponse.json({ data });
 }
@@ -48,7 +48,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   if (body?.action !== 'publish_now') return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
   const res = await publishNow('blog_posts', id);
   if (!res.ok) return NextResponse.json({ error: res.error }, { status: res.status });
-  revalidateTag(BLOG_TAG, { expire: 0 });
+  revalidateTag(BLOG_TAG, { expire: 0 }); revalidatePath('/blog', 'layout');
   after(() => pingIndexNow([`/blog/${res.slug}`, '/blog', '/sitemap.xml']));
   return NextResponse.json({ data: { id, slug: res.slug } });
 }
@@ -65,6 +65,6 @@ export async function DELETE(req: NextRequest, { params }: Ctx) {
     await client.from('blog_hidden_slugs').upsert({ slug: row.slug });
   }
   if (error) return NextResponse.json({ error: 'Failed to delete post.' }, { status: 500 });
-  revalidateTag(BLOG_TAG, { expire: 0 });
+  revalidateTag(BLOG_TAG, { expire: 0 }); revalidatePath('/blog', 'layout');
   return NextResponse.json({ ok: true });
 }
