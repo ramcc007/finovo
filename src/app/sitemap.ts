@@ -4,6 +4,7 @@ import { slugify } from '@/lib/blog';
 import { getPublishedTerms } from '@/lib/glossaryDb';
 import { getElectionData } from '@/lib/election/db';
 import { getAuthors } from '@/lib/authorsDb';
+import { supabase } from '@/lib/supabase';
 import { MIN_UPDATES_TO_INDEX, SECTION_IDS, SECTIONS, listRaces, racePath, sectionUpdates } from '@/lib/election/sections';
 
 const base = 'https://www.scripwise.co.in';
@@ -56,8 +57,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/terms`, changeFrequency: 'yearly', priority: 0.3 },
   ];
 
-  // Stock pages (/stocks/[symbol]) are deliberately left out: thousands of
-  // thin, data-only pages dilute the sitemap. They stay reachable by links.
+  // Stock pages: only the largest companies, which have the fullest data and the most search interest. The long tail
+  // stays reachable by links and is not offered to crawlers, so thin pages do not dilute the sitemap.
+  let stockRoutes: MetadataRoute.Sitemap = [];
+  try {
+    const { data } = await supabase.from('screener_view').select('symbol').not('market_cap', 'is', null).order('market_cap', { ascending: false }).limit(500);
+    stockRoutes = (data ?? []).map(r => ({ url: `${base}/stocks/${encodeURIComponent(r.symbol as string)}`, changeFrequency: 'daily' as const, priority: 0.6 }));
+  } catch { /* the sitemap still works without them */ }
   // Election section and race pages: only those with something to say.
   const { updates: electionUpdates, meta: electionMeta } = await getElectionData();
   // Coverage has ended: the pages no longer change, so they stop advertising hourly updates.
@@ -70,5 +76,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .map(r => ({ url: `${base}${racePath(r.slug)}`, changeFrequency: electionFreq, priority: 0.7 })),
   ];
 
-  return [...staticRoutes, ...electionRoutes, ...blogRoutes, ...authorRoutes, ...glossaryRoutes];
+  return [...staticRoutes, ...stockRoutes, ...electionRoutes, ...blogRoutes, ...authorRoutes, ...glossaryRoutes];
 }

@@ -141,7 +141,7 @@ function Skeleton({ className }: { className?: string }) {
   return <div className={cn('animate-pulse bg-[#EEF1F7] rounded', className)} />;
 }
 
-export default function StockPageClient() {
+export default function StockPageClient({ initialName }: { initialName?: string }) {
   const params = useParams();
   const symbol = (params.symbol as string).toUpperCase();
 
@@ -261,6 +261,8 @@ export default function StockPageClient() {
 
           {loading ? (
             <div className="space-y-2">
+              {/* The server renders this state, so give crawlers the page heading. */}
+              <h1 className="sr-only">{initialName ? `${initialName} (${symbol}) share price and financials` : `${symbol} share price and financials`}</h1>
               <Skeleton className="h-7 w-48" />
               <Skeleton className="h-4 w-72" />
               <Skeleton className="h-10 w-40" />

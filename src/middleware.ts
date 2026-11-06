@@ -35,7 +35,7 @@ function sweepBuckets() {
 // Content pages that can be cached: no per-request nonce, no cookie (a Set-Cookie header keeps a response out of the
 // CDN cache). They live in the (static) route group. Scripts there are allowed with 'unsafe-inline' instead of a
 // nonce, because Next.js inlines its page data as scripts and a fixed page cannot carry a fresh nonce.
-const STATIC_PREFIXES = ['/blog', '/glossary', '/pricing', '/disclaimer', '/privacy', '/terms', '/refund', '/contact'];
+const STATIC_PREFIXES = ['/blog', '/glossary', '/stocks', '/pricing', '/disclaimer', '/privacy', '/terms', '/refund', '/contact'];
 const isStaticContent = (p: string) => STATIC_PREFIXES.some(s => p === s || p.startsWith(s + '/'));
 
 export function middleware(request: NextRequest) {
